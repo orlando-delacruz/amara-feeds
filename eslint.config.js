@@ -26,7 +26,7 @@ export default defineConfig(
   },
   {
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/services/**'],
+    ignores: ['src/services/**', 'src/test/**', '**/*.test.*'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',

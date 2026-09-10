@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { NotFoundPage, PlaceholderPage } from '@/components/PlaceholderPage'
+import { CustomerListPage } from '@/features/customers/CustomerListPage'
 import { RequireRole } from '@/features/session/guards'
 import { SignInPage } from '@/features/session/SignInPage'
 import { useHomePath } from '@/features/session/useHomePath'
@@ -26,12 +27,6 @@ const staffAreas: AreaPlaceholder[] = [
     scope:
       'Store-specific sale recording: optional customer, items and quantities, cash or charge, delivery details when applicable.',
     requirements: 'REQ-SALE-001–005, REQ-CUST-002',
-  },
-  {
-    path: 'customers',
-    title: 'Customers',
-    scope: 'Shared customer records across Amara and Zeann.',
-    requirements: 'REQ-CUST-001–003',
   },
   {
     path: 'credit',
@@ -72,12 +67,6 @@ const adminAreas: AreaPlaceholder[] = [
     title: 'Sales Review',
     scope: 'Review store-specific sales across both stores.',
     requirements: 'REQ-SALE-001–005, REQ-USER-003',
-  },
-  {
-    path: 'customers',
-    title: 'Customers',
-    scope: 'Review shared customer records across Amara and Zeann.',
-    requirements: 'REQ-CUST-001–003, REQ-USER-003',
   },
   {
     path: 'credit',
@@ -128,6 +117,7 @@ export function AppRoutes() {
       <Route element={<RequireRole role="staff" />}>
         <Route element={<StaffLayout />}>
           <Route index element={<HomeRedirect />} />
+          <Route path="customers" element={<CustomerListPage />} />
           {staffAreas.map((area) => (
             <Route
               key={area.path}
@@ -156,6 +146,7 @@ export function AppRoutes() {
               />
             }
           />
+          <Route path="customers" element={<CustomerListPage canAdd={false} />} />
           {adminAreas.map((area) => (
             <Route
               key={area.path}
