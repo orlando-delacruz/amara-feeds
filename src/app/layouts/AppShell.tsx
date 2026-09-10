@@ -7,8 +7,6 @@ import type { NavItem } from '@/components/navigation/navItems'
 
 interface AppShellProps {
   sectionLabel: string
-  switchTo: string
-  switchLabel: string
   navItems: NavItem[]
 }
 
@@ -44,11 +42,11 @@ const Content = styled.main`
   padding: ${({ theme }) => theme.space.lg};
 `
 
-export function AppShell({ sectionLabel, switchTo, switchLabel, navItems }: AppShellProps) {
+export function AppShell({ sectionLabel, navItems }: AppShellProps) {
   return (
     <Shell>
       <SkipLink href="#main-content">Skip to content</SkipLink>
-      <TopBar sectionLabel={sectionLabel} switchTo={switchTo} switchLabel={switchLabel} />
+      <TopBar sectionLabel={sectionLabel} />
       <SideNav items={navItems} />
       <Content id="main-content" tabIndex={-1}>
         <Outlet />

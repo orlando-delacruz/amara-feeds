@@ -1,14 +1,13 @@
 import styled from 'styled-components'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { StoreBadge } from '@/components/ui/StoreBadge'
+import { useSession } from '@/features/session/useSession'
 import { storeIds, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import type { StoreId } from '@/store/stores'
 
 interface TopBarProps {
   sectionLabel: string
-  switchTo: string
-  switchLabel: string
 }
 
 const Header = styled.header`
@@ -55,6 +54,16 @@ const Controls = styled.div`
   gap: ${({ theme }) => theme.space.sm};
 `
 
+const UserName = styled.span`
+  font-size: ${({ theme }) => theme.font.size.sm};
+  color: ${({ theme }) => theme.color.text.secondary};
+  white-space: nowrap;
+
+  @media (max-width: ${({ theme }) => theme.breakpoint.tablet}) {
+    display: none;
+  }
+`
+
 const StoreSelect = styled.select`
   min-height: ${({ theme }) => theme.touch.minTarget};
   padding: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.sm};
@@ -65,15 +74,33 @@ const StoreSelect = styled.select`
   font-weight: ${({ theme }) => theme.font.weight.semibold};
 `
 
-const SwitchLink = styled(Link)`
+const SignOutButton = styled.button`
+  min-height: ${({ theme }) => theme.touch.minTarget};
+  padding: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.sm};
+  background: none;
+  border: none;
+  border-radius: ${({ theme }) => theme.radius.md};
+  color: ${({ theme }) => theme.color.brand[700]};
   font-size: ${({ theme }) => theme.font.size.sm};
   font-weight: ${({ theme }) => theme.font.weight.semibold};
-  color: ${({ theme }) => theme.color.brand[700]};
+  cursor: pointer;
   white-space: nowrap;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.color.brand[50]};
+  }
 `
 
-export function TopBar({ sectionLabel, switchTo, switchLabel }: TopBarProps) {
-  const { store, setStore } = useStore()
+export function TopBar({ sectionLabel }: TopBarProps) {
+  const { store, setStore, canSwitchStore } = useStore()
+  const { user, signOut } = useSession()
+  const navigate = useNavigate()
+
+  function handleSignOut() {
+    signOut()
+    navigate('/sign-in', { replace: true })
+  }
+
   return (
     <Header>
       <Inner>
@@ -82,20 +109,23 @@ export function TopBar({ sectionLabel, switchTo, switchLabel }: TopBarProps) {
         <Spacer />
         <Controls>
           <StoreBadge store={store} />
-          {/* PHASE-0 PLACEHOLDER: temporary in-app store switcher until Phase 2
-              wires real store assignment/session. */}
-          <StoreSelect
-            aria-label="Store"
-            value={store}
-            onChange={(event) => setStore(event.target.value as StoreId)}
-          >
-            {storeIds.map((id) => (
-              <option key={id} value={id}>
-                {storeNames[id]}
-              </option>
-            ))}
-          </StoreSelect>
-          <SwitchLink to={switchTo}>{switchLabel}</SwitchLink>
+          {canSwitchStore && (
+            <StoreSelect
+              aria-label="Store"
+              value={store}
+              onChange={(event) => setStore(event.target.value as StoreId)}
+            >
+              {storeIds.map((id) => (
+                <option key={id} value={id}>
+                  {storeNames[id]}
+                </option>
+              ))}
+            </StoreSelect>
+          )}
+          {user && <UserName>{user.name}</UserName>}
+          <SignOutButton type="button" onClick={handleSignOut}>
+            Sign out
+          </SignOutButton>
         </Controls>
       </Inner>
     </Header>

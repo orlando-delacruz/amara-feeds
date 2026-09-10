@@ -16,9 +16,12 @@ export const staffNavItems: NavItem[] = [
 
 export const adminNavItems: NavItem[] = [
   { to: '/admin', label: 'Dashboard' },
-  { to: '/admin/products', label: 'Products' },
+  { to: '/admin/sales', label: 'Sales' },
+  { to: '/admin/customers', label: 'Customers' },
   { to: '/admin/credit', label: 'Credit' },
   { to: '/admin/inventory', label: 'Inventory' },
+  { to: '/admin/receiving', label: 'Receiving' },
+  { to: '/admin/products', label: 'Products' },
   { to: '/admin/reports', label: 'Reports' },
   { to: '/admin/users', label: 'Users' },
 ]
