@@ -1,0 +1,8 @@
+dist
+coverage
+node_modules
+package-lock.json
+# Pre-existing documentation baseline keeps its committed style (see DEC-001);
+# new or content-updated docs are formatted with Prettier.
+*.md
+!docs/DESIGN-SYSTEM.md

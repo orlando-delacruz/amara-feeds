@@ -83,11 +83,58 @@ Hierarchy: a record here cannot authorize requirement violations, security weake
 
 ## 8. Current Decision Register
 
-No formal decision records have been created yet. Documented choices in owning documents (e.g. the selected stack in `docs/TECH-STACK.md`) are not retroactively entries here. Future records are appended in ID order with status and date kept current.
+No formal decision records existed before Phase 0. The following records were created during Phase 0 (frontend foundation). Documented choices in owning documents (e.g. the selected stack in `docs/TECH-STACK.md`) are not retroactively entries here; only material implementation decisions that introduce or change direction are recorded.
 
 | ID | Title | Status | Date |
 | --- | --- | --- | --- |
-| — | (no records yet) | — | — |
+| DEC-001 | Frontend tooling and verification execution | Accepted | 2026-09-10 |
+| DEC-002 | SPA routing with React Router | Accepted | 2026-09-10 |
+| DEC-003 | Visual language baseline and design tokens | Accepted | 2026-09-10 |
+
+### DEC-001 — Frontend tooling and verification execution
+
+- **ID:** DEC-001
+- **Title:** Frontend tooling and verification execution
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** `ROADMAP.md` Phase 0 requires settling tooling execution (commands, CI intent, coverage stance). `docs/TECH-STACK.md` selected npm, Vite, TypeScript, Styled Components, and Vitest + React Testing Library, but left execution detail as Implementation Decision Required (`docs/TESTING.md` §11).
+- **Decision:** Host the single application at the repository root and manage it with npm. Commands: `dev`, `build`, `preview`, `typecheck`, `lint`, `format`, `format:check`, `test`, `test:run`. Lint with ESLint flat config plus `typescript-eslint`, `eslint-plugin-react-hooks`, and `eslint-plugin-react-refresh`, reconciled with Prettier through `eslint-config-prettier`; format with Prettier (single quotes, no semicolons, trailing commas, 100 columns). Verify UI with Vitest + React Testing Library under jsdom using a shared provider-aware render helper. No CI pipeline and no coverage threshold in Phase 0.
+- **Alternatives considered:** The current Vite template defaults to oxlint — rejected as a less established React/TypeScript rule ecosystem than ESLint for this codebase. No lint/format tooling — rejected because `ROADMAP.md` names lint hygiene in Phase 0. CI from day one — deferred; no demonstrated need at this scope and the budget favors core delivery. Coverage thresholds — rejected; `docs/TESTING.md` §10 governs by risk-based gates, not numeric coverage.
+- **Rationale:** Reuses the selected stack without adding services or infrastructure; local scripts give immediate, reviewable hygiene while leaving CI and coverage to a deliberate later decision.
+- **Consequences:** Contributors run the documented scripts. CI and any coverage policy remain open and must be decided and recorded before being relied upon. Pre-existing documentation keeps its committed Markdown style; Prettier ignores `*.md` except `docs/DESIGN-SYSTEM.md`, which was authored under the new tooling.
+- **Related documents:** `docs/TECH-STACK.md` §§1–3, `docs/TESTING.md` §11, `ROADMAP.md` §§3, 8.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** CI adoption and the Playwright E2E trigger remain open; revisit at Phases 5–8.
+
+### DEC-002 — SPA routing with React Router
+
+- **ID:** DEC-002
+- **Title:** SPA routing with React Router
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** `ROADMAP.md` Phase 0 scope includes routing and application structure, but `docs/TECH-STACK.md` listed no router, so selecting one adds a technology and requires an owning-document update plus this record.
+- **Decision:** Adopt `react-router-dom` v7 as the client-side router. Use `BrowserRouter` with declarative nested `Routes`; the staff and admin shells are layout routes, and area pages are route components.
+- **Alternatives considered:** TanStack Router — type-safe but more capability than the core scope needs; a hand-rolled router — unnecessary maintenance; no router — fails the Phase 0 routing scope.
+- **Rationale:** The smallest established solution consistent with a client-rendered SPA and the confirmed information architecture (`docs/UI-UX.md` §5), with no server-side routing.
+- **Consequences:** Static hosting must rewrite unknown paths to `index.html` (SPA fallback) at deployment; to be verified in Phase 8. Adds one runtime dependency.
+- **Related documents:** `docs/TECH-STACK.md` §§2–3, `docs/ARCHITECTURE.md` §7, `docs/DEPLOYMENT.md`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Confirm the Vercel SPA-fallback configuration during deployment.
+
+### DEC-003 — Visual language baseline and design tokens
+
+- **ID:** DEC-003
+- **Title:** Visual language baseline and design tokens
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** `docs/UI-UX.md` §19 defers all visual values (color, typography, spacing, breakpoints) to design documentation "if and when such documentation is introduced." None existed, yet Phase 0 shells must render real values without inventing them ad hoc.
+- **Decision:** Introduce `docs/DESIGN-SYSTEM.md` as the authoritative visual-language source and implement matching tokens in `src/theme` (color, typography, spacing, radii, shadows, breakpoints, motion, focus). Components consume values only through the styled-components theme. Use a system font stack; pair store identity colors with the store name in text; support `prefers-reduced-motion`.
+- **Alternatives considered:** In-code tokens only — rejected; creates undocumented visual conventions. A third-party component library and theme — rejected; adds a dependency and a visual opinion beyond the core scope.
+- **Rationale:** Keeps visual values documented, accessible by default, and consistent with `docs/UI-UX.md` behavior and the Styled Components choice in `docs/TECH-STACK.md`.
+- **Consequences:** `docs/DESIGN-SYSTEM.md` and `src/theme/tokens.ts` must stay in sync; new visual values require a documented need and an update to that file. Adds `docs/DESIGN-SYSTEM.md` to the source-of-truth set.
+- **Related documents:** `docs/DESIGN-SYSTEM.md`, `docs/UI-UX.md` §19, `docs/TECH-STACK.md` §3 (Styling), `docs/REQUIREMENTS.md` REQ-ACC-001–004.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Brand artwork, logo, and any marketing palette remain Confirmation Required.
 
 ## 9. Per-Area Handling
 

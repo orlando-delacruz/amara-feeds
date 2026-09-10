@@ -1,0 +1,48 @@
+import styled, { css } from 'styled-components'
+import type { InputHTMLAttributes } from 'react'
+import { FormField } from './FormField'
+
+export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
+  id: string
+  label: string
+  error?: string
+  hint?: string
+}
+
+const StyledInput = styled.input<{ $invalid: boolean }>`
+  width: 100%;
+  min-height: ${({ theme }) => theme.touch.minTarget};
+  padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md};
+  border: 1px solid ${({ theme }) => theme.color.border.strong};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background-color: ${({ theme }) => theme.color.white};
+
+  &:disabled {
+    background-color: ${({ theme }) => theme.color.neutral[100]};
+    color: ${({ theme }) => theme.color.text.muted};
+  }
+
+  ${({ $invalid, theme }) =>
+    $invalid &&
+    css`
+      border-color: ${theme.color.status.danger.text};
+    `}
+`
+
+export function TextField({ id, label, error, hint, required, ...rest }: TextFieldProps) {
+  const describedBy = [hint ? `${id}-hint` : null, error ? `${id}-error` : null]
+    .filter(Boolean)
+    .join(' ')
+  return (
+    <FormField label={label} inputId={id} error={error} hint={hint} required={required}>
+      <StyledInput
+        id={id}
+        $invalid={Boolean(error)}
+        aria-invalid={Boolean(error)}
+        aria-describedby={describedBy || undefined}
+        required={required}
+        {...rest}
+      />
+    </FormField>
+  )
+}

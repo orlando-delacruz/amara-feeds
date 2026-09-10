@@ -19,6 +19,7 @@ Working rules: smallest maintainable change; existing patterns before new patter
 | Business context | `docs/PROJECT.md` |
 | Requirements | `docs/REQUIREMENTS.md` |
 | UI/UX behavior | `docs/UI-UX.md` |
+| Visual language | `docs/DESIGN-SYSTEM.md` |
 | Technology | `docs/TECH-STACK.md` |
 | Architecture | `docs/ARCHITECTURE.md` |
 | Data concepts | `docs/DATA-MODEL.md` |
@@ -26,6 +27,7 @@ Working rules: smallest maintainable change; existing patterns before new patter
 | Security | `docs/SECURITY.md` |
 | Testing/verification | `docs/TESTING.md` |
 | Development workflow | `docs/DEVELOPMENT.md` (this file) |
+| Implementation sequence | `ROADMAP.md` |
 | Deployment | `docs/DEPLOYMENT.md` |
 | Decisions | `docs/DECISIONS.md` |
 | Agent-wide rules | `AGENTS.md` |
@@ -108,7 +110,7 @@ Classification: Confirmed, Conditional, Confirmation Required, Reference-Only, I
 
 ## 14. Documentation, Decisions, and Source Control
 
-Ownership: business requirement change → `docs/REQUIREMENTS.md`; business/context change → `docs/PROJECT.md`; UI behavior change → `docs/UI-UX.md`; technology decision → `docs/TECH-STACK.md` with record in `docs/DECISIONS.md`; architecture decision → `docs/ARCHITECTURE.md` with record in `docs/DECISIONS.md`; data-model change → `docs/DATA-MODEL.md`; API boundary change → `docs/API.md`; security change → `docs/SECURITY.md`; verification strategy → `docs/TESTING.md`; deployment procedure → `docs/DEPLOYMENT.md`. Proposals stay proposals until accepted.
+Ownership: business requirement change → `docs/REQUIREMENTS.md`; business/context change → `docs/PROJECT.md`; UI behavior change → `docs/UI-UX.md`; visual language change → `docs/DESIGN-SYSTEM.md`; technology decision → `docs/TECH-STACK.md` with record in `docs/DECISIONS.md`; architecture decision → `docs/ARCHITECTURE.md` with record in `docs/DECISIONS.md`; data-model change → `docs/DATA-MODEL.md`; API boundary change → `docs/API.md`; security change → `docs/SECURITY.md`; verification strategy → `docs/TESTING.md`; deployment procedure → `docs/DEPLOYMENT.md`. Proposals stay proposals until accepted.
 
 Source control: review status and diff; keep changes focused to intended files; never commit secrets or sensitive fixtures; never invent branch/PR/CI conventions; never bypass verification or security controls to complete a change.
 

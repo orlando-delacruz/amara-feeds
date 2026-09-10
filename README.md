@@ -18,6 +18,7 @@ A business management web application for the Amara and Zeann two-store business
 | `docs/TECH-STACK.md` | Technology choices |
 | `docs/ARCHITECTURE.md` | Architecture and code organization |
 | `docs/UI-UX.md` | Behavior and experience |
+| `docs/DESIGN-SYSTEM.md` | Visual language and design tokens |
 | `docs/DATA-MODEL.md` | Data concepts and relationships |
 | `docs/API.md` | Endpoint and integration contracts |
 | `docs/SECURITY.md` | Security requirements |
@@ -25,6 +26,7 @@ A business management web application for the Amara and Zeann two-store business
 | `docs/DEVELOPMENT.md` | Development workflow |
 | `docs/DEPLOYMENT.md` | Deployment procedures |
 | `docs/DECISIONS.md` | Material decisions |
+| `ROADMAP.md` | Implementation sequence and phase dependencies |
 
 Operating rules for working in this repository live in `AGENTS.md`. Documentation conventions live in `TEMPLATE-GUIDE.md`.
 
@@ -40,4 +42,10 @@ Selected stack (authority: `docs/TECH-STACK.md`): React + Vite + TypeScript with
 
 ## Status
 
-Implementation status is determined from the actual repository, not from this file. The repository is currently at the documentation stage with no application implementation yet. Features described here reflect intended scope, not confirmed completion.
+Implementation status is determined from the actual repository, not from this file.
+
+- **Phase 0 (Frontend Foundation) — complete:** React + Vite + TypeScript scaffold at the repository root, Styled Components theming with design tokens, React Router with staff and admin shells, reusable UI foundations, and build/type/lint/format/test tooling. `typecheck`, `lint`, `format:check`, `test:run`, and `build` pass.
+- **No business data, mock services, Supabase, or database exist yet.** The store context in the shell is a temporary in-app placeholder replaced in Phase 2.
+- **Next:** Phase 1 (centralized mock data layer), then Phase 2 workflows. Database work (Phase 4+) is gated behind the Phase 3 validation gate.
+
+Features described in the documentation reflect intended scope, not confirmed completion. Implementation follows `ROADMAP.md`.

@@ -21,6 +21,7 @@ Status labels (see `TEMPLATE-GUIDE.md`): **Selected** — confirmed direction. *
 | Frontend framework + build | React + Vite | Selected | Mobile-primary internal application UI and fast development builds |
 | Language | TypeScript | Selected | Type-safe client code |
 | Styling | Styled Components | Selected | Co-located component styles |
+| Routing | React Router | Selected | Client-side navigation for the staff and admin surfaces (DEC-002) |
 | Backend / platform | Supabase | Selected | Managed backend: data access, business-rule enforcement point, file/export support surface |
 | Database | PostgreSQL via Supabase | Selected | System of record for shared and store-specific data |
 | Authentication | Supabase Auth | Selected | Individual staff and admin accounts |
@@ -55,6 +56,12 @@ Status labels (see `TEMPLATE-GUIDE.md`): **Selected** — confirmed direction. *
 - **What:** Styled Components.
 - **For:** co-located component styles for the internal application.
 - **Why:** keeps styling next to the components an AI coding agent generates, avoiding a separate styling architecture; behavior and responsive expectations come from `docs/UI-UX.md`, which this choice does not alter.
+
+### Routing — Selected
+
+- **What:** React Router.
+- **For:** client-side navigation across the confirmed application areas for both staff and admin surfaces (`docs/UI-UX.md` §5–6).
+- **Why:** the smallest established solution for a client-rendered SPA with no server routing; visual values for the routed shells come from `docs/DESIGN-SYSTEM.md`, and the selection is recorded in `docs/DECISIONS.md` (DEC-002).
 
 ### Backend / platform — Selected
 

@@ -30,11 +30,13 @@ Act as a senior software engineer and technical problem solver working inside th
 | Technology choices | `docs/TECH-STACK.md` |
 | Architecture and code organization | `docs/ARCHITECTURE.md` |
 | Behavior and experience | `docs/UI-UX.md` |
+| Visual language and design tokens | `docs/DESIGN-SYSTEM.md` |
 | Data concepts | `docs/DATA-MODEL.md` |
 | Endpoint and integration contracts | `docs/API.md` |
 | Security | `docs/SECURITY.md` |
 | Verification strategy | `docs/TESTING.md` |
 | Development workflow | `docs/DEVELOPMENT.md` |
+| Implementation sequence and phase dependencies | `ROADMAP.md` |
 | Deployment procedures | `docs/DEPLOYMENT.md` |
 | Material decisions | `docs/DECISIONS.md` |
 
