@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { NotFoundPage, PlaceholderPage } from '@/components/PlaceholderPage'
 import { CustomerListPage } from '@/features/customers/CustomerListPage'
+import { CreditDetailPage } from '@/features/credit/CreditDetailPage'
+import { CreditListPage } from '@/features/credit/CreditListPage'
 import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { ProductApprovalPage } from '@/features/products/ProductApprovalPage'
 import { ProductListPage } from '@/features/products/ProductListPage'
@@ -28,13 +30,6 @@ const staffAreas: AreaPlaceholder[] = [
     requirements: 'REQ-DASH-001–006',
   },
   {
-    path: 'credit',
-    title: 'Credit / Collection',
-    scope:
-      'Shared credit with terms-based due dates, partial payments, and cross-store payments in one traceable history.',
-    requirements: 'REQ-CRED-001–007, REQ-PAY-001–002',
-  },
-  {
     path: 'reports',
     title: 'Reports / Export / Printing',
     scope: 'Agreed business summaries with Excel export and printing.',
@@ -43,12 +38,6 @@ const staffAreas: AreaPlaceholder[] = [
 ]
 
 const adminAreas: AreaPlaceholder[] = [
-  {
-    path: 'credit',
-    title: 'Credit / Payments Review',
-    scope: 'Shared credit obligations, balances, status, and cross-store payment history.',
-    requirements: 'REQ-CRED-006–007, REQ-DASH-003–004',
-  },
   {
     path: 'inventory',
     title: 'Inventory Review',
@@ -77,6 +66,8 @@ export function AppRoutes() {
           <Route path="customers" element={<CustomerListPage />} />
           <Route path="sales" element={<SaleListPage />} />
           <Route path="sales/new" element={<NewSalePage />} />
+          <Route path="credit" element={<CreditListPage />} />
+          <Route path="credit/:creditId" element={<CreditDetailPage />} />
           <Route path="products" element={<ProductListPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="receiving" element={<ReceivingPage />} />
@@ -110,6 +101,8 @@ export function AppRoutes() {
           />
           <Route path="customers" element={<CustomerListPage canAdd={false} />} />
           <Route path="sales" element={<SaleListPage />} />
+          <Route path="credit" element={<CreditListPage basePath="/admin/credit" />} />
+          <Route path="credit/:creditId" element={<CreditDetailPage basePath="/admin/credit" />} />
           <Route path="products" element={<ProductApprovalPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="receiving" element={<ReceivingPage />} />
