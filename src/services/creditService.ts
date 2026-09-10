@@ -34,6 +34,10 @@ export async function listPaymentTerms(): Promise<PaymentTerms[]> {
   return getDb().terms.map((term) => ({ ...term }))
 }
 
+export async function previewDueDate(termsId: PaymentTermsId): Promise<string> {
+  return resolveDueDate(termsId, new Date().toISOString())
+}
+
 export async function listCredits(
   filter: { customerId?: CustomerId; originStoreId?: StoreId; status?: CreditStatus } = {},
 ): Promise<CreditObligation[]> {

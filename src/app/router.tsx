@@ -5,6 +5,8 @@ import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { ProductApprovalPage } from '@/features/products/ProductApprovalPage'
 import { ProductListPage } from '@/features/products/ProductListPage'
 import { ReceivingPage } from '@/features/receiving/ReceivingPage'
+import { NewSalePage } from '@/features/sales/NewSalePage'
+import { SaleListPage } from '@/features/sales/SaleListPage'
 import { RequireRole } from '@/features/session/guards'
 import { SignInPage } from '@/features/session/SignInPage'
 import { useHomePath } from '@/features/session/useHomePath'
@@ -26,13 +28,6 @@ const staffAreas: AreaPlaceholder[] = [
     requirements: 'REQ-DASH-001–006',
   },
   {
-    path: 'sales',
-    title: 'Sales',
-    scope:
-      'Store-specific sale recording: optional customer, items and quantities, cash or charge, delivery details when applicable.',
-    requirements: 'REQ-SALE-001–005, REQ-CUST-002',
-  },
-  {
     path: 'credit',
     title: 'Credit / Collection',
     scope:
@@ -48,12 +43,6 @@ const staffAreas: AreaPlaceholder[] = [
 ]
 
 const adminAreas: AreaPlaceholder[] = [
-  {
-    path: 'sales',
-    title: 'Sales Review',
-    scope: 'Review store-specific sales across both stores.',
-    requirements: 'REQ-SALE-001–005, REQ-USER-003',
-  },
   {
     path: 'credit',
     title: 'Credit / Payments Review',
@@ -86,6 +75,8 @@ export function AppRoutes() {
         <Route element={<StaffLayout />}>
           <Route index element={<HomeRedirect />} />
           <Route path="customers" element={<CustomerListPage />} />
+          <Route path="sales" element={<SaleListPage />} />
+          <Route path="sales/new" element={<NewSalePage />} />
           <Route path="products" element={<ProductListPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="receiving" element={<ReceivingPage />} />
@@ -118,6 +109,7 @@ export function AppRoutes() {
             }
           />
           <Route path="customers" element={<CustomerListPage canAdd={false} />} />
+          <Route path="sales" element={<SaleListPage />} />
           <Route path="products" element={<ProductApprovalPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="receiving" element={<ReceivingPage />} />

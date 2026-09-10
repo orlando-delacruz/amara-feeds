@@ -6,11 +6,12 @@ import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { TextField } from '@/components/ui/TextField'
 import { useMutation } from '@/features/shared'
+import type { Customer } from '@/domain'
 
 interface AddCustomerDialogProps {
   open: boolean
   onClose: () => void
-  onCreated: () => void
+  onCreated: (customer: Customer) => void
 }
 
 const Form = styled.form`
@@ -30,7 +31,7 @@ export function AddCustomerDialog({ open, onClose, onCreated }: AddCustomerDialo
     if (created) {
       setName('')
       setContact('')
-      onCreated()
+      onCreated(created)
     }
   }
 
