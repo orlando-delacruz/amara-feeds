@@ -44,8 +44,9 @@ Selected stack (authority: `docs/TECH-STACK.md`): React + Vite + TypeScript with
 
 Implementation status is determined from the actual repository, not from this file.
 
-- **Phase 0 (Frontend Foundation) — complete:** React + Vite + TypeScript scaffold at the repository root, Styled Components theming with design tokens, React Router with staff and admin shells, reusable UI foundations, and build/type/lint/format/test tooling. `typecheck`, `lint`, `format:check`, `test:run`, and `build` pass.
-- **No business data, mock services, Supabase, or database exist yet.** The store context in the shell is a temporary in-app placeholder replaced in Phase 2.
-- **Next:** Phase 1 (centralized mock data layer), then Phase 2 workflows. Database work (Phase 4+) is gated behind the Phase 3 validation gate.
+- **Phase 0 (Frontend Foundation) — complete:** React + Vite + TypeScript scaffold at the repository root, Styled Components theming with design tokens, React Router with staff and admin shells, reusable UI foundations, and build/type/lint/format/test tooling.
+- **Phase 1 (Centralized Mock Data Layer) — complete:** framework-agnostic async services over a centralized in-memory mock domain model, with confirmed invariants (sale→stock, charge→credit, payment→balance, receiving→stock, product approval) enforced in memory and covered by tests. No UI is wired to the services yet.
+- **No Supabase or database exists yet.** The store context in the shell is a temporary in-app placeholder replaced in Phase 2.
+- **Next:** Phase 2 (frontend business workflows). Database work (Phase 4+) is gated behind the Phase 3 validation gate.
 
-Features described in the documentation reflect intended scope, not confirmed completion. Implementation follows `ROADMAP.md`.
+`typecheck`, `lint`, `format:check`, `test:run`, and `build` pass. Features described in the documentation reflect intended scope, not confirmed completion. Implementation follows `ROADMAP.md`.

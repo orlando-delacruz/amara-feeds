@@ -24,4 +24,21 @@ export default defineConfig(
       globals: { ...globals.browser, ...globals.vitest },
     },
   },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/services/**'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/services/mocks/*', '**/services/mocks/*'],
+              message: 'Import services, not raw mock data (ROADMAP Phase 1 / Gate 2).',
+            },
+          ],
+        },
+      ],
+    },
+  },
 )

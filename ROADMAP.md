@@ -197,11 +197,12 @@ Implementation may decide: file/component/service organization following repo pa
 ## 9. Current Project Status
 
 - Documentation foundation completed (13 finalized documents plus this roadmap).
-- Application implementation has not started; the repository contains documentation only.
-- `ROADMAP.md` (this file) is now the implementation sequence.
-- First implementation task is Phase 0 — Frontend Foundation.
+- **Phase 0 — Frontend Foundation: complete** (Vite + React + TypeScript scaffold, Styled Components theming, React Router with staff/admin shells, reusable UI foundations, tooling recorded in `docs/DECISIONS.md`).
+- **Phase 1 — Centralized Mock Data Layer: complete** (framework-agnostic services over a centralized in-memory mock domain model, confirmed invariants enforced in memory, Gate 2 covered by tests; no UI wired to data yet).
+- `ROADMAP.md` (this file) is the implementation sequence.
+- Next implementation task is Phase 2 — Frontend Business Workflows.
 - No database or Supabase implementation should begin yet — Phases 4+ are gated behind Phase 3.
 
 ## 10. First Implementation Task
 
-**Phase 0 — Frontend Foundation.** The next implementation prompt focuses only on establishing the frontend foundation: Vite + React + TypeScript scaffold, Styled Components, routing structure, staff/admin shells with store context, responsive base, reusable UI foundations, and build/type/lint hygiene with tooling decisions recorded. No mock business data, no Supabase, no database work. Phase 1+ instructions do not belong in the first task.
+**Phase 2 — Frontend Business Workflows.** The next implementation prompt wires the confirmed workflows end-to-end against the Phase 1 mock services, in business-dependency order (store context/auth experience → customers → products + approval → inventory + receiving → sales → credit + payments → dashboard + reports), with success, failure, and empty states. No Supabase, no database work; Phase 1+ mock services are consumed, never raw mock data.

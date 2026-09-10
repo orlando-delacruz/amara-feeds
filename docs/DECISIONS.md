@@ -83,13 +83,14 @@ Hierarchy: a record here cannot authorize requirement violations, security weake
 
 ## 8. Current Decision Register
 
-No formal decision records existed before Phase 0. The following records were created during Phase 0 (frontend foundation). Documented choices in owning documents (e.g. the selected stack in `docs/TECH-STACK.md`) are not retroactively entries here; only material implementation decisions that introduce or change direction are recorded.
+No formal decision records existed before Phase 0. The following records were created during implementation Phases 0–1. Documented choices in owning documents (e.g. the selected stack in `docs/TECH-STACK.md`) are not retroactively entries here; only material implementation decisions that introduce or change direction are recorded.
 
 | ID | Title | Status | Date |
 | --- | --- | --- | --- |
 | DEC-001 | Frontend tooling and verification execution | Accepted | 2026-09-10 |
 | DEC-002 | SPA routing with React Router | Accepted | 2026-09-10 |
 | DEC-003 | Visual language baseline and design tokens | Accepted | 2026-09-10 |
+| DEC-004 | Mock service seam, in-memory datastore, and money representation | Accepted | 2026-09-10 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -135,6 +136,21 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Related documents:** `docs/DESIGN-SYSTEM.md`, `docs/UI-UX.md` §19, `docs/TECH-STACK.md` §3 (Styling), `docs/REQUIREMENTS.md` REQ-ACC-001–004.
 - **Supersedes / Superseded by:** none.
 - **Open questions or follow-up:** Brand artwork, logo, and any marketing palette remain Confirmation Required.
+
+### DEC-004 — Mock service seam, in-memory datastore, and money representation
+
+- **ID:** DEC-004
+- **Title:** Mock service seam, in-memory datastore, and money representation
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** `ROADMAP.md` Phase 1 requires a centralized mock data layer behind a single service/data-access seam so the frontend can behave realistically and later swap to Supabase without UI rewrites. It also requires the smallest shapes and that convenience attributes be flagged. Representation choices here affect every future service, UI workflow, and the Phase 4 schema reference.
+- **Decision:** Provide framework-agnostic async services under `src/services/` (one per confirmed domain) over a single in-memory mock datastore (`src/services/mocks/`), with shared types in `src/domain/`. Confirmed invariants are enforced in memory: sale save deducts the selling store's stock, charge sales create a shared obligation at the origin store, payments update balance/status with payment-store attribution, receiving increases one store's stock, and products stay `pending` until approved. Monetary amounts are integer minor units (centavos) via a `Money` number, formatted only at the UI edge. Store context is passed explicitly to services; no artificial latency; no new runtime dependencies; convenience attributes are flagged with `/** assumed: ... */` and terms remain opaque.
+- **Alternatives considered:** Per-feature services co-located with future UI — rejected; weakens the centralized mock seam and the bounded mock→real swap. Decimal peso numbers — rejected; risks floating-point drift in balances and totals. A React data layer (e.g. React Query) — rejected; global client-state frameworks are prohibited by `docs/ARCHITECTURE.md` §3.7 and were not selected. Simulated network latency — rejected; `docs/UI-UX.md` §12 forbids artificial loading states.
+- **Rationale:** Gives Phase 2 a working, testable domain to build against and Phase 4 an executable reference, while keeping the Phase 6 replacement bounded to service implementations behind stable signatures.
+- **Consequences:** Phase 6 replaces service implementations without UI contract changes. UI and features must import services, never `src/services/mocks/*` (enforced by an ESLint `no-restricted-imports` guardrail). Integer money requires consistent formatting at the UI edge. In-memory state resets on reload, which is acceptable for a mock.
+- **Related documents:** `docs/ARCHITECTURE.md` §§5–6, `docs/DATA-MODEL.md` §§4–5, `docs/API.md` §5, `docs/UI-UX.md` §12, `ROADMAP.md` §3 (Phase 1), `docs/TECH-STACK.md`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Exact fields, payment-term options/calculation rules, validation rules, permissions, and report formats remain Confirmation Required; the `resolveDueDate` helper is the single placeholder for term math. Role-based authorization is not enforced by the mock (frontend checks are never a security boundary per `docs/SECURITY.md`).
 
 ## 9. Per-Area Handling
 
