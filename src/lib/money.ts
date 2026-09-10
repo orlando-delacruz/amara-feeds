@@ -1,5 +1,9 @@
 export type Money = number
 
+export function toMinor(pesos: number): Money {
+  return Math.round(pesos * 100)
+}
+
 export function sumMinor(values: Money[]): Money {
   return values.reduce((total, value) => total + value, 0)
 }

@@ -1,8 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { NotFoundPage, PlaceholderPage } from '@/components/PlaceholderPage'
 import { CustomerListPage } from '@/features/customers/CustomerListPage'
+import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { ProductApprovalPage } from '@/features/products/ProductApprovalPage'
 import { ProductListPage } from '@/features/products/ProductListPage'
+import { ReceivingPage } from '@/features/receiving/ReceivingPage'
 import { RequireRole } from '@/features/session/guards'
 import { SignInPage } from '@/features/session/SignInPage'
 import { useHomePath } from '@/features/session/useHomePath'
@@ -38,18 +40,6 @@ const staffAreas: AreaPlaceholder[] = [
     requirements: 'REQ-CRED-001–007, REQ-PAY-001–002',
   },
   {
-    path: 'inventory',
-    title: 'Inventory',
-    scope: 'Store-specific stock, automatically deducted when a sale is saved.',
-    requirements: 'REQ-INV-001–002',
-  },
-  {
-    path: 'receiving',
-    title: 'Receiving Stock',
-    scope: 'Store-specific stock receipts: store, item, quantity, supplier, purchase/cost price.',
-    requirements: 'REQ-RCV-001',
-  },
-  {
     path: 'reports',
     title: 'Reports / Export / Printing',
     scope: 'Agreed business summaries with Excel export and printing.',
@@ -77,18 +67,6 @@ const adminAreas: AreaPlaceholder[] = [
     requirements: 'REQ-DASH-005',
   },
   {
-    path: 'receiving',
-    title: 'Receiving Review',
-    scope: 'Received stock across both stores.',
-    requirements: 'REQ-DASH-006',
-  },
-  {
-    path: 'products',
-    title: 'Product Approvals',
-    scope: 'Review staff-submitted products; approval activates them.',
-    requirements: 'REQ-PROD-002–003',
-  },
-  {
     path: 'reports',
     title: 'Reports / Export / Printing',
     scope: 'Agreed business summaries with Excel export and printing.',
@@ -109,6 +87,8 @@ export function AppRoutes() {
           <Route index element={<HomeRedirect />} />
           <Route path="customers" element={<CustomerListPage />} />
           <Route path="products" element={<ProductListPage />} />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="receiving" element={<ReceivingPage />} />
           {staffAreas.map((area) => (
             <Route
               key={area.path}
@@ -139,6 +119,8 @@ export function AppRoutes() {
           />
           <Route path="customers" element={<CustomerListPage canAdd={false} />} />
           <Route path="products" element={<ProductApprovalPage />} />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="receiving" element={<ReceivingPage />} />
           {adminAreas.map((area) => (
             <Route
               key={area.path}
