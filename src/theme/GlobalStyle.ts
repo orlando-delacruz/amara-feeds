@@ -53,4 +53,16 @@ export const GlobalStyle = createGlobalStyle`
       transition-duration: 0.01ms !important;
     }
   }
+
+  @media print {
+    header,
+    nav {
+      display: none !important;
+    }
+
+    main {
+      max-width: none !important;
+      padding: 0 !important;
+    }
+  }
 `
