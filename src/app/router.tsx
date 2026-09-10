@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { NotFoundPage, PlaceholderPage } from '@/components/PlaceholderPage'
 import { CustomerListPage } from '@/features/customers/CustomerListPage'
+import { ProductApprovalPage } from '@/features/products/ProductApprovalPage'
+import { ProductListPage } from '@/features/products/ProductListPage'
 import { RequireRole } from '@/features/session/guards'
 import { SignInPage } from '@/features/session/SignInPage'
 import { useHomePath } from '@/features/session/useHomePath'
@@ -48,12 +50,6 @@ const staffAreas: AreaPlaceholder[] = [
     requirements: 'REQ-RCV-001',
   },
   {
-    path: 'products',
-    title: 'Products',
-    scope: 'Product records with staff submission and admin approval before activation.',
-    requirements: 'REQ-PROD-001–003',
-  },
-  {
     path: 'reports',
     title: 'Reports / Export / Printing',
     scope: 'Agreed business summaries with Excel export and printing.',
@@ -98,12 +94,6 @@ const adminAreas: AreaPlaceholder[] = [
     scope: 'Agreed business summaries with Excel export and printing.',
     requirements: 'REQ-REP-001–002',
   },
-  {
-    path: 'users',
-    title: 'Users / Staff',
-    scope: 'Individual staff accounts with store assignment.',
-    requirements: 'REQ-USER-001–002',
-  },
 ]
 
 function HomeRedirect() {
@@ -118,6 +108,7 @@ export function AppRoutes() {
         <Route element={<StaffLayout />}>
           <Route index element={<HomeRedirect />} />
           <Route path="customers" element={<CustomerListPage />} />
+          <Route path="products" element={<ProductListPage />} />
           {staffAreas.map((area) => (
             <Route
               key={area.path}
@@ -147,6 +138,7 @@ export function AppRoutes() {
             }
           />
           <Route path="customers" element={<CustomerListPage canAdd={false} />} />
+          <Route path="products" element={<ProductApprovalPage />} />
           {adminAreas.map((area) => (
             <Route
               key={area.path}
