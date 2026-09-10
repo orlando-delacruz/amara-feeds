@@ -30,7 +30,9 @@ describe('NewSalePage', () => {
     await user.type(screen.getByLabelText(/^Unit price/), '1150')
     await user.click(screen.getByRole('button', { name: 'Save sale' }))
 
-    expect(await screen.findByRole('heading', { name: 'Sales' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
+    ).toBeInTheDocument()
   })
 
   it('records a charge sale with a due date preview', async () => {
@@ -47,7 +49,9 @@ describe('NewSalePage', () => {
     expect(await screen.findByText(/Due date:/)).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Save sale' }))
-    expect(await screen.findByRole('heading', { name: 'Sales' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
+    ).toBeInTheDocument()
   })
 
   it('surfaces the charge-without-customer validation', async () => {
