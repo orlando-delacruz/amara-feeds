@@ -198,11 +198,12 @@ Implementation may decide: file/component/service organization following repo pa
 
 - Documentation foundation completed (13 finalized documents plus this roadmap).
 - **Phase 0 — Frontend Foundation: complete** (Vite + React + TypeScript scaffold, Styled Components theming, React Router with staff/admin shells, reusable UI foundations, tooling recorded in `docs/DECISIONS.md`).
-- **Phase 1 — Centralized Mock Data Layer: complete** (framework-agnostic services over a centralized in-memory mock domain model, confirmed invariants enforced in memory, Gate 2 covered by tests; no UI wired to data yet).
+- **Phase 1 — Centralized Mock Data Layer: complete** (framework-agnostic services over a centralized in-memory mock domain model, confirmed invariants enforced in memory, Gate 2 covered by tests).
+- **Phase 2 — Frontend Business Workflows: complete** (mock sign-in with role-gated shells and store context; customers; products + approval; inventory + receiving; sales flow; credit + cross-store payments; dashboards and printable report summaries; per-workflow success/failure/empty states; decision records DEC-005 and DEC-006).
 - `ROADMAP.md` (this file) is the implementation sequence.
-- Next implementation task is Phase 2 — Frontend Business Workflows.
+- Next implementation task is Phase 3 — Frontend Workflow Validation (the gate before any database work).
 - No database or Supabase implementation should begin yet — Phases 4+ are gated behind Phase 3.
 
 ## 10. First Implementation Task
 
-**Phase 2 — Frontend Business Workflows.** The next implementation prompt wires the confirmed workflows end-to-end against the Phase 1 mock services, in business-dependency order (store context/auth experience → customers → products + approval → inventory + receiving → sales → credit + payments → dashboard + reports), with success, failure, and empty states. No Supabase, no database work; Phase 1+ mock services are consumed, never raw mock data.
+**Phase 3 — Frontend Workflow Validation.** Structured walkthroughs of the confirmed workflows built in Phase 2 (cross-store payments, sales with stock effects, shared-customer handling, approval gating, receiving, dashboard trust, staff/admin split), producing the confirmation-question list the database design must respect. Database work (Phase 4) opens only after this gate. Do not begin migrations, schemas, or Supabase work during Phase 3.

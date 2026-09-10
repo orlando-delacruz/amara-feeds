@@ -83,7 +83,7 @@ Hierarchy: a record here cannot authorize requirement violations, security weake
 
 ## 8. Current Decision Register
 
-No formal decision records existed before Phase 0. The following records were created during implementation Phases 0–1. Documented choices in owning documents (e.g. the selected stack in `docs/TECH-STACK.md`) are not retroactively entries here; only material implementation decisions that introduce or change direction are recorded.
+No formal decision records existed before Phase 0. The following records were created during implementation Phases 0–2. Documented choices in owning documents (e.g. the selected stack in `docs/TECH-STACK.md`) are not retroactively entries here; only material implementation decisions that introduce or change direction are recorded.
 
 | ID | Title | Status | Date |
 | --- | --- | --- | --- |
@@ -91,6 +91,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-002 | SPA routing with React Router | Accepted | 2026-09-10 |
 | DEC-003 | Visual language baseline and design tokens | Accepted | 2026-09-10 |
 | DEC-004 | Mock service seam, in-memory datastore, and money representation | Accepted | 2026-09-10 |
+| DEC-005 | Mock session, role gating, and shared async data hooks | Accepted | 2026-09-10 |
+| DEC-006 | Report summaries with browser print; Excel export deferred | Accepted | 2026-09-10 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -151,6 +153,36 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Related documents:** `docs/ARCHITECTURE.md` §§5–6, `docs/DATA-MODEL.md` §§4–5, `docs/API.md` §5, `docs/UI-UX.md` §12, `ROADMAP.md` §3 (Phase 1), `docs/TECH-STACK.md`.
 - **Supersedes / Superseded by:** none.
 - **Open questions or follow-up:** Exact fields, payment-term options/calculation rules, validation rules, permissions, and report formats remain Confirmation Required; the `resolveDueDate` helper is the single placeholder for term math. Role-based authorization is not enforced by the mock (frontend checks are never a security boundary per `docs/SECURITY.md`).
+
+### DEC-005 — Mock session, role gating, and shared async data hooks
+
+- **ID:** DEC-005
+- **Title:** Mock session, role gating, and shared async data hooks
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** Phase 2 scope includes the "store-context/auth experience," but authentication detail is Confirmation Required and no real auth exists (`docs/SECURITY.md` §2). The Phase 1 services are async, so every workflow needs consistent loading, error, empty, and submission behavior (`docs/UI-UX.md` §12), and the temporary Phase 0 store switcher must be replaced.
+- **Decision:** Add a mock session (`SessionProvider`/`useSession`) with a seeded-account sign-in picker over `userService` and route guards (`RequireAuth`/`RequireRole`). The store context derives from the signed-in user: staff are locked to their assigned store; admins are business-wide and can switch the store context for store-specific views. Add two shared async hooks, `useAsyncData` (loading/error/reload) and `useMutation` (pending/double-submit guard/error), as the standard data-fetching convention. This is UI gating only and is never a security boundary.
+- **Alternatives considered:** Defer any sign-in UI until real Supabase Auth — rejected; Phase 2 names the auth/store-context experience and the mock seam makes it cheap to exercise before Phase 3 validation. Keep the unguarded staff/admin shell toggle — rejected; it would not exercise role-based behavior. Per-page ad-hoc state instead of shared hooks — rejected; would duplicate loading/error/submission handling across every workflow.
+- **Rationale:** Exercises role and store behavior early so Phase 3 walkthroughs and Phase 4 authorization design build on observed behavior, while keeping the mock→real swap bounded to replacing the session provider and service implementations.
+- **Consequences:** The session is in-memory and resets on reload. Real authentication and authorization replace the mock in Phases 4–5. `useAsyncData`/`useMutation` are the conventions feature pages should follow.
+- **Related documents:** `ROADMAP.md` §3 (Phase 2), `docs/UI-UX.md` §§4, 12, `docs/SECURITY.md` §§2–3, `docs/ARCHITECTURE.md` §9.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Authentication flow detail (session handling, provisioning, recovery) remains Confirmation Required.
+
+### DEC-006 — Report summaries with browser print; Excel export deferred
+
+- **ID:** DEC-006
+- **Title:** Report summaries with browser print; Excel export deferred
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** REQ-REP-001/002 require Excel export and printing of the agreed summaries, but exact report columns and formats are Confirmation Required (REQ-REP-003) and the export library is undecided (`docs/TECH-STACK.md` §7). The `ROADMAP.md` confirmation matrix defers export UI and formats while allowing summary views.
+- **Decision:** Phase 2 ships the agreed summary views with a date selector and a print-friendly layout (browser `window.print()` plus print CSS hiding app chrome). Excel export UI and the export library are deferred until report formats are confirmed.
+- **Alternatives considered:** Add an Excel export library now — rejected; report formats are unconfirmed and a dependency would be premature. Defer printing as well — rejected; printing is unblocked by formats and is cheap to provide now.
+- **Rationale:** Satisfies the confirmed printing requirement and gives Phase 3 a concrete summary surface to review, without inventing report formats or adding an unconfirmed dependency.
+- **Consequences:** Export is added later behind the same summary components; the print CSS lives in `src/theme/GlobalStyle.ts`; the export library selection is re-opened when formats are confirmed.
+- **Related documents:** `docs/REQUIREMENTS.md` REQ-REP-001–003, `docs/TECH-STACK.md` §7, `ROADMAP.md` §6.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Exact report columns, formats, and the export library remain Confirmation Required.
 
 ## 9. Per-Area Handling
 

@@ -45,8 +45,9 @@ Selected stack (authority: `docs/TECH-STACK.md`): React + Vite + TypeScript with
 Implementation status is determined from the actual repository, not from this file.
 
 - **Phase 0 (Frontend Foundation) — complete:** React + Vite + TypeScript scaffold at the repository root, Styled Components theming with design tokens, React Router with staff and admin shells, reusable UI foundations, and build/type/lint/format/test tooling.
-- **Phase 1 (Centralized Mock Data Layer) — complete:** framework-agnostic async services over a centralized in-memory mock domain model, with confirmed invariants (sale→stock, charge→credit, payment→balance, receiving→stock, product approval) enforced in memory and covered by tests. No UI is wired to the services yet.
-- **No Supabase or database exists yet.** The store context in the shell is a temporary in-app placeholder replaced in Phase 2.
-- **Next:** Phase 2 (frontend business workflows). Database work (Phase 4+) is gated behind the Phase 3 validation gate.
+- **Phase 1 (Centralized Mock Data Layer) — complete:** framework-agnostic async services over a centralized in-memory mock domain model, with confirmed invariants (sale→stock, charge→credit, payment→balance, receiving→stock, product approval) enforced in memory and covered by tests.
+- **Phase 2 (Frontend Business Workflows) — complete:** mock sign-in with role-gated staff/admin shells and store context; customers (list/search/add); products with submit→pending→approve; per-store inventory and receiving; the full sales flow (cash/charge, terms with due-date preview, delivery); shared credit with cross-store payment recording; staff/admin dashboards and printable report summaries. All workflows consume services (never raw mocks) with loading, empty, error, and success states.
+- **No Supabase or database exists yet.** Authentication is a mock account picker; real auth, authorization, and persistence are Phase 4+.
+- **Next:** Phase 3 (frontend workflow validation gate). Database work (Phase 4+) is gated behind it.
 
 `typecheck`, `lint`, `format:check`, `test:run`, and `build` pass. Features described in the documentation reflect intended scope, not confirmed completion. Implementation follows `ROADMAP.md`.
