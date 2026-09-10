@@ -69,7 +69,7 @@ This mock domain model is intended to become the **working business-domain refer
 ### Phase 3 — Frontend Workflow Validation (gate before database work)
 
 - **Objective:** Break and fix workflows while fixes are cheap; produce the confirmation-question list that database design must respect.
-- **Scope:** Structured walkthroughs of cross-store payments, sales with stock effects, shared-customer handling, approval gating, receiving, dashboard trust, and the staff/admin split; store-context clarity and shared-vs-specific confusion review; immediate rework and re-walkthrough.
+- **Scope:** Structured walkthroughs of cross-store payments, sales with stock effects, shared-customer handling, approval gating, receiving, dashboard trust, and the staff/admin split, each traced to requirement IDs; store-context clarity and shared-vs-specific confusion review; manual browser walkthroughs on mobile and desktop viewports (the interactive pass); immediate rework and re-walkthrough.
 - **Dependencies:** Phase 2.
 - **Relevant documentation:** `UI-UX.md` §§2, 14–17, `TESTING.md` §§4–5 (mock-scoped checklists), `DEVELOPMENT.md` §12.
 - **Confirmation Required items:** This phase surfaces confirmation questions — record them, do not answer them.
@@ -79,17 +79,17 @@ This mock domain model is intended to become the **working business-domain refer
 ### Phase 4 — Database
 
 - **Objective:** Real Supabase/PostgreSQL foundation for exactly the validated workflows.
-- **Scope:** Schema, relationships, and constraints per `DATA-MODEL.md`; shared vs store-scoped separation with store attribution; pending/active and outstanding/settled states; RLS policies for store assignment and admin-wide access; versioned Supabase migrations. No frontend redesign unless a genuine data-model requirement forces it.
+- **Scope:** Schema, relationships, and constraints per `DATA-MODEL.md`; shared vs store-scoped separation with store attribution; pending/active and outstanding/settled states; RLS policies for store assignment and admin-wide access; versioned Supabase migrations; minimal seed data for development/preview parity (mirroring the mock seed facts in shape, never real customer data per `TESTING.md` §9). No frontend redesign unless a genuine data-model requirement forces it.
 - **Dependencies:** Phase 3 gate; Phase 1 mock shapes as reference input, not schema.
 - **Relevant documentation:** `DATA-MODEL.md` §§4–9, 11, `ARCHITECTURE.md` §§3.3–3.4, 4–5, `SECURITY.md` §§3–5, `API.md` §10, `REQUIREMENTS.md`, `SECURITY.md` confirmation matrices.
 - **Confirmation Required items:** Exact fields must be finalized-or-explicitly-assumed before migrations are written; detailed permission extras, retention/deletion machinery, and unbuilt-behavior structures stay out.
-- **Validation:** Migrations apply/revert cleanly; per-structure boundary review (shared readable cross-store with attribution; scoped records store-bound).
+- **Validation:** Migrations apply/revert cleanly; per-structure boundary review (shared readable cross-store with attribution; scoped records store-bound); seed loads a parity dataset with no real customer data.
 - **Definition of Done:** Reviewed migration set with RLS boundaries, traced to concepts; frontend untouched.
 
 ### Phase 5 — Backend/API/Data Operations
 
 - **Objective:** The enforcement the mocks explicitly did not provide, behind the existing service abstraction.
-- **Scope:** Atomic sale-with-deduction; payment-with-balance/status update; cross-store attribution; approval-gated activation; store-scoped and admin-wide authorization execution — as database transactions/functions plus RLS. No separate Node/Express backend (none selected or justified).
+- **Scope:** Atomic sale-with-deduction; payment-with-balance/status update; cross-store attribution; approval-gated activation; store-scoped and admin-wide authorization execution; authenticated-identity enforcement at the data layer (anonymous reaches nothing operational; Supabase Auth as the identity foundation per `SECURITY.md` §2) — as database transactions/functions plus RLS. No separate Node/Express backend (none selected or justified).
 - **Dependencies:** Phase 4.
 - **Relevant documentation:** `ARCHITECTURE.md` §§1, 3, 5, 9, `API.md` §§5, 10, 12, `SECURITY.md` §§3–5, 8, `TECH-STACK.md` §3.
 - **Confirmation Required items:** Calculation rules beyond confirmed arithmetic; reversals/edits (not built); field-level validation detail as confirmed.
@@ -99,7 +99,7 @@ This mock domain model is intended to become the **working business-domain refer
 ### Phase 6 — Mock → Real Integration
 
 - **Objective:** Re-point services from mocks to Supabase holding the frontend contract stable; fix mismatches openly.
-- **Scope:** Service-by-service replacement in Phase 2 order; mismatch log reviewed per domain (frontend changes where validated UX rested on an Assumed shape; service adaptation for shape-only differences); mocks retired per domain, never left as parallel paths.
+- **Scope:** Service-by-service replacement in Phase 2 order, including the mock session provider → Supabase Auth swap (DEC-005) with role/store-gating behavior preserved; mismatch log reviewed per domain (frontend changes where validated UX rested on an Assumed shape; service adaptation for shape-only differences); mocks retired per domain, never left as parallel paths.
 - **Dependencies:** Phases 2 (contract) and 5 (real operations).
 - **Relevant documentation:** `API.md` §§5–7, 11, `ARCHITECTURE.md` §5, `DEVELOPMENT.md` §§6–7, 11.
 - **Confirmation Required items:** Mismatches rooted in Assumed shapes escalate the underlying confirmation question instead of being hidden in adapters.
@@ -109,7 +109,7 @@ This mock domain model is intended to become the **working business-domain refer
 ### Phase 7 — Real-System Validation
 
 - **Objective:** Prove confirmed lifecycles against the real database and backend.
-- **Scope:** Full `TESTING.md` §§4–5 execution: cross-store partial-to-settled lifecycle, atomic sale/stock under failure, RLS negative testing, approval gating, shared-customer visibility, dashboard/report reconciliation, responsive/accessibility baseline, states and recovery.
+- **Scope:** Full `TESTING.md` §§4–5 execution: cross-store partial-to-settled lifecycle, atomic sale/stock under failure, RLS negative testing, approval gating, shared-customer visibility, dashboard/report reconciliation, responsive/accessibility baseline, qualitative performance checks for frequent workflows (no invented numeric targets), states and recovery. Critical journeys additionally verified in a real browser on mobile and desktop viewports; conditional Playwright critical-path E2E only if triggered and recorded in `DECISIONS.md`. Debugging follows the reproduce → fix → re-verify loop in `DEVELOPMENT.md` §12; risk-based regression per `TESTING.md` §7 after every fix.
 - **Dependencies:** Phase 6.
 - **Relevant documentation:** `TESTING.md` (whole), `SECURITY.md` (checklist), `DEVELOPMENT.md` §11.
 - **Confirmation Required items:** Tested only as far as confirmed; remainder reported, never invented into expectations.
@@ -119,12 +119,12 @@ This mock domain model is intended to become the **working business-domain refer
 ### Phase 8 — Hardening + Deployment
 
 - **Objective:** Safe, verified, handed-over production system.
-- **Scope:** Residual closures (logging/browser-security policy, legal wording); risk-based regression; production Supabase project with reviewed migrations and Auth/RLS verification; `DEPLOYMENT.md` smoke test; client handoff.
+- **Scope:** Residual closures (logging/browser-security policy, legal wording); risk-based regression; risk-based final web-quality pass on the production build (accessibility + performance per `DEPLOYMENT.md` §8; console/network output clean — SEO is explicitly not applicable: internal app with no public surface); production Supabase project with reviewed migrations and Auth/RLS verification; `DEPLOYMENT.md` smoke test; final documentation updates (usage docs, `DECISIONS.md` entries, known limitations); client handoff.
 - **Dependencies:** Phase 7.
 - **Relevant documentation:** `DEPLOYMENT.md` (whole), `TESTING.md` §§6–7, `SECURITY.md` §§6, 9–12, `DEVELOPMENT.md` §§14–16.
 - **Confirmation Required items:** Launch approval, account ownership, production-data readiness — closed here, never assumed.
-- **Validation:** Production smoke test passes; handoff checklist complete.
-- **Definition of Done:** Live system verified and handed over with documented limitations.
+- **Validation:** Deployment succeeds **and**, separately, post-deploy production verification passes (smoke test + launch verification per `DEPLOYMENT.md` §10 — a failed smoke test blocks launch); deploy success alone never completes this phase. Handoff checklist complete.
+- **Definition of Done:** Live system verified against production (not merely deployed) and handed over with documented limitations.
 
 ## 4. Mock → Database Relationship
 
@@ -154,14 +154,14 @@ The mock domain model gives the frontend realistic representations of shared cus
 
 ## 5. Validation Gates
 
-- **Gate 1:** Frontend foundation works — scaffold builds, shells render mobile-first, tooling recorded. Opens Phase 1.
-- **Gate 2:** Centralized mock layer can represent all confirmed workflows — service coverage traced to requirement IDs, no raw mock data in components. Opens Phase 2.
-- **Gate 3:** Confirmed frontend workflows are usable and stable enough for database design — walkthrough findings resolved or explicitly deferred. **Opens Phase 4; no database work before this gate.**
-- **Gate 4:** Database/data-layer integrity and authorization are proven — atomicity and RLS demonstrated UI-independently. Opens Phase 6.
-- **Gate 5:** Real integration reproduces validated workflows — Phase 2 evidences repeat against Supabase with an empty/justified mismatch log. Opens Phase 7 exit and Phase 8.
-- **Gate 6:** Production smoke testing and handoff succeed — live system verified with documented limitations.
+Each gate names its entry condition (what must be true to assess it), validation evidence (what is inspected), exit condition (what must hold to pass), and next-phase dependency (what the pass opens). No phase is complete merely because files were created. Completion requires its validation and Definition of Done.
 
-No phase is complete merely because files were created. Completion requires its validation and Definition of Done.
+- **Gate 1 — Frontend foundation works.** Entry: Phase 0 scope implemented. Evidence: clean build/type/lint output; shells rendering mobile-first with store context; tooling recorded in `docs/DECISIONS.md`. Exit: scaffold reviewed, shells demonstrable, no business data present. Opens Phase 1.
+- **Gate 2 — Centralized mock layer can represent all confirmed workflows.** Entry: Phase 1 services implemented. Evidence: service coverage traced to requirement IDs; no raw mock data imports in components (lint guardrail); workflow tests exercising confirmed invariants. Exit: stable reviewed service contract; mock data demonstrably shared-vs-store-specific. Opens Phase 2.
+- **Gate 3 — Confirmed frontend workflows are usable and stable enough for database design.** Entry: Phase 2 workflows demonstrable on mocks. Evidence: walkthrough records (expected vs observed, environment, pass/fail, findings) with each walkthrough traced to requirement IDs; issue list empty or explicitly deferred; confirmation-question list updated. Exit: written go-ahead recorded in the Phase 3 working record. **Opens Phase 4; no database work before this gate.**
+- **Gate 4 — Database/data-layer integrity and authorization are proven.** Entry: Phases 4–5 implemented. Evidence: UI-independent data-layer proof — successes produce all effects, failures produce none, unauthorized attempts denied without leaking record existence, approval bypass impossible. Exit: atomicity and RLS/authorization demonstrated with evidence. Opens Phase 6.
+- **Gate 5 — Real integration reproduces validated workflows.** Entry: Phase 6 service replacement complete with zero mock imports on business paths. Evidence: Phase 2 demonstrations repeated unchanged against Supabase; mismatch log empty or explicitly justified. Exit: validated workflows reproducible against the real backend. Opens Phase 7. (Phase 8 opens only on the Phase 7 Definition of Done: all confirmed behaviors Verified with evidence, everything else explicitly categorized.)
+- **Gate 6 — Production verification and handoff succeed.** Entry: Phase 8 scope complete on preview/production. Evidence: deployment output **plus** post-deploy production smoke test and launch verification per `DEPLOYMENT.md` §10; completed handoff checklist; documented limitations. Exit: live system verified against production (deploy success alone never passes this gate) and handed over. Closes the project.
 
 ## 6. Confirmation Required Items
 
@@ -185,6 +185,7 @@ Unresolved items are preserved as-is; nothing here answers them.
 - Do not scatter mock data directly across UI components; UI consumes the service/data-access layer.
 - Mock data models confirmed business concepts and relationships per `DATA-MODEL.md`.
 - Do not treat mock behavior as proof of database integrity or authorization; those are Phase 5 properties proven in Gates 4–5.
+- Verify each vertical slice before the next begins (established automated checks plus manual behavior and failure-state checks per `DEVELOPMENT.md` §11); phase validations are gates, not the first time the code is checked.
 - Critical integrity rules (atomic sale→stock, payment→balance, approval gating, store/admin scoping) are eventually enforced at the real data layer.
 - Do not introduce Node/Express merely because this roadmap says "Backend/API" — Supabase-direct remains selected unless future evidence requires otherwise (recorded in `DECISIONS.md` if ever changed).
 - Do not invent unresolved business requirements; do not allow scope creep; prefer the smallest maintainable implementation.
@@ -193,17 +194,3 @@ Unresolved items are preserved as-is; nothing here answers them.
 ## 8. Implementation Decision Boundaries
 
 Implementation may decide: file/component/service organization following repo patterns; command/CI/coverage execution detail; migration file sequencing; service function shapes within the confirmed contract; test placement per established tooling. These never become business requirements and are recorded where the workflow requires. Business confirmation is required for: fields, terms, validation rules, permissions, report formats, edge-case behaviors, and any scope change — implementation proceeds on explicit assumptions or waits, never on silent invention.
-
-## 9. Current Project Status
-
-- Documentation foundation completed (13 finalized documents plus this roadmap).
-- **Phase 0 — Frontend Foundation: complete** (Vite + React + TypeScript scaffold, Styled Components theming, React Router with staff/admin shells, reusable UI foundations, tooling recorded in `docs/DECISIONS.md`).
-- **Phase 1 — Centralized Mock Data Layer: complete** (framework-agnostic services over a centralized in-memory mock domain model, confirmed invariants enforced in memory, Gate 2 covered by tests).
-- **Phase 2 — Frontend Business Workflows: complete** (mock sign-in with role-gated shells and store context; customers; products + approval; inventory + receiving; sales flow; credit + cross-store payments; dashboards and printable report summaries; per-workflow success/failure/empty states; decision records DEC-005 and DEC-006).
-- `ROADMAP.md` (this file) is the implementation sequence.
-- Next implementation task is Phase 3 — Frontend Workflow Validation (the gate before any database work).
-- No database or Supabase implementation should begin yet — Phases 4+ are gated behind Phase 3.
-
-## 10. First Implementation Task
-
-**Phase 3 — Frontend Workflow Validation.** Structured walkthroughs of the confirmed workflows built in Phase 2 (cross-store payments, sales with stock effects, shared-customer handling, approval gating, receiving, dashboard trust, staff/admin split), producing the confirmation-question list the database design must respect. Database work (Phase 4) opens only after this gate. Do not begin migrations, schemas, or Supabase work during Phase 3.
