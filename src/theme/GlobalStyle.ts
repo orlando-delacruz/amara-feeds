@@ -34,6 +34,11 @@ export const GlobalStyle = createGlobalStyle`
     color: inherit;
   }
 
+  button,
+  a {
+    touch-action: manipulation;
+  }
+
   img,
   svg {
     display: block;

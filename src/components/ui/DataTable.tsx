@@ -76,8 +76,8 @@ export function DataTable({ caption, columns, rows, emptyMessage }: DataTablePro
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            // PHASE-0 PLACEHOLDER: index keys are acceptable for static
-            // foundation demos; real lists use record identities in Phase 1+.
+            // Rows render in source order; keys are positional because row
+            // identities stay inside services and never cross this seam.
             <BodyRow key={index}>
               {columns.map((column) => (
                 <BodyCell key={column.key}>{row[column.key]}</BodyCell>

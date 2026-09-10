@@ -1,5 +1,6 @@
 export { getErrorMessage } from './getErrorMessage'
 export { useAsyncData } from './hooks/useAsyncData'
 export type { AsyncDataState } from './hooks/useAsyncData'
+export { useMediaQuery } from './hooks/useMediaQuery'
 export { useMutation } from './hooks/useMutation'
 export type { MutationState } from './hooks/useMutation'

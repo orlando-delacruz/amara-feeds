@@ -57,6 +57,7 @@ export const tokens = {
       lg: '18px',
       xl: '20px',
       xxl: '24px',
+      display: '32px',
     },
     weight: {
       regular: 400,
@@ -88,6 +89,12 @@ export const tokens = {
   shadow: {
     sm: '0 1px 2px rgba(17, 24, 39, 0.06)',
     md: '0 8px 24px rgba(17, 24, 39, 0.16)',
+    lg: '0 16px 40px rgba(17, 24, 39, 0.22)',
+  },
+  layout: {
+    headerHeight: '60px',
+    tabBarHeight: '64px',
+    contentMaxWidth: '72rem',
   },
   breakpoint: {
     tablet: '640px',

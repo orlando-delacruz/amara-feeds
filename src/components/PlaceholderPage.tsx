@@ -7,18 +7,17 @@ import { useHomePath } from '@/features/session/useHomePath'
 interface PlaceholderPageProps {
   title: string
   scope: string
-  requirements: string
 }
 
-export function PlaceholderPage({ title, scope, requirements }: PlaceholderPageProps) {
+export function PlaceholderPage({ title, scope }: PlaceholderPageProps) {
   const navigate = useNavigate()
   const home = useHomePath()
   return (
     <div>
       <PageHeader title={title} description={scope} />
       <EmptyState
-        title="Area foundation ready"
-        description={`This area is defined for the confirmed scope (${requirements}). Business workflows arrive in Phase 2; no business data exists yet.`}
+        title="Not available yet"
+        description="Staff account management is not part of this version. Contact your administrator for account changes."
         action={
           <Button variant="secondary" onClick={() => navigate(home)}>
             Back to dashboard

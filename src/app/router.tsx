@@ -61,7 +61,6 @@ export function AppRoutes() {
               <PlaceholderPage
                 title="Users / Staff"
                 scope="Individual staff accounts with store assignment."
-                requirements="REQ-USER-001–002"
               />
             }
           />

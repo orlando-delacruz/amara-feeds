@@ -26,7 +26,9 @@ function renderAt(path: string, user: User | null = staffUser) {
 describe('application shell', () => {
   it('sends unauthenticated users to sign-in', async () => {
     renderAt('/dashboard', null)
-    expect(await screen.findByText('Mock sign-in')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Amara Feeds' }),
+    ).toBeInTheDocument()
   })
 
   it('redirects the root path to the staff dashboard', () => {

@@ -89,28 +89,33 @@ always shown as text next to it.
 
 - **Family (system stack, no web-font dependency):**
   `system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`.
-- **Sizes:** `xs` 12px · `sm` 14px · `md` 16px (base) · `lg` 18px · `xl` 20px · `2xl` 24px.
+- **Sizes:** `xs` 12px · `sm` 14px · `md` 16px (base) · `lg` 18px · `xl` 20px · `2xl` 24px · `display` 32px (stat values and brand wordmarks only).
 - **Weights:** `regular` 400 · `medium` 500 · `semibold` 600 · `bold` 700.
 - **Line heights:** `tight` 1.25 (headings) · `base` 1.5 (body).
 - Form labels use `sm` semibold; body text is never smaller than `sm` except captions (`xs`).
+- Numeric values (money, quantities, counts) use `font-variant-numeric: tabular-nums` so figures align.
+- Headings use `text-wrap: balance` to avoid widows.
 
 ## 5. Spacing, Radii, Shadows
 
 - **Spacing (4px base):** `0` 0 · `xs` 4px · `sm` 8px · `md` 12px · `lg` 16px · `xl` 24px ·
   `2xl` 32px · `3xl` 48px.
 - **Radii:** `sm` 4px · `md` 8px · `lg` 12px · `full` 9999px.
-- **Shadows:** `sm` (cards) · `md` (dialogs, elevated nav). Dialogs also dim the page with
+- **Shadows:** `sm` (cards) · `md` (dialogs, elevated nav) · `lg` (sheets, prominent surfaces). Dialogs also dim the page with
   `surface.overlay`.
+- **Layout:** `layout.headerHeight` 60px · `layout.tabBarHeight` 64px ·
+  `layout.contentMaxWidth` 72rem. Header and tab-bar dimensions are tokens, never hardcoded offsets.
 
 ## 6. Breakpoints and Layout
 
-| Token         | Value    | Layout effect                                                  |
-| ------------- | -------- | -------------------------------------------------------------- |
-| base (mobile) | < 640px  | Bottom navigation bar; single column; tables scroll internally |
-| `tablet`      | ≥ 640px  | Wider forms and lists; same destinations as mobile             |
-| `desktop`     | ≥ 1024px | Side navigation replaces the bottom bar; content max-width     |
+| Token         | Value    | Layout effect                                                                         |
+| ------------- | -------- | ------------------------------------------------------------------------------------- |
+| base (mobile) | < 640px  | Fixed tab bar (max 5 destinations + More sheet); single column; lists render as cards |
+| `tablet`      | ≥ 640px  | Wider forms and lists; same destinations as mobile                                    |
+| `desktop`     | ≥ 1024px | Side navigation replaces the tab bar; content max-width                               |
 
-Navigation destinations are identical on all viewports (`docs/UI-UX.md` §6).
+Navigation destinations are identical on all viewports (`docs/UI-UX.md` §6). The More sheet groups overflow destinations; it adds no new destinations.
+Fixed chrome respects device safe areas (`env(safe-area-inset-*)`) and the tab bar uses icon + label pairs (inline SVG, `currentColor`, decorative and hidden from assistive tech).
 
 ## 7. Motion
 

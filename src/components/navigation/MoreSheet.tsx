@@ -1,33 +1,23 @@
-import styled from 'styled-components'
 import { NavLink } from 'react-router-dom'
-import { NavIcon } from './icons'
+import { Dialog } from '@/components/ui/Dialog'
 import type { NavItem } from './navItems'
+import styled from 'styled-components'
+import { NavIcon } from './icons'
 
-interface SideNavProps {
+interface MoreSheetProps {
+  open: boolean
   items: NavItem[]
+  onClose: () => void
 }
-
-const Aside = styled.nav`
-  display: none;
-
-  @media (min-width: ${({ theme }) => theme.breakpoint.desktop}) {
-    display: block;
-    background-color: ${({ theme }) => theme.color.surface.card};
-    border-right: 1px solid ${({ theme }) => theme.color.border.default};
-    padding: ${({ theme }) => theme.space.lg} ${({ theme }) => theme.space.md};
-  }
-`
 
 const List = styled.ul`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space.xs};
   list-style: none;
-  position: sticky;
-  top: calc(${({ theme }) => theme.layout.headerHeight} + ${({ theme }) => theme.space.md});
 `
 
-const StyledNavLink = styled(NavLink)`
+const RowLink = styled(NavLink)`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space.md};
@@ -35,7 +25,7 @@ const StyledNavLink = styled(NavLink)`
   padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md};
   border-radius: ${({ theme }) => theme.radius.md};
   font-weight: ${({ theme }) => theme.font.weight.medium};
-  color: ${({ theme }) => theme.color.text.secondary};
+  color: ${({ theme }) => theme.color.text.primary};
   text-decoration: none;
 
   &:hover {
@@ -49,19 +39,19 @@ const StyledNavLink = styled(NavLink)`
   }
 `
 
-export function SideNav({ items }: SideNavProps) {
+export function MoreSheet({ open, items, onClose }: MoreSheetProps) {
   return (
-    <Aside aria-label="Primary">
+    <Dialog open={open} title="More" onClose={onClose}>
       <List>
         {items.map((item) => (
           <li key={item.to}>
-            <StyledNavLink to={item.to} end={item.to === '/dashboard' || item.to === '/admin'}>
+            <RowLink to={item.to} onClick={onClose}>
               <NavIcon name={item.icon} />
               {item.label}
-            </StyledNavLink>
+            </RowLink>
           </li>
         ))}
       </List>
-    </Aside>
+    </Dialog>
   )
 }

@@ -37,9 +37,17 @@ const SkipLink = styled.a`
 
 const Content = styled.main`
   width: 100%;
-  max-width: 72rem;
+  max-width: ${({ theme }) => theme.layout.contentMaxWidth};
   margin: 0 auto;
   padding: ${({ theme }) => theme.space.lg};
+  padding-bottom: calc(
+    ${({ theme }) => theme.layout.tabBarHeight} + env(safe-area-inset-bottom, 0px) +
+      ${({ theme }) => theme.space.lg}
+  );
+
+  @media (min-width: ${({ theme }) => theme.breakpoint.desktop}) {
+    padding-bottom: ${({ theme }) => theme.space.lg};
+  }
 `
 
 export function AppShell({ sectionLabel, navItems }: AppShellProps) {

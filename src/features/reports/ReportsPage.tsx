@@ -13,7 +13,7 @@ export function ReportsPage() {
     <Stack>
       <PageHeader
         title="Reports"
-        description="Agreed business summaries. Excel export formats remain under confirmation; printing is available."
+        description="Business summaries for the selected date. Print from this page."
         actions={<Button onClick={() => window.print()}>Print</Button>}
       />
       <TextField

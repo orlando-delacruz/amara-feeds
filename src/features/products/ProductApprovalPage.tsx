@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { approveProduct, listProducts } from '@/services'
 import { Alert } from '@/components/ui/Alert'
+import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { DataTable } from '@/components/ui/DataTable'
-import { EmptyState } from '@/components/ui/EmptyState'
-import { ErrorState } from '@/components/ui/ErrorState'
-import { LoadingState } from '@/components/ui/LoadingState'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { RecordList } from '@/components/ui/RecordList'
 import { Stack } from '@/components/ui/Stack'
 import { useAsyncData, useMutation } from '@/features/shared'
 import type { Product } from '@/domain'
@@ -37,31 +35,38 @@ export function ProductApprovalPage() {
         description="Approve staff-submitted products to make them active."
       />
       {notice && <Alert variant="success">{notice}</Alert>}
-      {loading && <LoadingState text="Loading pending products…" />}
-      {error && <ErrorState description={error} onRetry={reload} />}
-      {!loading && !error && data && data.length === 0 && (
-        <EmptyState
-          title="No products awaiting approval"
-          description="Nothing to review right now."
-        />
-      )}
-      {!loading && !error && data && data.length > 0 && (
-        <DataTable
-          caption="Pending products"
-          columns={[
-            { key: 'name', header: 'Name' },
-            { key: 'action', header: '' },
-          ]}
-          rows={data.map((product) => ({
-            name: product.name,
-            action: (
-              <Button size="sm" onClick={() => setSelected(product)}>
-                Approve
-              </Button>
-            ),
-          }))}
-        />
-      )}
+      <AsyncBoundary
+        loading={loading}
+        loadingText="Loading pending products…"
+        error={error}
+        onRetry={reload}
+        empty={
+          data && data.length === 0
+            ? {
+                title: 'No products awaiting approval',
+                description: 'Nothing to review right now.',
+              }
+            : null
+        }
+      >
+        {data && data.length > 0 && (
+          <RecordList
+            caption="Pending products"
+            columns={[
+              { key: 'name', header: 'Name' },
+              { key: 'action', header: 'Action' },
+            ]}
+            rows={data.map((product) => ({
+              name: product.name,
+              action: (
+                <Button size="sm" onClick={() => setSelected(product)}>
+                  Approve
+                </Button>
+              ),
+            }))}
+          />
+        )}
+      </AsyncBoundary>
       <ConfirmDialog
         open={selected !== null}
         title="Approve product"

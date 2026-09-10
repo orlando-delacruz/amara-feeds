@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button'
 import { DateText } from '@/components/ui/DateText'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Section } from '@/components/ui/Section'
 import { Select } from '@/components/ui/Select'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
@@ -31,28 +32,24 @@ interface ItemLine {
 
 const emptyLine: ItemLine = { productId: '', quantity: '', unitPrice: '' }
 
-const Section = styled.section`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.space.md};
-  padding: ${({ theme }) => theme.space.lg};
-  background-color: ${({ theme }) => theme.color.surface.card};
-  border: 1px solid ${({ theme }) => theme.color.border.default};
-  border-radius: ${({ theme }) => theme.radius.lg};
-`
-
-const SectionTitle = styled.h2`
-  font-size: ${({ theme }) => theme.font.size.lg};
-  font-weight: ${({ theme }) => theme.font.weight.semibold};
-`
-
 const ItemRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr 5rem 6.5rem auto;
+  grid-template-columns: 1fr 1fr;
   gap: ${({ theme }) => theme.space.sm};
   align-items: end;
-`
 
+  > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoint.tablet}) {
+    grid-template-columns: 1fr 5rem 7rem auto;
+
+    > :first-child {
+      grid-column: auto;
+    }
+  }
+`
 const RemoveButton = styled(Button)`
   min-height: ${({ theme }) => theme.touch.minTarget};
 `
@@ -165,8 +162,7 @@ export function NewSalePage() {
       {save.error && <Alert variant="danger">{save.error}</Alert>}
       <form onSubmit={handleSubmit} noValidate>
         <Stack>
-          <Section>
-            <SectionTitle>Customer</SectionTitle>
+          <Section title="Customer">
             <Select
               id="sale-customer"
               label="Customer (optional)"
@@ -180,8 +176,7 @@ export function NewSalePage() {
             </Button>
           </Section>
 
-          <Section>
-            <SectionTitle>Items</SectionTitle>
+          <Section title="Items">
             {items.map((line, index) => (
               <ItemRow key={index}>
                 <Select
@@ -227,8 +222,7 @@ export function NewSalePage() {
             </Button>
           </Section>
 
-          <Section>
-            <SectionTitle>Payment</SectionTitle>
+          <Section title="Payment">
             <Select
               id="sale-payment"
               label="Payment type"
@@ -259,8 +253,7 @@ export function NewSalePage() {
             )}
           </Section>
 
-          <Section>
-            <SectionTitle>Delivery (optional)</SectionTitle>
+          <Section title="Delivery (optional)">
             <TextField
               id="sale-delivery-fee"
               label="Delivery fee (₱)"
@@ -284,8 +277,7 @@ export function NewSalePage() {
             />
           </Section>
 
-          <Section>
-            <SectionTitle>Review</SectionTitle>
+          <Section title="Review">
             <Review>
               <p>
                 Items:{' '}
@@ -293,7 +285,7 @@ export function NewSalePage() {
                   .filter((line) => line.productId)
                   .map((line) => {
                     const product = products.data?.find((item) => item.id === line.productId)
-                    return `${product?.name ?? 'Unknown'} × ${line.quantity}`
+                    return `${product?.name ?? 'Not available'} × ${line.quantity}`
                   })
                   .join(', ') || 'None'}
               </p>

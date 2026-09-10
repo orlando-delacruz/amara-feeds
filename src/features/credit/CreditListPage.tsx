@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listCredits, listCustomers } from '@/services'
-import { DataTable } from '@/components/ui/DataTable'
+import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { DateText } from '@/components/ui/DateText'
-import { EmptyState } from '@/components/ui/EmptyState'
-import { ErrorState } from '@/components/ui/ErrorState'
-import { LoadingState } from '@/components/ui/LoadingState'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { RecordList } from '@/components/ui/RecordList'
 import { Select } from '@/components/ui/Select'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -49,37 +47,44 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
           { value: 'settled', label: 'Settled' },
         ]}
       />
-      {credits.loading && <LoadingState text="Loading credit…" />}
-      {credits.error && <ErrorState description={credits.error} onRetry={credits.reload} />}
-      {!credits.loading && !credits.error && filtered.length === 0 && (
-        <EmptyState
-          title="No credit records"
-          description="Charge sales create shared credit obligations."
-        />
-      )}
-      {!credits.loading && !credits.error && filtered.length > 0 && (
-        <DataTable
-          caption="Credit obligations"
-          columns={[
-            { key: 'customer', header: 'Customer' },
-            { key: 'origin', header: 'Origin store' },
-            { key: 'due', header: 'Due date' },
-            { key: 'balance', header: 'Balance' },
-            { key: 'status', header: 'Status' },
-          ]}
-          rows={filtered.map((credit) => ({
-            customer: (
-              <Link to={`${basePath}/${credit.id}`}>
-                {customerNames.get(credit.customerId) ?? 'Unknown'}
-              </Link>
-            ),
-            origin: storeNames[credit.originStoreId],
-            due: <DateText value={credit.dueDate} />,
-            balance: <MoneyText amountMinor={credit.balanceMinor} />,
-            status: <StatusBadge status={credit.status} />,
-          }))}
-        />
-      )}
+      <AsyncBoundary
+        loading={credits.loading}
+        loadingText="Loading credit…"
+        error={credits.error}
+        onRetry={credits.reload}
+        empty={
+          !credits.loading && !credits.error && filtered.length === 0
+            ? {
+                title: 'No credit records',
+                description: 'Charge sales create shared credit obligations.',
+              }
+            : null
+        }
+      >
+        {filtered.length > 0 && (
+          <RecordList
+            caption="Credit obligations"
+            columns={[
+              { key: 'customer', header: 'Customer' },
+              { key: 'origin', header: 'Origin store' },
+              { key: 'due', header: 'Due date' },
+              { key: 'balance', header: 'Balance' },
+              { key: 'status', header: 'Status' },
+            ]}
+            rows={filtered.map((credit) => ({
+              customer: (
+                <Link to={`${basePath}/${credit.id}`}>
+                  {customerNames.get(credit.customerId) ?? 'Not available'}
+                </Link>
+              ),
+              origin: storeNames[credit.originStoreId],
+              due: <DateText value={credit.dueDate} />,
+              balance: <MoneyText amountMinor={credit.balanceMinor} />,
+              status: <StatusBadge status={credit.status} />,
+            }))}
+          />
+        )}
+      </AsyncBoundary>
     </Stack>
   )
 }

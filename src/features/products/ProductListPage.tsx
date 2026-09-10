@@ -1,12 +1,10 @@
 import { useState } from 'react'
 import { listProducts } from '@/services'
 import { Alert } from '@/components/ui/Alert'
+import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
-import { DataTable } from '@/components/ui/DataTable'
-import { EmptyState } from '@/components/ui/EmptyState'
-import { ErrorState } from '@/components/ui/ErrorState'
-import { LoadingState } from '@/components/ui/LoadingState'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { RecordList } from '@/components/ui/RecordList'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useAsyncData } from '@/features/shared'
@@ -31,28 +29,35 @@ export function ProductListPage() {
         actions={<Button onClick={() => setDialogOpen(true)}>Add product</Button>}
       />
       {notice && <Alert variant="success">{notice}</Alert>}
-      {loading && <LoadingState text="Loading products…" />}
-      {error && <ErrorState description={error} onRetry={reload} />}
-      {!loading && !error && data && data.length === 0 && (
-        <EmptyState
-          title="No products yet"
-          description="Submit the first product for admin approval."
-          action={<Button onClick={() => setDialogOpen(true)}>Add product</Button>}
-        />
-      )}
-      {!loading && !error && data && data.length > 0 && (
-        <DataTable
-          caption="Products"
-          columns={[
-            { key: 'name', header: 'Name' },
-            { key: 'status', header: 'Status' },
-          ]}
-          rows={data.map((product) => ({
-            name: product.name,
-            status: <StatusBadge status={product.status} />,
-          }))}
-        />
-      )}
+      <AsyncBoundary
+        loading={loading}
+        loadingText="Loading products…"
+        error={error}
+        onRetry={reload}
+        empty={
+          data && data.length === 0
+            ? {
+                title: 'No products yet',
+                description: 'Submit the first product for admin approval.',
+                action: <Button onClick={() => setDialogOpen(true)}>Add product</Button>,
+              }
+            : null
+        }
+      >
+        {data && data.length > 0 && (
+          <RecordList
+            caption="Products"
+            columns={[
+              { key: 'name', header: 'Name' },
+              { key: 'status', header: 'Status' },
+            ]}
+            rows={data.map((product) => ({
+              name: product.name,
+              status: <StatusBadge status={product.status} />,
+            }))}
+          />
+        )}
+      </AsyncBoundary>
       <AddProductDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}

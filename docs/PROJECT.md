@@ -118,8 +118,9 @@ The system uses accurate, operationally useful labels and information for sales,
 
 ## 10. Brand Context
 
+- Product/brand name: **Amara Feeds** (confirmed 2026-09-10 as the on-screen product brand; the two operating stores remain Amara and Zeann).
 - Confirmed store/business names: **Amara** and **Zeann**.
-- No parent-company name, previous brand, logo, brand history, or other identity information is confirmed.
+- No previous brand, logo artwork, brand history, or other identity information is confirmed.
 
 ## 11. Legal and Privacy Context
 

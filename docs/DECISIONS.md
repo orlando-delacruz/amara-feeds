@@ -93,6 +93,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-004 | Mock service seam, in-memory datastore, and money representation | Accepted | 2026-09-10 |
 | DEC-005 | Mock session, role gating, and shared async data hooks | Accepted | 2026-09-10 |
 | DEC-006 | Report summaries with browser print; Excel export deferred | Accepted | 2026-09-10 |
+| DEC-007 | Sign-in entry brand and two-store treatment | Accepted | 2026-09-10 |
+| DEC-008 | App-like shell, shared UI primitives, and responsive record lists | Accepted | 2026-09-10 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -183,6 +185,36 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Related documents:** `docs/REQUIREMENTS.md` REQ-REP-001–003, `docs/TECH-STACK.md` §7, `ROADMAP.md` §6.
 - **Supersedes / Superseded by:** none.
 - **Open questions or follow-up:** Exact report columns, formats, and the export library remain Confirmation Required.
+
+### DEC-007 — Sign-in entry brand and two-store treatment
+
+- **ID:** DEC-007
+- **Title:** Sign-in entry brand and two-store treatment
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** The mock sign-in page was a generic centered card with no product brand or store identity, and its copy exposed implementation detail ("seeded account"). The on-screen product brand "Amara Feeds" was confirmed as the entry-screen brand; the two operating stores remain Amara and Zeann (`docs/PROJECT.md` §10). Logo artwork remains Confirmation Required.
+- **Decision:** The sign-in header uses the text wordmark "Amara Feeds" with the operational line "Store management for Amara and Zeann." plus a decorative two-store split motif built only from the existing store solid tokens, always paired with store names in text. Account rows show a store-tinted initials avatar, the display name (parenthetical role hints stay in data, never on screen, including the app header), and a derived badge: `StoreBadge` with "Staff" for store-assigned staff, an "Admin" badge with "Both stores" for admins. The brand panel is full-bleed on mobile and a two-panel card on desktop, using existing surface/neutral tokens only. No mock/demo notice is shown on screen. Seed account names are kept unchanged. No new design tokens, no new dependencies, no invented logo.
+- **Alternatives considered:** Reuse the `AZ` favicon monogram as the in-app mark — rejected; the confirmed "Amara Feeds" text direction was chosen instead. A bolder redesign introducing new tokens — deferred; the token-compliant treatment satisfies the need without a design-system change.
+- **Rationale:** Makes the entry screen recognizably the product's front door and makes store context obvious at account choice (UI-UX §2.10), while staying inside the confirmed visual language and the sign-in-only scope.
+- **Consequences:** The `TopBar` wordmark ("Amara + Zeann") and the document title are intentionally unchanged; aligning them to "Amara Feeds" app-wide is a follow-up, not part of this change.
+- **Related documents:** `docs/PROJECT.md` §10, `docs/DESIGN-SYSTEM.md` §§3.4, 8, `docs/UI-UX.md` §§2, 14.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** App-wide brand alignment (TopBar, document title) remains open.
+
+### DEC-008 — App-like shell, shared UI primitives, and responsive record lists
+
+- **ID:** DEC-008
+- **Title:** App-like shell, shared UI primitives, and responsive record lists
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** Every feature page rolled its own cards, section titles, and loading/error/empty branches; lists were desktop tables with horizontal scroll on phones; the mobile nav was a scrollable text bar with 8–9 items and no safe-area handling; user-visible copy leaked internal status ("under confirmation", "not part of this version", raw ISO dates, `Unknown` fallbacks).
+- **Decision:** Mobile-first app shell — fixed 5-tab bar (4 primary destinations + a More sheet reusing `Dialog`) with inline-SVG icon + label pairs, side rail on desktop, safe-area insets, and tokenized chrome dimensions (`layout.headerHeight/tabBarHeight/contentMaxWidth`, `shadow.lg`, `font.size.display`, tabular numerals). Shared primitives behind small interfaces: `Card`, `StatCard`, `Section`, `AsyncBoundary`, `RecordList` (card list on mobile, `DataTable` on tablet+), `BackLink`, `useMediaQuery`, `NavIcon`. All pages consume them; no page-local card/section/branch copies remain. Production copy throughout: no confirmation/phase language, formatted dates, "No customer" / "Not available" / "Not listed" fallbacks. Brand aligned app-wide to "Amara Feeds" (TopBar, document title, sign-in), closing the DEC-007 follow-up.
+- **Alternatives considered:** Per-page styling fixes — rejected; preserves the duplication that caused the generic look. A third-party component or icon library — rejected; unneeded dependency for the core scope. Dark mode and webfonts — deferred; system stack and light theme stay.
+- **Rationale:** One shared visual system gives the premium app feel and makes future changes local: fix once in the primitive, fixed on every page. The More sheet keeps all confirmed destinations reachable without overloading the tab bar, consistent with `docs/UI-UX.md` §6.
+- **Consequences:** `docs/DESIGN-SYSTEM.md` §§4–6 record the new tokens and tab-bar rules; `src/theme/tokens.ts` implements them. Page tests asserting old copy or table-only structure were updated with the reskin.
+- **Related documents:** `docs/DESIGN-SYSTEM.md` §§4–6, `docs/UI-UX.md` §§6, 9–10, 12, `docs/ARCHITECTURE.md` §6.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** None; dark mode and webfonts stay deferred.
 
 ## 9. Per-Area Handling
 

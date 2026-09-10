@@ -1,6 +1,7 @@
 import styled from 'styled-components'
 import { Link, useNavigate } from 'react-router-dom'
 import { StoreBadge } from '@/components/ui/StoreBadge'
+import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { storeIds, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
@@ -15,6 +16,7 @@ const Header = styled.header`
   top: 0;
   z-index: ${({ theme }) => theme.zIndex.header};
   grid-column: 1 / -1;
+  padding-top: env(safe-area-inset-top, 0px);
   background-color: ${({ theme }) => theme.color.surface.card};
   border-bottom: 1px solid ${({ theme }) => theme.color.border.default};
 `
@@ -23,7 +25,8 @@ const Inner = styled.div`
   display: flex;
   align-items: center;
   gap: ${({ theme }) => theme.space.md};
-  max-width: 72rem;
+  max-width: ${({ theme }) => theme.layout.contentMaxWidth};
+  min-height: ${({ theme }) => theme.layout.headerHeight};
   margin: 0 auto;
   padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.lg};
 `
@@ -104,7 +107,7 @@ export function TopBar({ sectionLabel }: TopBarProps) {
   return (
     <Header>
       <Inner>
-        <Brand to="/">Amara + Zeann</Brand>
+        <Brand to="/">Amara Feeds</Brand>
         <SectionTag>{sectionLabel}</SectionTag>
         <Spacer />
         <Controls>
@@ -122,7 +125,7 @@ export function TopBar({ sectionLabel }: TopBarProps) {
               ))}
             </StoreSelect>
           )}
-          {user && <UserName>{user.name}</UserName>}
+          {user && <UserName>{getDisplayName(user.name)}</UserName>}
           <SignOutButton type="button" onClick={handleSignOut}>
             Sign out
           </SignOutButton>
