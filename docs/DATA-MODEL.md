@@ -1,0 +1,197 @@
+# Amara + Zeann Store Management System — Data Model
+
+## 1. Purpose and Scope
+
+This file defines business data concepts, ownership boundaries, shared vs store-specific data, conceptual relationships, data categories, and unresolved data decisions. It fixes shared language before any schema.
+
+It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums, database constraints, migrations, API payloads, endpoint schemas, authorization policies, credentials, or implementation-specific storage details. Those belong to `docs/DATA-MODEL.md` successors: schemas and migrations to the implementation, contracts to `docs/API.md`, policies to `docs/SECURITY.md`.
+
+## 2. Data-Model Principles
+
+1. **Concepts before schema.** Shared language and boundaries first; no tables or constraints before scope is confirmed.
+2. **Reuse confirmed language.** Concept names follow `docs/PROJECT.md` and `docs/REQUIREMENTS.md`; no parallel terminology.
+3. **Smallest useful model.** Cover only what the agreed core scope needs, sized to the ₱10,000 core budget.
+4. **Shared stays shared.** Customer identity and credit/collection are never duplicated independently per store.
+5. **Store-specific stays store-specific.** Sales, inventory, and receiving belong to one store each.
+6. **Integrity at the data layer.** Atomic updates and access enforcement are data-layer responsibilities, deferred to implementation with policy detail in `docs/SECURITY.md`.
+7. **Approval gates state.** Pending products are visibly not active; only admin approval activates them.
+8. **Unconfirmed means unconfirmed.** Anything not established is marked Confirmation Required, never guessed.
+
+## 3. Authority Boundaries
+
+| Concern | Owner |
+| --- | --- |
+| What the system must do | `docs/REQUIREMENTS.md` |
+| Selected technologies | `docs/TECH-STACK.md` |
+| Architecture and data flows | `docs/ARCHITECTURE.md` |
+| Behavior and experience | `docs/UI-UX.md` |
+| **Concepts, relationships, and data boundaries** | **This file** |
+| Endpoint contracts and validation detail | `docs/API.md` |
+| Auth behavior, authorization, secret handling | `docs/SECURITY.md` |
+| Material decisions | `docs/DECISIONS.md` |
+
+## 4. Core Concepts
+
+### 4.1 Store — Confirmed
+
+- **Concept:** the two operating stores, Amara and Zeann, providing the store context for store-specific records.
+- **Source:** REQ-STORE-001, REQ-STORE-002; `docs/PROJECT.md` §2.
+- **Boundary:** exactly two stores; no further store attributes defined here.
+
+### 4.2 Customer — Confirmed
+
+- **Concept:** one shared customer identity usable across both stores, never duplicated per store.
+- **Source:** REQ-CUST-001, REQ-STORE-003; `docs/PROJECT.md` §2.
+- **Boundary:** exact identity fields are Confirmation Required; no per-store customer copies exist in this model.
+
+### 4.3 Product / Item — Confirmed
+
+- **Concept:** a sellable, stockable, and receivable product/item record with an approval state.
+- **Source:** REQ-PROD-001–003; `docs/PROJECT.md` §4.
+- **Boundary:** exact product information is Confirmation Required; rejection/edit/resubmission behavior is unconfirmed.
+
+### 4.4 Sale — Confirmed
+
+- **Concept:** a store-specific completed sale recording customer (optional), purchased items with quantities, payment type (cash or charge), and delivery details when applicable.
+- **Source:** REQ-SALE-001–005; `docs/PROJECT.md` §4.
+- **Boundary:** editing, cancellation, and reversal behavior are Confirmation Required; no additional sale attributes defined here.
+
+### 4.5 Purchased items (sale lines) — Confirmed
+
+- **Concept:** the items and quantities purchased within a sale. This is modeled as part of the sale concept, not as an independent entity, and does not by itself authorize a separate table.
+- **Source:** REQ-SALE-002; `docs/PROJECT.md` §4.
+- **Boundary:** exact line information is Confirmation Required.
+
+### 4.6 Credit obligation — Confirmed
+
+- **Concept:** a shared outstanding obligation arising from a charge sale, carrying the originating store, selected payment terms with an automatically calculated due date, remaining balance, and outstanding/settled state.
+- **Source:** REQ-CRED-001–004, REQ-CRED-006; `docs/PROJECT.md` §4.
+- **Boundary:** exact term options, calculation rules, and status vocabulary beyond outstanding/settled are Confirmation Required.
+
+### 4.7 Payment — Confirmed
+
+- **Concept:** a full or partial payment against a shared credit obligation, recorded through either store, carrying the payment store and contributing to one traceable shared history with updated balance and status.
+- **Source:** REQ-PAY-001–002, REQ-CRED-005–007; `docs/PROJECT.md` §2.
+- **Boundary:** exact payment information, methods, and reversal behavior are Confirmation Required.
+
+### 4.8 Inventory / Stock — Confirmed
+
+- **Concept:** the per-store quantity of a product/item held by Amara or Zeann, increased by receiving and decreased by successful sales.
+- **Source:** REQ-INV-001–002; `docs/PROJECT.md` §2.
+- **Boundary:** exact stock calculations, negative-stock rules, adjustment workflows, and reversal behavior are Confirmation Required.
+
+### 4.9 Receiving record — Confirmed
+
+- **Concept:** a store-specific stock receipt recording store, item, quantity, supplier, and purchase/cost price.
+- **Source:** REQ-RCV-001; `docs/PROJECT.md` §4.
+- **Boundary:** no additional receiving attributes defined here.
+
+### 4.10 Supplier — Confirmed
+
+- **Concept:** the supplier named on a receiving record. This is modeled as a reference within the receiving concept, not as an independently managed entity, since no supplier-management requirement is confirmed.
+- **Source:** REQ-RCV-001.
+- **Boundary:** supplier directories, contact management, and supplier history beyond the receiving reference are unconfirmed.
+
+### 4.11 User / Staff identity — Confirmed
+
+- **Concept:** an individual authenticated identity assigned to one store, providing the operational store context; admin identities carry business-wide oversight.
+- **Source:** REQ-USER-001–003; `docs/PROJECT.md` §2.
+- **Boundary:** identities are an authentication concept, not business content; additional roles, permission matrices, hierarchies, and multi-store staff behavior are unconfirmed and belong to `docs/SECURITY.md` after confirmation.
+
+### 4.12 Product approval state — Confirmed
+
+- **Concept:** the lifecycle state of a staff-submitted product: pending after submission, active only after admin review and approval.
+- **Source:** REQ-PROD-002–003; `docs/PROJECT.md` §4.
+- **Boundary:** rejection, editing, resubmission, and any further states or timestamps are Confirmation Required.
+
+## 5. Conceptual Relationships
+
+- A customer can have sales at either store; a sale belongs to one store.
+- A sale contains one or more purchased product/item concepts.
+- A customer may have an outstanding credit obligation originating from a store.
+- A payment can be made at a store different from the credit-origin store and remains part of the same shared history.
+- A store maintains its own inventory for products/items; a receiving record increases one store's stock for one product/item, and a successful sale decreases the selling store's stock.
+- A staff identity operates within one assigned store's context; an admin identity oversees both stores.
+- A staff-submitted product is pending until an admin approves it into the active state.
+
+No foreign keys, cardinalities, junction tables, or database constraints are introduced here.
+
+## 6. Field and Data-Type Categories
+
+Only the KINDS of values the model may need — listing a category confirms no field:
+
+- Names (stores, customers, products, suppliers, riders).
+- Contact details (customer contact kinds only as confirmed later).
+- Quantities (item quantities, stock quantities).
+- Monetary amounts (prices, fees, balances, payments).
+- Dates (sale dates, due dates, payment dates, receiving dates).
+- Store references (origin store, payment store, selling/receiving store, staff assignment).
+- Product information (identity and approval state; exact information Confirmation Required).
+- Supplier information (receiving reference only).
+- Payment information (partial/full payment references; exact information Confirmation Required).
+- Status/state concepts (outstanding/settled credit, pending/active product).
+
+Validation principles: inputs are validated at system boundaries with clear messages; client-side checks are usability only; staff-submitted products require admin approval that validation never replaces; no constraints invented here.
+
+## 7. Identity, Status, and Lifecycle Concepts
+
+Only where justified by the requirements:
+
+- Authenticated staff identity with one assigned store; admin identity with business-wide oversight.
+- Product pending/active approval state.
+- Outstanding/settled credit state with remaining balance.
+- Store association on every store-specific concept.
+
+No additional lifecycle states are introduced.
+
+## 8. Shared vs Store-Specific Data Boundaries
+
+There is no public surface; all business data is restricted to authenticated, permitted users.
+
+- **Shared:** customer identity; credit obligations with balances and statuses; payment history including origin store and payment store.
+- **Store-specific:** sales and their purchased items; inventory/stock; receiving records; staff store assignment and operational store context.
+- Submitted data in transit is validated, minimal, and delivered to the confirmed destination; no extra personal-data kinds without justification. The model must never imply that customers or credit balances are duplicated independently per store.
+
+## 9. Deletion, Retention, and Integrity Principles
+
+- Financial and business history (sales, credit obligations, payments, receiving) is protected against accidental loss; deletion, if ever permitted, requires explicit confirmation and must preserve traceability of cross-store credit/payment activity.
+- No cascade, versioning, audit, retention-period, or legal machinery is assumed; retention periods and legal obligations are not defined here.
+- Integrity of atomic updates (sale with stock deduction, payment with balance update) is a data-layer responsibility; no mechanisms invented here.
+
+## 10. Explicit Exclusions (Non-Concepts)
+
+Unless explicitly rescoped, this model does NOT include: CRM entities, payroll/HR entities, accounting entities, reservation/booking entities, customer review entities, marketing/SEO content entities, enterprise organization structures, payment-provider integration entities, notification/email entities, analytics entities, automation/workflow machinery, or any second data layer. Authority: `docs/PROJECT.md` §13 and `docs/REQUIREMENTS.md` §18.
+
+## 11. Confirmation Required Matrix
+
+| # | Item | Status | Notes |
+| --- | --- | --- | --- |
+| 1 | Exact fields per concept (customer, product, sale, payment, receiving) | **Confirmation Required** | Nothing assumed or invented. |
+| 2 | Exact payment-term options and due-date calculations | **Confirmation Required** | Selected-terms workflow confirmed; options and rules unconfirmed. |
+| 3 | Exact validation rules | **Confirmation Required** | Principles here; enforceable rules in `docs/API.md` / `docs/SECURITY.md` after confirmation. |
+| 4 | Sale editing, cancellation, and reversal behavior | **Confirmation Required** | Affects sale, stock, and credit concepts. |
+| 5 | Insufficient-stock behavior | **Confirmation Required** | No negative-stock or blocking rule assumed. |
+| 6 | Duplicate customer handling | **Confirmation Required** | One-shared-record principle confirmed; merge/dedup behavior unconfirmed. |
+| 7 | Product rejection, editing, and resubmission behavior | **Confirmation Required** | Only pending→approved-by-admin is confirmed. |
+| 8 | Inventory adjustment behavior beyond receiving and sale deduction | **Confirmation Required** | No adjustment workflow assumed. |
+| 9 | Payment reversal behavior | **Confirmation Required** | Partial-until-settled confirmed; reversals unconfirmed. |
+| 10 | Report/export data requirements (columns, formats) | **Confirmation Required** | Summaries confirmed; exact data unconfirmed. |
+| 11 | Detailed user permissions | **Confirmation Required** | Only store assignment and product approval confirmed. |
+| 12 | Retention and deletion behavior | **Confirmation Required** | No periods or rules defined. |
+
+## 12. Related Documentation
+
+- `README.md` — repository orientation
+- `AGENTS.md` — AI-agent operating rules
+- `docs/PROJECT.md` — product and business context
+- `docs/REQUIREMENTS.md` — functional and business requirements
+- `docs/TECH-STACK.md` — technology decisions
+- `docs/ARCHITECTURE.md` — architecture
+- `docs/UI-UX.md` — experience requirements
+- `docs/DATA-MODEL.md` — data concepts and boundaries (this file)
+- `docs/API.md` — contracts
+- `docs/SECURITY.md` — security
+- `docs/TESTING.md` — verification strategy
+- `docs/DEVELOPMENT.md` — development workflow
+- `docs/DEPLOYMENT.md` — deployment procedures
+- `docs/DECISIONS.md` — material decisions
