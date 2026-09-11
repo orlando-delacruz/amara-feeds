@@ -47,10 +47,11 @@ describe('application shell', () => {
     expect(screen.queryByLabelText('Store')).not.toBeInTheDocument()
   })
 
-  it('lets an admin switch the store context', async () => {
+  it('lets an admin switch the store context on a store-scoped page', async () => {
     const user = userEvent.setup()
-    renderAt('/admin', adminUser)
-    await user.selectOptions(screen.getByLabelText('Store'), 'zeann')
+    renderAt('/admin/sales', adminUser)
+    expect(await screen.findByRole('heading', { name: 'Sales' })).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Zeann' }))
     expect(screen.getByLabelText('Current store: Zeann')).toBeInTheDocument()
   })
 

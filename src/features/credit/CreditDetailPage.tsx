@@ -11,10 +11,11 @@ import { DateText } from '@/components/ui/DateText'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
+import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { TextField } from '@/components/ui/TextField'
-import { useAsyncData, useMutation } from '@/features/shared'
+import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
 import { toMinor } from '@/lib/money'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
@@ -111,13 +112,14 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
           credit ? `${customerNames.get(credit.customerId) ?? 'Credit record'}'s credit` : undefined
         }
         actions={<BackLink to={basePath}>Back to credit</BackLink>}
+        size="compact"
       />
       {notice && <Alert variant="success">{notice}</Alert>}
       <AsyncBoundary
         loading={history.loading}
-        loadingText="Loading credit…"
         error={history.error}
         onRetry={history.reload}
+        skeleton={<ListSkeleton rows={4} />}
         empty={
           !history.loading && !history.error && !credit
             ? {
@@ -175,29 +177,32 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
             {settled ? (
               <Alert variant="success">This credit is fully paid and settled.</Alert>
             ) : (
-              <Card>
-                <form onSubmit={handlePay} noValidate>
-                  <PaymentFields>
-                    {pay.error && <Alert variant="danger">{pay.error}</Alert>}
-                    <TextField
-                      id="payment-amount"
-                      label="Payment amount (₱)"
-                      type="number"
-                      min={0.01}
-                      step="0.01"
-                      value={amount}
-                      onChange={(event) => setAmount(event.target.value)}
-                      required
-                    />
-                    <PaymentNote>Payment will be recorded at {storeNames[store]}.</PaymentNote>
-                  </PaymentFields>
-                  <PaymentActions>
-                    <Button type="submit" disabled={pay.pending}>
-                      {pay.pending ? 'Recording…' : 'Record payment'}
-                    </Button>
-                  </PaymentActions>
-                </form>
-              </Card>
+              <>
+                <StoreControl />
+                <Card>
+                  <form onSubmit={handlePay} noValidate>
+                    <PaymentFields>
+                      {pay.error && <Alert variant="danger">{pay.error}</Alert>}
+                      <TextField
+                        id="payment-amount"
+                        label="Payment amount (₱)"
+                        type="number"
+                        min={0.01}
+                        step="0.01"
+                        value={amount}
+                        onChange={(event) => setAmount(event.target.value)}
+                        required
+                      />
+                      <PaymentNote>Payment will be recorded at {storeNames[store]}.</PaymentNote>
+                    </PaymentFields>
+                    <PaymentActions>
+                      <Button type="submit" disabled={pay.pending}>
+                        {pay.pending ? 'Recording…' : 'Record payment'}
+                      </Button>
+                    </PaymentActions>
+                  </form>
+                </Card>
+              </>
             )}
 
             <RecordList

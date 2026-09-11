@@ -4,7 +4,9 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Stack } from '@/components/ui/Stack'
 import { StatCard } from '@/components/ui/StatCard'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
+import { Icon } from '@/components/ui/icons'
 import { MoneyText } from '@/components/ui/MoneyText'
+import { StatsSkeleton } from '@/components/ui/Skeletons'
 import { useAsyncData } from '@/features/shared'
 import { todayIso } from '@/lib/dates'
 import { storeNames } from '@/store/stores'
@@ -12,12 +14,12 @@ import { useStore } from '@/store/useStore'
 
 const Cards = styled.div`
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
   gap: ${({ theme }) => theme.space.md};
+`
 
-  @media (min-width: ${({ theme }) => theme.breakpoint.tablet}) {
-    grid-template-columns: repeat(3, 1fr);
-  }
+const FullWidth = styled.div`
+  grid-column: 1 / -1;
 `
 
 export function StaffDashboardPage() {
@@ -37,30 +39,41 @@ export function StaffDashboardPage() {
 
   return (
     <Stack>
-      <PageHeader title="Dashboard" description={`Today's overview for ${storeNames[store]}.`} />
+      <PageHeader
+        title="Dashboard"
+        description={`Today's overview for ${storeNames[store]}.`}
+        size="compact"
+      />
       <AsyncBoundary
         loading={data.loading}
-        loadingText="Loading dashboard…"
         error={data.error}
         onRetry={data.reload}
         empty={null}
+        skeleton={<StatsSkeleton count={3} />}
       >
         {data.data && (
           <Cards>
-            <StatCard
-              label="Today's sales"
-              value={<MoneyText amountMinor={data.data.storeSales?.totalMinor ?? 0} />}
-              caption={`${data.data.storeSales?.saleCount ?? 0} sales`}
-            />
+            <FullWidth>
+              <StatCard
+                label="Today's sales"
+                value={<MoneyText amountMinor={data.data.storeSales?.totalMinor ?? 0} />}
+                caption={`${data.data.storeSales?.saleCount ?? 0} sales`}
+                tone="brand"
+                icon={<Icon name="card" />}
+                valueScale="hero"
+              />
+            </FullWidth>
             <StatCard
               label="Outstanding credit"
               value={<MoneyText amountMinor={data.data.outstanding.totalMinor} />}
               caption={`${data.data.outstanding.count} obligations`}
+              icon={<Icon name="alert" />}
             />
             <StatCard
               label="Items in stock"
               value={data.data.stockCount}
               caption="products tracked"
+              icon={<Icon name="box" />}
             />
           </Cards>
         )}

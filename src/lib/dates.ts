@@ -14,7 +14,7 @@ export function todayIso(): string {
 }
 
 export function isSameDate(isoTimestamp: string, dateOnly: string): boolean {
-  return isoTimestamp.slice(0, 10) === dateOnly
+  return toDateOnly(new Date(isoTimestamp)) === dateOnly
 }
 
 export function addDays(isoTimestamp: string, days: number): string {

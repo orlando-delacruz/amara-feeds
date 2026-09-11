@@ -8,13 +8,14 @@ import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 
 const staffUser: User = { id: 'user-1', name: 'Alice', role: 'staff', storeId: 'amara' }
+const adminUser: User = { id: 'user-3', name: 'Owner', role: 'admin' }
 
-function renderAt(path: string) {
+function renderAt(path: string, user: User = staffUser) {
   return renderWithProviders(
     <MemoryRouter initialEntries={[path]}>
       <AppRoutes />
     </MemoryRouter>,
-    { user: staffUser },
+    { user },
   )
 }
 
@@ -37,5 +38,13 @@ describe('SaleListPage', () => {
     await user.type(dateInput, '2000-01-01')
 
     expect(await screen.findByText('No sales on this date')).toBeInTheDocument()
+  })
+
+  it('lets an admin open the new-sale form instead of landing on the dashboard', async () => {
+    const user = userEvent.setup()
+    renderAt('/admin/sales', adminUser)
+    await screen.findByRole('heading', { name: 'Sales' })
+    await user.click(screen.getByRole('button', { name: 'New sale' }))
+    expect(await screen.findByRole('heading', { name: 'New sale' })).toBeInTheDocument()
   })
 })

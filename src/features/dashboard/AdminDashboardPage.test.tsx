@@ -12,9 +12,9 @@ describe('AdminDashboardPage', () => {
 
   it('shows business-wide summaries for both stores', async () => {
     renderWithProviders(<AdminDashboardPage />, { user: adminUser })
-    expect((await screen.findAllByText(/Daily sales by store/)).length).toBeGreaterThan(0)
-    expect(screen.getByText(/Overall daily sales/)).toBeInTheDocument()
+    expect(await screen.findByText('Overall daily sales')).toBeInTheDocument()
     expect(screen.getByText('₱2,590.00')).toBeInTheDocument()
+    expect(screen.getAllByText('Amara').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Zeann').length).toBeGreaterThan(0)
   })
 })

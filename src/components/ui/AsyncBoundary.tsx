@@ -11,23 +11,25 @@ export interface AsyncEmpty {
 
 interface AsyncBoundaryProps {
   loading: boolean
-  loadingText: string
+  loadingText?: string
   error: string | null
   onRetry: () => void
   empty: AsyncEmpty | null
+  skeleton?: ReactNode
   children: ReactNode
 }
 
 export function AsyncBoundary({
   loading,
-  loadingText,
+  loadingText = 'Loading…',
   error,
   onRetry,
   empty,
+  skeleton,
   children,
 }: AsyncBoundaryProps) {
   if (loading) {
-    return <LoadingState text={loadingText} />
+    return <>{skeleton ?? <LoadingState text={loadingText} />}</>
   }
   if (error) {
     return <ErrorState description={error} onRetry={onRetry} />

@@ -8,13 +8,14 @@ import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 
 const staffUser: User = { id: 'user-1', name: 'Alice', role: 'staff', storeId: 'amara' }
+const adminUser: User = { id: 'user-3', name: 'Owner', role: 'admin' }
 
-function renderNewSale() {
+function renderNewSale(path = '/sales/new', user: User = staffUser) {
   return renderWithProviders(
-    <MemoryRouter initialEntries={['/sales/new']}>
+    <MemoryRouter initialEntries={[path]}>
       <AppRoutes />
     </MemoryRouter>,
-    { user: staffUser },
+    { user },
   )
 }
 
@@ -66,5 +67,19 @@ describe('NewSalePage', () => {
     await user.click(screen.getByRole('button', { name: 'Save sale' }))
 
     expect(await screen.findByText('A charge sale requires a customer.')).toBeInTheDocument()
+  })
+
+  it('records a sale as admin and returns to the admin sales list', async () => {
+    const user = userEvent.setup()
+    renderNewSale('/admin/sales/new', adminUser)
+
+    await user.selectOptions(await screen.findByLabelText(/^Item/), 'prod-1')
+    await user.type(screen.getByLabelText(/^Qty/), '2')
+    await user.type(screen.getByLabelText(/^Unit price/), '1150')
+    await user.click(screen.getByRole('button', { name: 'Save sale' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
+    ).toBeInTheDocument()
   })
 })

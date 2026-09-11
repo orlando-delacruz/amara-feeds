@@ -33,7 +33,7 @@ describe('CreditListPage', () => {
     )
     await screen.findByText('Maria Santos')
 
-    await user.selectOptions(screen.getByLabelText('Status'), 'settled')
+    await user.click(screen.getByRole('radio', { name: 'Settled' }))
 
     expect(await screen.findByText('Ana Reyes')).toBeInTheDocument()
     expect(screen.queryByText('Maria Santos')).not.toBeInTheDocument()

@@ -1,8 +1,6 @@
-import { useState } from 'react'
-import styled from 'styled-components'
-import { NavLink, useLocation } from 'react-router-dom'
+import styled, { css } from 'styled-components'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import type { NavItem } from './navItems'
-import { MoreSheet } from './MoreSheet'
 import { NavIcon } from './icons'
 
 interface BottomNavProps {
@@ -16,6 +14,8 @@ const Bar = styled.nav`
   left: 0;
   z-index: ${({ theme }) => theme.zIndex.nav};
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: max(${({ theme }) => theme.space.md}, env(safe-area-inset-left, 0px));
+  padding-right: max(${({ theme }) => theme.space.md}, env(safe-area-inset-right, 0px));
   background-color: ${({ theme }) => theme.color.surface.card};
   border-top: 1px solid ${({ theme }) => theme.color.border.default};
   box-shadow: ${({ theme }) => theme.shadow.md};
@@ -27,25 +27,30 @@ const Bar = styled.nav`
 
 const List = styled.ul`
   display: flex;
+  justify-content: center;
   list-style: none;
   max-width: ${({ theme }) => theme.layout.contentMaxWidth};
   margin: 0 auto;
+  padding: 0;
 `
 
 const Item = styled.li`
   flex: 1 1 0;
   min-width: 0;
+  max-width: 6.5rem;
 `
 
-const TabLink = styled(NavLink)`
+const tabLinkStyles = css`
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
+  width: 100%;
   min-height: ${({ theme }) => theme.layout.tabBarHeight};
   padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.xs};
   font-size: ${({ theme }) => theme.font.size.xs};
+  line-height: ${({ theme }) => theme.font.lineHeight.tight};
   font-weight: ${({ theme }) => theme.font.weight.medium};
   color: ${({ theme }) => theme.color.text.secondary};
   text-decoration: none;
@@ -56,24 +61,15 @@ const TabLink = styled(NavLink)`
   }
 `
 
-const MoreButton = styled.button<{ $active: boolean }>`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  width: 100%;
-  min-height: ${({ theme }) => theme.layout.tabBarHeight};
-  padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.xs};
-  background: none;
-  border: none;
-  border-radius: ${({ theme }) => theme.radius.md};
-  font-size: ${({ theme }) => theme.font.size.xs};
-  font-weight: ${({ theme }) => theme.font.weight.medium};
-  color: ${({ theme, $active }) => ($active ? theme.color.brand[700] : theme.color.text.secondary)};
-  font-weight: ${({ theme, $active }) =>
-    $active ? theme.font.weight.semibold : theme.font.weight.medium};
-  cursor: pointer;
+const TabLink = styled(NavLink)`
+  ${tabLinkStyles}
+`
+
+// The More tab covers several overflow destinations, so its active state is
+// computed manually (moreActive). NavLink would overwrite a manual
+// aria-current when inactive, hence a plain Link here.
+const MoreTabLink = styled(Link)`
+  ${tabLinkStyles}
 `
 
 const Label = styled.span`
@@ -105,39 +101,34 @@ function MoreIcon() {
 }
 
 export function BottomNav({ items }: BottomNavProps) {
-  const [moreOpen, setMoreOpen] = useState(false)
   const { pathname } = useLocation()
   const primary = items.filter((item) => item.primary)
   const overflow = items.filter((item) => !item.primary)
-  const moreActive = overflow.some((item) => isTabActive(pathname, item.to))
+  const base = primary[0]?.to === '/admin' ? '/admin/more' : '/more'
+  const moreActive = pathname === base || overflow.some((item) => isTabActive(pathname, item.to))
 
   return (
-    <>
-      <Bar aria-label="Primary">
-        <List>
-          {primary.map((item) => (
-            <Item key={item.to}>
-              <TabLink to={item.to} end={item.to === '/dashboard' || item.to === '/admin'}>
-                <NavIcon name={item.icon} />
-                <Label>{item.label}</Label>
-              </TabLink>
-            </Item>
-          ))}
-          <Item>
-            <MoreButton
-              type="button"
-              $active={moreActive}
-              aria-expanded={moreOpen}
-              aria-haspopup="dialog"
-              onClick={() => setMoreOpen(true)}
-            >
-              <MoreIcon />
-              <Label>More</Label>
-            </MoreButton>
+    <Bar aria-label="Primary">
+      <List>
+        {primary.map((item) => (
+          <Item key={item.to}>
+            <TabLink to={item.to} end={item.to === '/dashboard' || item.to === '/admin'}>
+              <NavIcon name={item.icon} />
+              <Label>{item.label}</Label>
+            </TabLink>
           </Item>
-        </List>
-      </Bar>
-      <MoreSheet open={moreOpen} items={overflow} onClose={() => setMoreOpen(false)} />
-    </>
+        ))}
+        <Item>
+          <MoreTabLink
+            to={base}
+            className={moreActive ? 'active' : undefined}
+            aria-current={moreActive ? 'page' : undefined}
+          >
+            <MoreIcon />
+            <Label>More</Label>
+          </MoreTabLink>
+        </Item>
+      </List>
+    </Bar>
   )
 }

@@ -95,6 +95,9 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-006 | Report summaries with browser print; Excel export deferred | Accepted | 2026-09-10 |
 | DEC-007 | Sign-in entry brand and two-store treatment | Accepted | 2026-09-10 |
 | DEC-008 | App-like shell, shared UI primitives, and responsive record lists | Accepted | 2026-09-10 |
+| DEC-009 | Operations-board dashboard and app-wide visual rhythm | Accepted | 2026-09-10 |
+| DEC-010 | Tight responsive scale and flat grouped dashboard | Accepted | 2026-09-10 |
+| DEC-011 | More page, centered tabs, dashboard value hierarchy | Accepted | 2026-09-10 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -166,7 +169,7 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Decision:** Add a mock session (`SessionProvider`/`useSession`) with a seeded-account sign-in picker over `userService` and route guards (`RequireAuth`/`RequireRole`). The store context derives from the signed-in user: staff are locked to their assigned store; admins are business-wide and can switch the store context for store-specific views. Add two shared async hooks, `useAsyncData` (loading/error/reload) and `useMutation` (pending/double-submit guard/error), as the standard data-fetching convention. This is UI gating only and is never a security boundary.
 - **Alternatives considered:** Defer any sign-in UI until real Supabase Auth — rejected; Phase 2 names the auth/store-context experience and the mock seam makes it cheap to exercise before Phase 3 validation. Keep the unguarded staff/admin shell toggle — rejected; it would not exercise role-based behavior. Per-page ad-hoc state instead of shared hooks — rejected; would duplicate loading/error/submission handling across every workflow.
 - **Rationale:** Exercises role and store behavior early so Phase 3 walkthroughs and Phase 4 authorization design build on observed behavior, while keeping the mock→real swap bounded to replacing the session provider and service implementations.
-- **Consequences:** The session is in-memory and resets on reload. Real authentication and authorization replace the mock in Phases 4–5. `useAsyncData`/`useMutation` are the conventions feature pages should follow.
+- **Consequences:** The session is in-memory and resets on reload. Real authentication and authorization replace the mock in Phases 4–5. `useAsyncData`/`useMutation` are the conventions feature pages should follow. Follow-up: the header store `<select>` was removed; admin store switching moved to a shared `StoreControl` (segmented Amara/Zeann) on store-scoped pages (sales, inventory, receiving, credit payment). Admin switching capability unchanged; the header shows the current store badge only. Follow-up: the mock session persists in localStorage so a reload keeps the user signed in; explicit `initialUser={null}` starts signed out (used by tests).
 - **Related documents:** `ROADMAP.md` §3 (Phase 2), `docs/UI-UX.md` §§4, 12, `docs/SECURITY.md` §§2–3, `docs/ARCHITECTURE.md` §9.
 - **Supersedes / Superseded by:** none.
 - **Open questions or follow-up:** Authentication flow detail (session handling, provisioning, recovery) remains Confirmation Required.
@@ -216,7 +219,50 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Supersedes / Superseded by:** none.
 - **Open questions or follow-up:** None; dark mode and webfonts stay deferred.
 
-## 9. Per-Area Handling
+### DEC-009 — Operations-board dashboard and app-wide visual rhythm
+
+- **ID:** DEC-009
+- **Title:** Operations-board dashboard and app-wide visual rhythm
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** After DEC-008 every surface used the same card treatment, so the admin dashboard read as a flat wall of identical cards with key totals buried below a table; filters were full labeled fields; list rows were not tappable; loading was a centered spinner. The two-store identity — the product's one distinctive asset — appeared only in badges.
+- **Decision:** Dashboard-first visual rhythm with one point of view: a "Today" hero (overall daily sales + per-store split tinted with the existing store pairs), secondary stat cards, then list sections. Shared upgrades behind small interfaces: `StatCard` gains `tone`/`icon`/`emphasis`; new `SegmentedControl`, `FilterBar`, `ListRow`, `Skeleton` family; compact `PageHeader`; `AsyncBoundary` accepts a skeleton node. Dashboard and Reports share the new `useBusinessSummaries` data seam but compose different layouts. New tokens are limited to `radius.xl`, `font.size.hero`, and `color.surface.subtle`; system font stack, light theme, and existing palette stay.
+- **Alternatives considered:** A third-party chart/component library — rejected; unneeded for agreed summaries. Dark mode and webfonts — deferred again. Per-page styling — rejected; preserves the duplication DEC-008 removed.
+- **Rationale:** Emphasis hierarchy (hero → stats → lists) makes the dashboard glanceable on a phone while every page reuses the same primitives, so the premium feel is systemic, not per-page decoration.
+- **Consequences:** `docs/DESIGN-SYSTEM.md` §§3–5 record the new tokens; page tests asserting old structure were updated with the change.
+- **Related documents:** `docs/DESIGN-SYSTEM.md` §§3–5, `docs/UI-UX.md` §§2, 9–10, 12.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** None.
+
+### DEC-010 — Tight responsive scale and flat grouped dashboard
+
+- **ID:** DEC-010
+- **Title:** Tight responsive scale and flat grouped dashboard
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** The DEC-009 system read airy and generic on phones: headings and stat values oversized for 320px widths, the fixed header and segmented filter could overflow horizontally, stat grids stayed two-column at every width, and dashboard sections nested cards inside cards.
+- **Decision:** Tighten the scale without breaking accessibility: body stays 16px; headings and meta shrink (`hero` 30, `display` 26, `2xl` 22, `xl` 19, `lg` 17, `sm` 13, `xs` 11); line-heights go `tight` 1.15 / `base` 1.4; new `tracking` tokens; new `phoneWide` 430px breakpoint; header truncates and hides the section tag on phones; segmented filters scroll horizontally; stat grids collapse via `auto-fit minmax(9rem, 1fr)`; dashboard and reports use flat grouped lists (`Section`/`RecordList` `flush`/`grouped` variants) with a brand-tinted hero. System font, light theme, palette unchanged.
+- **Alternatives considered:** Ultra-compact body text — rejected; breaks the 16px readability floor. A webfont — deferred again. Per-page fixes — rejected; systemic tokens fix every page at once.
+- **Rationale:** Density comes from the scale, not from ad-hoc overrides, so every current and future page inherits the tight rhythm while 44px targets and contrast stay intact.
+- **Consequences:** `docs/DESIGN-SYSTEM.md` §§2, 4, 6 record the scale; page tests asserting old structure were updated.
+- **Related documents:** `docs/DESIGN-SYSTEM.md` §§2, 4–6, `docs/UI-UX.md` §§9–10.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** None.
+
+### DEC-011 — More page, centered tabs, dashboard value hierarchy
+
+- **ID:** DEC-011
+- **Title:** More page, centered tabs, dashboard value hierarchy
+- **Status:** Accepted
+- **Date:** 2026-09-10
+- **Context:** The mobile tab bar stretched edge-to-edge with no centering; the More overflow opened a dialog instead of a real destination; the admin dashboard hero (30px) and store cards (26px) read at near-equal weight, and saturated store borders competed with the brand hero.
+- **Decision:** Tab items share equal width capped at 6.5rem and sit centered. Overflow destinations move to a full More page (`/more`, `/admin/more`) built from role-filtered nav items as an app-like grouped link list with short descriptions; the MoreSheet dialog is deleted. `StatCard` swaps `emphasis` for an explicit `valueScale` (`hero` 30 / `large` 26 / `medium` 22); only the brand tone keeps the accent border, store identity lives in tinted chips and names; dashboard groups content into "Daily sales by store" and "Credit & payments" flush sections under the hero.
+- **Alternatives considered:** Keep the More dialog — rejected; a real destination has natural focus order and no trap. Fixed-width tabs — rejected; capped flexible tabs adapt to all phone widths.
+- **Rationale:** Centered tabs read intentional; a More page keeps every destination a first-class, keyboard-friendly route; the 30/22/19 value steps plus section grouping make the dashboard glanceable.
+- **Consequences:** `docs/DESIGN-SYSTEM.md` §6 records the tab-bar and More-page rules; `MoreSheet.tsx` removed; tests added for the More page.
+- **Related documents:** `docs/DESIGN-SYSTEM.md` §6, `docs/UI-UX.md` §§5–6, 9–10.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** None.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

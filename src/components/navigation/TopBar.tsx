@@ -3,9 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { StoreBadge } from '@/components/ui/StoreBadge'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
-import { storeIds, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
-import type { StoreId } from '@/store/stores'
 
 interface TopBarProps {
   sectionLabel: string
@@ -29,6 +27,8 @@ const Inner = styled.div`
   min-height: ${({ theme }) => theme.layout.headerHeight};
   margin: 0 auto;
   padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.lg};
+  padding-left: max(${({ theme }) => theme.space.lg}, env(safe-area-inset-left, 0px));
+  padding-right: max(${({ theme }) => theme.space.lg}, env(safe-area-inset-right, 0px));
 `
 
 const Brand = styled(Link)`
@@ -36,15 +36,23 @@ const Brand = styled(Link)`
   color: ${({ theme }) => theme.color.text.primary};
   text-decoration: none;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex-shrink: 1;
 `
 
 const SectionTag = styled.span`
   font-size: ${({ theme }) => theme.font.size.xs};
   font-weight: ${({ theme }) => theme.font.weight.semibold};
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: ${({ theme }) => theme.font.tracking.wide};
   color: ${({ theme }) => theme.color.text.secondary};
   white-space: nowrap;
+
+  @media (max-width: ${({ theme }) => theme.breakpoint.tablet}) {
+    display: none;
+  }
 `
 
 const Spacer = styled.span`
@@ -54,7 +62,11 @@ const Spacer = styled.span`
 const Controls = styled.div`
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: ${({ theme }) => theme.space.sm};
+  margin-left: auto;
+  min-width: 0;
 `
 
 const UserName = styled.span`
@@ -65,16 +77,6 @@ const UserName = styled.span`
   @media (max-width: ${({ theme }) => theme.breakpoint.tablet}) {
     display: none;
   }
-`
-
-const StoreSelect = styled.select`
-  min-height: ${({ theme }) => theme.touch.minTarget};
-  padding: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.sm};
-  border: 1px solid ${({ theme }) => theme.color.border.strong};
-  border-radius: ${({ theme }) => theme.radius.md};
-  background-color: ${({ theme }) => theme.color.white};
-  font-size: ${({ theme }) => theme.font.size.sm};
-  font-weight: ${({ theme }) => theme.font.weight.semibold};
 `
 
 const SignOutButton = styled.button`
@@ -92,10 +94,15 @@ const SignOutButton = styled.button`
   &:hover {
     background-color: ${({ theme }) => theme.color.brand[50]};
   }
+
+  // Sign out lives on the More page on phones, keeping the header a single row.
+  @media (max-width: ${({ theme }) => theme.breakpoint.tablet}) {
+    display: none;
+  }
 `
 
 export function TopBar({ sectionLabel }: TopBarProps) {
-  const { store, setStore, canSwitchStore } = useStore()
+  const { store } = useStore()
   const { user, signOut } = useSession()
   const navigate = useNavigate()
 
@@ -107,24 +114,13 @@ export function TopBar({ sectionLabel }: TopBarProps) {
   return (
     <Header>
       <Inner>
-        <Brand to="/">Amara Feeds</Brand>
+        <Brand to="/" translate="no">
+          Amara Feeds
+        </Brand>
         <SectionTag>{sectionLabel}</SectionTag>
         <Spacer />
         <Controls>
           <StoreBadge store={store} />
-          {canSwitchStore && (
-            <StoreSelect
-              aria-label="Store"
-              value={store}
-              onChange={(event) => setStore(event.target.value as StoreId)}
-            >
-              {storeIds.map((id) => (
-                <option key={id} value={id}>
-                  {storeNames[id]}
-                </option>
-              ))}
-            </StoreSelect>
-          )}
           {user && <UserName>{getDisplayName(user.name)}</UserName>}
           <SignOutButton type="button" onClick={handleSignOut}>
             Sign out

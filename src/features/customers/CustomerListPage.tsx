@@ -5,6 +5,7 @@ import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
+import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
 import { useAsyncData } from '@/features/shared'
@@ -38,6 +39,7 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
         actions={
           canAdd ? <Button onClick={() => setDialogOpen(true)}>Add customer</Button> : undefined
         }
+        size="compact"
       />
       {notice && <Alert variant="success">{notice}</Alert>}
       <TextField
@@ -48,9 +50,9 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
       />
       <AsyncBoundary
         loading={loading}
-        loadingText="Loading customers…"
         error={error}
         onRetry={reload}
+        skeleton={<ListSkeleton rows={4} />}
         empty={
           data && data.length === 0
             ? {

@@ -17,8 +17,10 @@ foundation; any future brand artwork, logo, or marketing palette remains
 
 ## 2. Principles
 
-1. **Mobile first.** Base styles target small phones; `tablet` (≥640px) and `desktop`
+1. **Mobile first.** Base styles target small phones, including 320px widths with no
+   horizontal scrolling; `phoneWide` (≥430px), `tablet` (≥640px) and `desktop`
    (≥1024px) enhance layout only. Core workflows never require horizontal scrolling.
+   Fixed chrome truncates or hides secondary items rather than overflowing.
 2. **Text, not color alone.** Statuses, store context, and errors are always conveyed in
    words. Color is reinforcement only (`docs/REQUIREMENTS.md` REQ-ACC-004).
 3. **Visible store context.** Amara and Zeann each have an identity color pair, always
@@ -81,6 +83,7 @@ always shown as text next to it.
 | Token             | Value                                                                 |
 | ----------------- | --------------------------------------------------------------------- |
 | `surface.page`    | `#f9fafb`                                                             |
+| `surface.subtle`  | `#f3f4f6` (filter bars, icon chips, skeleton base)                    |
 | `surface.card`    | `#ffffff`                                                             |
 | `surface.overlay` | `rgba(17, 24, 39, 0.5)`                                               |
 | `focus.ring`      | `#2563eb` (2px outline, 2px offset, always visible on keyboard focus) |
@@ -89,9 +92,10 @@ always shown as text next to it.
 
 - **Family (system stack, no web-font dependency):**
   `system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`.
-- **Sizes:** `xs` 12px · `sm` 14px · `md` 16px (base) · `lg` 18px · `xl` 20px · `2xl` 24px · `display` 32px (stat values and brand wordmarks only).
+- **Sizes:** `xs` 11px · `sm` 13px · `md` 16px (base, never smaller for body) · `lg` 17px · `xl` 19px · `2xl` 22px · `display` 26px (stat values) · `hero` 30px (dashboard hero number only).
 - **Weights:** `regular` 400 · `medium` 500 · `semibold` 600 · `bold` 700.
-- **Line heights:** `tight` 1.25 (headings) · `base` 1.5 (body).
+- **Tracking:** `tight` -0.01em (headings) · `normal` 0 (body) · `wide` 0.05em (micro labels).
+- **Line heights:** `tight` 1.15 (headings) · `base` 1.4 (body).
 - Form labels use `sm` semibold; body text is never smaller than `sm` except captions (`xs`).
 - Numeric values (money, quantities, counts) use `font-variant-numeric: tabular-nums` so figures align.
 - Headings use `text-wrap: balance` to avoid widows.
@@ -100,7 +104,7 @@ always shown as text next to it.
 
 - **Spacing (4px base):** `0` 0 · `xs` 4px · `sm` 8px · `md` 12px · `lg` 16px · `xl` 24px ·
   `2xl` 32px · `3xl` 48px.
-- **Radii:** `sm` 4px · `md` 8px · `lg` 12px · `full` 9999px.
+- **Radii:** `sm` 4px · `md` 8px · `lg` 12px · `xl` 16px (hero surfaces) · `full` 9999px.
 - **Shadows:** `sm` (cards) · `md` (dialogs, elevated nav) · `lg` (sheets, prominent surfaces). Dialogs also dim the page with
   `surface.overlay`.
 - **Layout:** `layout.headerHeight` 60px · `layout.tabBarHeight` 64px ·
@@ -108,14 +112,15 @@ always shown as text next to it.
 
 ## 6. Breakpoints and Layout
 
-| Token         | Value    | Layout effect                                                                         |
-| ------------- | -------- | ------------------------------------------------------------------------------------- |
-| base (mobile) | < 640px  | Fixed tab bar (max 5 destinations + More sheet); single column; lists render as cards |
-| `tablet`      | ≥ 640px  | Wider forms and lists; same destinations as mobile                                    |
-| `desktop`     | ≥ 1024px | Side navigation replaces the tab bar; content max-width                               |
+| Token         | Value    | Layout effect                                                                                           |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| base (mobile) | < 430px  | Fixed tab bar (max 5 destinations + More sheet); single column; lists render as cards; chrome truncates |
+| `phoneWide`   | ≥ 430px  | Relaxed phone layout; pairs and rows breathe                                                            |
+| `tablet`      | ≥ 640px  | Wider forms and lists; same destinations as mobile                                                      |
+| `desktop`     | ≥ 1024px | Side navigation replaces the tab bar; content max-width                                                 |
 
-Navigation destinations are identical on all viewports (`docs/UI-UX.md` §6). The More sheet groups overflow destinations; it adds no new destinations.
-Fixed chrome respects device safe areas (`env(safe-area-inset-*)`) and the tab bar uses icon + label pairs (inline SVG, `currentColor`, decorative and hidden from assistive tech).
+Navigation destinations are identical on all viewports (`docs/UI-UX.md` §6). Overflow destinations live on the More page (`/more`, `/admin/more`); it adds no new destinations.
+Fixed chrome respects device safe areas (`env(safe-area-inset-*)`) and the tab bar uses icon + label pairs (inline SVG, `currentColor`, decorative and hidden from assistive tech). Tab items share equal width capped at 6.5rem so the five tabs sit centered.
 
 ## 7. Motion
 

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
+import { Icon } from '@/components/ui/icons'
 import { todayIso } from '@/lib/dates'
 import { SummarySections } from './SummarySections'
 
@@ -14,15 +16,23 @@ export function ReportsPage() {
       <PageHeader
         title="Reports"
         description="Business summaries for the selected date. Print from this page."
-        actions={<Button onClick={() => window.print()}>Print</Button>}
+        actions={
+          <Button onClick={() => window.print()}>
+            <Icon name="print" />
+            Print
+          </Button>
+        }
+        size="compact"
       />
-      <TextField
-        id="report-date"
-        label="Date"
-        type="date"
-        value={date}
-        onChange={(event) => setDate(event.target.value)}
-      />
+      <FilterBar>
+        <TextField
+          id="report-date"
+          label="Date"
+          type="date"
+          value={date}
+          onChange={(event) => setDate(event.target.value)}
+        />
+      </FilterBar>
       <SummarySections date={date} />
     </Stack>
   )

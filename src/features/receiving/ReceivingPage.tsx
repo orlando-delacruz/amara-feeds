@@ -6,13 +6,15 @@ import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { DateText } from '@/components/ui/DateText'
+import { FilterBar } from '@/components/ui/FilterBar'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
 import { Select } from '@/components/ui/Select'
+import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
-import { useAsyncData, useMutation } from '@/features/shared'
+import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
 import { toMinor } from '@/lib/money'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
@@ -44,7 +46,7 @@ interface ReceivingFormState {
 const emptyForm: ReceivingFormState = { productId: '', quantity: '', supplier: '', costPrice: '' }
 
 export function ReceivingPage() {
-  const { store } = useStore()
+  const { store, canSwitchStore } = useStore()
   const [form, setForm] = useState<ReceivingFormState>(emptyForm)
   const [notice, setNotice] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
@@ -92,10 +94,16 @@ export function ReceivingPage() {
       <PageHeader
         title="Receiving Stock"
         description={`Record stock received at ${storeNames[store]}.`}
+        size="compact"
       />
       {notice && <Alert variant="success">{notice}</Alert>}
       {formError && <Alert variant="danger">{formError}</Alert>}
       {receive.error && <Alert variant="danger">{receive.error}</Alert>}
+      {canSwitchStore && (
+        <FilterBar>
+          <StoreControl />
+        </FilterBar>
+      )}
       <Card>
         <form onSubmit={handleSubmit} noValidate>
           <Fields>
@@ -144,9 +152,9 @@ export function ReceivingPage() {
       </Card>
       <AsyncBoundary
         loading={list.loading}
-        loadingText="Loading receipts…"
         error={list.error}
         onRetry={list.reload}
+        skeleton={<ListSkeleton rows={3} />}
         empty={
           list.data && list.data.length === 0
             ? {

@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listCredits, listCustomers } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { DateText } from '@/components/ui/DateText'
+import { ListRow } from '@/components/ui/ListRow'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
-import { Select } from '@/components/ui/Select'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useAsyncData } from '@/features/shared'
@@ -24,8 +26,9 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
   const credits = useAsyncData(() => listCredits())
   const customers = useAsyncData(() => listCustomers())
 
-  const customerNames = new Map(
-    (customers.data ?? []).map((customer) => [customer.id, customer.name]),
+  const customerNames = useMemo(
+    () => new Map((customers.data ?? []).map((customer) => [customer.id, customer.name])),
+    [customers.data],
   )
   const filtered =
     credits.data?.filter((credit) => status === 'all' || credit.status === status) ?? []
@@ -35,12 +38,12 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
       <PageHeader
         title="Credit / Collection"
         description="Shared credit across both stores, with traceable origin and payment stores."
+        size="compact"
       />
-      <Select
-        id="credit-status"
+      <SegmentedControl
         label="Status"
         value={status}
-        onChange={(event) => setStatus(event.target.value as StatusFilter)}
+        onChange={(value) => setStatus(value as StatusFilter)}
         options={[
           { value: 'all', label: 'All' },
           { value: 'outstanding', label: 'Outstanding' },
@@ -49,9 +52,9 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
       />
       <AsyncBoundary
         loading={credits.loading}
-        loadingText="Loading credit…"
         error={credits.error}
         onRetry={credits.reload}
+        skeleton={<ListSkeleton rows={4} />}
         empty={
           !credits.loading && !credits.error && filtered.length === 0
             ? {
@@ -82,6 +85,24 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
               balance: <MoneyText amountMinor={credit.balanceMinor} />,
               status: <StatusBadge status={credit.status} />,
             }))}
+            renderCard={(_row, index) => {
+              const credit = filtered[index]
+              if (!credit) {
+                return null
+              }
+              return (
+                <ListRow
+                  title={customerNames.get(credit.customerId) ?? 'Not available'}
+                  subtitle={
+                    <>
+                      {storeNames[credit.originStoreId]} · Due <DateText value={credit.dueDate} />
+                    </>
+                  }
+                  trailing={<MoneyText amountMinor={credit.balanceMinor} />}
+                  href={`${basePath}/${credit.id}`}
+                />
+              )
+            }}
           />
         )}
       </AsyncBoundary>

@@ -11,7 +11,7 @@ interface AppProvidersProps {
   initialUser?: User | null
 }
 
-export function AppProviders({ children, initialUser = null }: AppProvidersProps) {
+export function AppProviders({ children, initialUser }: AppProvidersProps) {
   return (
     <ThemeProvider theme={tokens}>
       <GlobalStyle />

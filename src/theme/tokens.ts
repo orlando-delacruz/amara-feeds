@@ -27,6 +27,7 @@ export const tokens = {
     },
     surface: {
       page: '#f9fafb',
+      subtle: '#f3f4f6',
       card: '#ffffff',
       overlay: 'rgba(17, 24, 39, 0.5)',
     },
@@ -51,13 +52,19 @@ export const tokens = {
   font: {
     family: 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     size: {
-      xs: '12px',
-      sm: '14px',
+      xs: '11px',
+      sm: '13px',
       md: '16px',
-      lg: '18px',
-      xl: '20px',
-      xxl: '24px',
-      display: '32px',
+      lg: '17px',
+      xl: '19px',
+      xxl: '22px',
+      display: '26px',
+      hero: '30px',
+    },
+    tracking: {
+      tight: '-0.01em',
+      normal: '0',
+      wide: '0.05em',
     },
     weight: {
       regular: 400,
@@ -66,8 +73,8 @@ export const tokens = {
       bold: 700,
     },
     lineHeight: {
-      tight: 1.25,
-      base: 1.5,
+      tight: 1.15,
+      base: 1.4,
     },
   },
   space: {
@@ -84,6 +91,7 @@ export const tokens = {
     sm: '4px',
     md: '8px',
     lg: '12px',
+    xl: '16px',
     full: '9999px',
   },
   shadow: {
@@ -97,6 +105,7 @@ export const tokens = {
     contentMaxWidth: '72rem',
   },
   breakpoint: {
+    phoneWide: '430px',
     tablet: '640px',
     desktop: '1024px',
   },

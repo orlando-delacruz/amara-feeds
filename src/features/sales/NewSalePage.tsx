@@ -65,7 +65,11 @@ const Review = styled.div`
   gap: ${({ theme }) => theme.space.sm};
 `
 
-export function NewSalePage() {
+interface NewSalePageProps {
+  basePath?: string
+}
+
+export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
   const navigate = useNavigate()
   const { store } = useStore()
   const [customerId, setCustomerId] = useState('')
@@ -129,7 +133,7 @@ export function NewSalePage() {
       termsId: paymentType === 'charge' ? termsId : undefined,
     })
     if (sale) {
-      navigate('/sales')
+      navigate(basePath)
     }
   }
 
@@ -154,10 +158,11 @@ export function NewSalePage() {
         title="New sale"
         description={`Recording a sale at ${storeNames[store]}.`}
         actions={
-          <Button variant="secondary" onClick={() => navigate('/sales')}>
+          <Button variant="secondary" onClick={() => navigate(basePath)}>
             Cancel
           </Button>
         }
+        size="compact"
       />
       {save.error && <Alert variant="danger">{save.error}</Alert>}
       <form onSubmit={handleSubmit} noValidate>

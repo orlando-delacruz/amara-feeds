@@ -10,6 +10,7 @@ interface RecordListProps {
   columns: DataTableColumn[]
   rows: DataTableRow[]
   emptyMessage?: string
+  variant?: 'card' | 'grouped'
   renderCard?: (row: DataTableRow, index: number) => ReactNode
 }
 
@@ -18,6 +19,24 @@ const Cards = styled.ul`
   flex-direction: column;
   gap: ${({ theme }) => theme.space.sm};
   list-style: none;
+`
+
+const Group = styled.ul`
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  background-color: ${({ theme }) => theme.color.surface.card};
+  border: 1px solid ${({ theme }) => theme.color.border.default};
+  border-radius: ${({ theme }) => theme.radius.lg};
+  overflow: hidden;
+`
+
+const GroupItem = styled.li`
+  padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md};
+
+  & + & {
+    border-top: 1px solid ${({ theme }) => theme.color.border.default};
+  }
 `
 
 const CardItem = styled.li`
@@ -71,13 +90,31 @@ function DefaultCard({ row, columns }: { row: DataTableRow; columns: DataTableCo
   )
 }
 
-export function RecordList({ caption, columns, rows, emptyMessage, renderCard }: RecordListProps) {
+export function RecordList({
+  caption,
+  columns,
+  rows,
+  emptyMessage,
+  variant = 'card',
+  renderCard,
+}: RecordListProps) {
   const wide = useMediaQuery(`(min-width: ${tokens.breakpoint.tablet})`, true)
   if (wide) {
     return <DataTable caption={caption} columns={columns} rows={rows} emptyMessage={emptyMessage} />
   }
   if (rows.length === 0) {
     return <DataTable caption={caption} columns={columns} rows={rows} emptyMessage={emptyMessage} />
+  }
+  if (variant === 'grouped') {
+    return (
+      <Group aria-label={caption}>
+        {rows.map((row, index) => (
+          <GroupItem key={row.id && typeof row.id === 'string' ? row.id : index}>
+            {renderCard ? renderCard(row, index) : <DefaultCard row={row} columns={columns} />}
+          </GroupItem>
+        ))}
+      </Group>
+    )
   }
   return (
     <Cards aria-label={caption}>

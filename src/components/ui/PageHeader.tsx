@@ -3,15 +3,16 @@ import type { ReactNode } from 'react'
 
 interface PageHeaderProps {
   title: string
-  description?: string
+  description?: ReactNode
   actions?: ReactNode
+  size?: 'default' | 'compact'
 }
 
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space.sm};
-  margin-bottom: ${({ theme }) => theme.space.lg};
+  margin-bottom: ${({ theme }) => theme.space.md};
 
   @media (min-width: ${({ theme }) => theme.breakpoint.tablet}) {
     flex-direction: row;
@@ -20,15 +21,21 @@ const Wrapper = styled.div`
   }
 `
 
-const Title = styled.h1`
-  font-size: ${({ theme }) => theme.font.size.xxl};
+const Title = styled.h1<{ $compact: boolean }>`
+  font-size: ${({ theme, $compact }) => ($compact ? theme.font.size.xl : theme.font.size.xxl)};
   font-weight: ${({ theme }) => theme.font.weight.bold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
+  text-wrap: balance;
 `
 
 const Description = styled.p`
   margin-top: ${({ theme }) => theme.space.xs};
+  font-size: ${({ theme }) => theme.font.size.sm};
   color: ${({ theme }) => theme.color.text.secondary};
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `
 
 const Actions = styled.div`
@@ -38,11 +45,11 @@ const Actions = styled.div`
   flex-shrink: 0;
 `
 
-export function PageHeader({ title, description, actions }: PageHeaderProps) {
+export function PageHeader({ title, description, actions, size = 'default' }: PageHeaderProps) {
   return (
     <Wrapper>
-      <div>
-        <Title>{title}</Title>
+      <div style={{ minWidth: 0 }}>
+        <Title $compact={size === 'compact'}>{title}</Title>
         {description && <Description>{description}</Description>}
       </div>
       {actions && <Actions>{actions}</Actions>}

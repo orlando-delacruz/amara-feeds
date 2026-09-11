@@ -5,6 +5,7 @@ import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
+import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useAsyncData } from '@/features/shared'
@@ -27,13 +28,14 @@ export function ProductListPage() {
         title="Products"
         description="Staff-submitted products stay pending until an admin approves them."
         actions={<Button onClick={() => setDialogOpen(true)}>Add product</Button>}
+        size="compact"
       />
       {notice && <Alert variant="success">{notice}</Alert>}
       <AsyncBoundary
         loading={loading}
-        loadingText="Loading products…"
         error={error}
         onRetry={reload}
+        skeleton={<ListSkeleton rows={4} />}
         empty={
           data && data.length === 0
             ? {

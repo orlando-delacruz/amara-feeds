@@ -14,7 +14,8 @@ reads **OPEN**.
 
 1. Mock success proves nothing about data integrity or authorization. Every record in
    this file is a statement about frontend behavior only.
-2. Mock state is in-memory and resets on page reload. Scenarios that chain actions
+2. Mock domain data is in-memory and resets on page reload (the signed-in mock
+   account itself persists across reloads). Scenarios that chain actions
    (marked CHAIN) must run without reloading, or repeat their setup steps.
 3. The mock sign-in is UI gating only, never a security boundary (`docs/SECURITY.md`).
 
@@ -61,12 +62,12 @@ Template for each scenario — fill in during the interactive pass:
 - Requirements: REQ-USER-001–003, REQ-STORE-001/002.
 - Steps:
   1. Open `/` signed out. Expected: redirected to the sign-in screen listing the mock accounts.
-  2. Sign in as Alice (Amara staff). Expected: lands on the staff dashboard; header shows store badge "Amara"; **no** store switcher; user name shown.
+  2. Sign in as Alice (Amara staff). Expected: lands on the staff dashboard; header shows store badge "Amara"; **no** store switcher anywhere; user name shown.
   3. Manually visit `/admin`. Expected: bounced back to the staff area.
-  4. Sign out, sign in as Owner (admin). Expected: lands on the admin dashboard; header shows a store badge **and** a store switcher.
-  5. As admin, switch the store to Zeann. Expected: badge reads "Zeann"; store-specific views follow the selection.
+  4. Sign out, sign in as Owner (admin). Expected: lands on the admin dashboard; header shows a store badge only (no header switcher).
+  5. As admin, open Inventory and switch the store to Zeann via the store control. Expected: badge reads "Zeann"; store-specific views follow the selection.
   6. Sign out. Expected: back at sign-in; protected routes redirect there again.
-- Manual focus: is the current store always obvious? Is it clear the switcher is admin-only?
+- Manual focus: is the current store always obvious? Is it clear the store control is admin-only?
 
 ### W2 — Shared customers
 
@@ -95,7 +96,7 @@ Template for each scenario — fill in during the interactive pass:
   2. Open Receiving. Expected: prior Amara receipts listed.
   3. Record a receipt: Rice 25kg, quantity 5, any supplier, cost ₱1,100.00. Expected: success, receipt appears, Amara Rice becomes 25.
   4. As Ben, open Inventory. Expected: Zeann figures unchanged (Rice 12).
-  5. As Owner, review both stores via the store switcher.
+  5. As Owner, review both stores via the store control on the Inventory and Receiving pages.
 - Manual focus: is per-store separation obvious at all times?
 
 ### W5 — Cash sale with stock effect (CHAIN with W4)

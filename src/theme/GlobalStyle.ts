@@ -9,21 +9,32 @@ export const GlobalStyle = createGlobalStyle`
     margin: 0;
   }
 
+  ul {
+    padding: 0;
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
+    scroll-padding-top: calc(
+      ${({ theme }) => theme.layout.headerHeight} + env(safe-area-inset-top, 0px) +
+        ${({ theme }) => theme.space.sm}
+    );
   }
 
   body {
     font-family: ${({ theme }) => theme.font.family};
     font-size: ${({ theme }) => theme.font.size.md};
     line-height: ${({ theme }) => theme.font.lineHeight.base};
+    letter-spacing: ${({ theme }) => theme.font.tracking.normal};
     color: ${({ theme }) => theme.color.text.primary};
     background-color: ${({ theme }) => theme.color.surface.page};
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
   #root {
     min-height: 100dvh;
+    overflow-x: hidden;
   }
 
   button,
@@ -35,7 +46,8 @@ export const GlobalStyle = createGlobalStyle`
   }
 
   button,
-  a {
+  a,
+  select {
     touch-action: manipulation;
   }
 

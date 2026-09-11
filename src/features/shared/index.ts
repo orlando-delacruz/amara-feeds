@@ -1,4 +1,5 @@
 export { getErrorMessage } from './getErrorMessage'
+export { StoreControl } from './StoreControl'
 export { useAsyncData } from './hooks/useAsyncData'
 export type { AsyncDataState } from './hooks/useAsyncData'
 export { useMediaQuery } from './hooks/useMediaQuery'

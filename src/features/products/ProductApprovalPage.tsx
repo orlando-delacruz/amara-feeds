@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
+import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { useAsyncData, useMutation } from '@/features/shared'
 import type { Product } from '@/domain'
@@ -33,13 +34,14 @@ export function ProductApprovalPage() {
       <PageHeader
         title="Product Approvals"
         description="Approve staff-submitted products to make them active."
+        size="compact"
       />
       {notice && <Alert variant="success">{notice}</Alert>}
       <AsyncBoundary
         loading={loading}
-        loadingText="Loading pending products…"
         error={error}
         onRetry={reload}
+        skeleton={<ListSkeleton rows={3} />}
         empty={
           data && data.length === 0
             ? {
