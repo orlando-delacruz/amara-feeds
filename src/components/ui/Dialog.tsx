@@ -59,12 +59,21 @@ const Title = styled.h2`
 
 export function Dialog({ open, title, onClose, children }: DialogProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
+  // Focus the Close button once per opening. The effect re-runs when the
+  // caller's onClose identity changes, so focusing unconditionally would yank
+  // focus out of form fields on every keystroke (and a subsequent Space key
+  // would then activate Close instead of typing a space).
+  const focusedForOpenRef = useRef(false)
 
   useEffect(() => {
     if (!open) {
+      focusedForOpenRef.current = false
       return
     }
-    closeRef.current?.focus()
+    if (!focusedForOpenRef.current) {
+      focusedForOpenRef.current = true
+      closeRef.current?.focus()
+    }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose()
@@ -94,7 +103,7 @@ export function Dialog({ open, title, onClose, children }: DialogProps) {
       <Panel role="dialog" aria-modal="true" aria-label={title}>
         <Header>
           <Title>{title}</Title>
-          <Button ref={closeRef} variant="subtle" size="sm" onClick={onClose}>
+          <Button ref={closeRef} type="button" variant="subtle" size="sm" onClick={onClose}>
             Close
           </Button>
         </Header>

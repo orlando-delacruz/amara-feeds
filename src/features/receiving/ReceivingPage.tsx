@@ -13,14 +13,14 @@ import {
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DateText } from '@/components/ui/DateText'
+import { Dialog } from '@/components/ui/Dialog'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
-import { Section } from '@/components/ui/Section'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Select } from '@/components/ui/Select'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
@@ -48,7 +48,9 @@ const Fields = styled.div`
 
 const Actions = styled.div`
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: ${({ theme }) => theme.space.sm};
   margin-top: ${({ theme }) => theme.space.md};
 `
 
@@ -59,12 +61,35 @@ const RowActions = styled.div`
   justify-content: flex-end;
 `
 
+const PendingCardHeader = styled.span`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.space.sm};
+`
+
+const PendingCardName = styled.span`
+  min-width: 0;
+  font-weight: ${({ theme }) => theme.font.weight.semibold};
+  overflow-wrap: break-word;
+`
+
+const PendingCardMeta = styled.span`
+  font-size: ${({ theme }) => theme.font.size.sm};
+  color: ${({ theme }) => theme.color.text.muted};
+`
+
+const FilterBarEnd = styled.div`
+  margin-left: auto;
+`
+
 interface ReceivingFormState {
   productId: string
   customItemName: string
   quantity: string
   supplier: string
   costPrice: string
+  sellingPrice: string
 }
 
 const emptyForm: ReceivingFormState = {
@@ -73,12 +98,15 @@ const emptyForm: ReceivingFormState = {
   quantity: '',
   supplier: '',
   costPrice: '',
+  sellingPrice: '',
 }
 
 export function ReceivingPage() {
-  const { store, canSwitchStore } = useStore()
+  const { store } = useStore()
   const { user } = useSession()
   const [form, setForm] = useState<ReceivingFormState>(emptyForm)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [tab, setTab] = useState<'pending' | 'received'>('pending')
   const [notice, setNotice] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [decision, setDecision] = useState<{ product: Product; action: 'approve' | 'reject' } | null>(
@@ -95,6 +123,12 @@ export function ReceivingPage() {
 
   function updateForm<K extends keyof ReceivingFormState>(key: K, value: string) {
     setForm((current) => ({ ...current, [key]: value }))
+  }
+
+  function closeDialog() {
+    setDialogOpen(false)
+    setForm(emptyForm)
+    setFormError(null)
   }
 
   const isCustomItem = form.productId === NEW_RECEIVING_ITEM_VALUE
@@ -145,9 +179,11 @@ export function ReceivingPage() {
       quantity: Number(form.quantity),
       supplier: form.supplier,
       costPriceMinor: toMinor(Number(form.costPrice)),
+      ...(form.sellingPrice.trim() ? { sellingPriceMinor: toMinor(Number(form.sellingPrice)) } : {}),
       recordedByUserId: user?.id ?? '',
     })
     if (record) {
+      setDialogOpen(false)
       setForm(emptyForm)
       setNotice(
         submittedNewItem
@@ -215,15 +251,25 @@ export function ReceivingPage() {
         size="compact"
       />
       {notice && <Alert variant="success">{notice}</Alert>}
-      {formError && <Alert variant="danger">{formError}</Alert>}
-      {receive.error && <Alert variant="danger">{receive.error}</Alert>}
-      {canSwitchStore && (
-        <FilterBar>
-          <StoreControl />
-        </FilterBar>
-      )}
-      <Card>
+      <FilterBar>
+        <StoreControl />
+        <FilterBarEnd>
+          <Button onClick={() => setDialogOpen(true)}>Add stock</Button>
+        </FilterBarEnd>
+      </FilterBar>
+      <SegmentedControl
+        label="Receiving view"
+        options={[
+          { value: 'pending', label: 'Pending items' },
+          { value: 'received', label: 'List items' },
+        ]}
+        value={tab}
+        onChange={(value) => setTab(value as 'pending' | 'received')}
+      />
+      <Dialog open={dialogOpen} title="Add stock" onClose={closeDialog}>
         <form onSubmit={handleSubmit} noValidate>
+          {formError && <Alert variant="danger">{formError}</Alert>}
+          {receive.error && <Alert variant="danger">{receive.error}</Alert>}
           <Fields>
             <Select
               id="receiving-product"
@@ -271,110 +317,147 @@ export function ReceivingPage() {
               onChange={(event) => updateForm('costPrice', event.target.value)}
               required
             />
+            <TextField
+              id="receiving-selling-price"
+              label="Selling price (₱)"
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.sellingPrice}
+              onChange={(event) => updateForm('sellingPrice', event.target.value)}
+            />
           </Fields>
           <Actions>
+            <Button type="button" variant="secondary" onClick={closeDialog}>
+              Cancel
+            </Button>
             <Button type="submit" disabled={receive.pending}>
-              {receive.pending ? 'Recording…' : 'Record receiving'}
+              {receive.pending ? 'Saving…' : 'Save'}
             </Button>
           </Actions>
         </form>
-      </Card>
-      {isAdmin ? (
-        <Section title="Pending items" variant="flush">
-          {review.error && <Alert variant="danger">{review.error}</Alert>}
-          {pendingProducts.length === 0 ? (
-            <Alert variant="success">No items awaiting approval.</Alert>
-          ) : (
+      </Dialog>
+      {tab === 'pending' ? (
+        isAdmin ? (
+          <>
+            {review.error && <Alert variant="danger">{review.error}</Alert>}
+            {pendingProducts.length === 0 ? (
+              <Alert variant="success">No items awaiting approval.</Alert>
+            ) : (
+              <RecordList
+                caption="Items awaiting approval"
+                columns={[
+                  { key: 'name', header: 'Item' },
+                  { key: 'submittedBy', header: 'Submitted by' },
+                  { key: 'status', header: 'Status' },
+                  { key: 'actions', header: 'Actions' },
+                ]}
+                rows={pendingProducts.map((product) => ({
+                  name: product.name,
+                  submittedBy: product.createdByUserId
+                    ? (userNames.get(product.createdByUserId) ?? 'Not available')
+                    : 'Not available',
+                  status: <StatusBadge status={product.status} />,
+                  actions: (
+                    <RowActions>
+                      <Button
+                        size="sm"
+                        disabled={review.pending}
+                        onClick={() => setDecision({ product, action: 'approve' })}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        disabled={review.pending}
+                        onClick={() => setDecision({ product, action: 'reject' })}
+                      >
+                        Reject
+                      </Button>
+                    </RowActions>
+                  ),
+                }))}
+                renderCard={(row) => (
+                  <>
+                    <PendingCardHeader>
+                      <PendingCardName>{row.name}</PendingCardName>
+                      {row.status}
+                    </PendingCardHeader>
+                    <PendingCardMeta>Submitted by {row.submittedBy}</PendingCardMeta>
+                    {row.actions}
+                  </>
+                )}
+              />
+            )}
+          </>
+        ) : myPendingProducts.length === 0 ? (
+          <Alert variant="success">No pending items.</Alert>
+        ) : (
+          <RecordList
+            caption="Your pending items"
+            columns={[
+              { key: 'name', header: 'Item' },
+              { key: 'status', header: 'Status' },
+            ]}
+            rows={myPendingProducts.map((product) => ({
+              name: product.name,
+              status: <StatusBadge status={product.status} />,
+            }))}
+            renderCard={(row) => (
+              <PendingCardHeader>
+                <PendingCardName>{row.name}</PendingCardName>
+                {row.status}
+              </PendingCardHeader>
+            )}
+          />
+        )
+      ) : (
+        <AsyncBoundary
+          loading={list.loading}
+          error={list.error}
+          onRetry={list.reload}
+          skeleton={<ListSkeleton rows={3} />}
+          empty={
+            list.data && list.data.length === 0
+              ? {
+                  title: 'No receipts yet',
+                  description: 'Add the first stock receipt to see it here.',
+                  action: <Button onClick={() => setDialogOpen(true)}>Add stock</Button>,
+                }
+              : null
+          }
+        >
+          {list.data && list.data.length > 0 && (
             <RecordList
-              caption="Pending items"
+              caption={`Receiving history at ${storeNames[store]}`}
               columns={[
-                { key: 'name', header: 'Item' },
-                { key: 'submittedBy', header: 'Submitted by' },
-                { key: 'status', header: 'Status' },
-                { key: 'actions', header: 'Actions' },
+                { key: 'product', header: 'Item' },
+                { key: 'quantity', header: 'Quantity' },
+                { key: 'supplier', header: 'Supplier' },
+                { key: 'cost', header: 'Cost price' },
+                { key: 'selling', header: 'Selling price' },
+                { key: 'recordedBy', header: 'Recorded by' },
+                { key: 'receivedAt', header: 'Received' },
               ]}
-              rows={pendingProducts.map((product) => ({
-                name: product.name,
-                submittedBy: product.createdByUserId
-                  ? (userNames.get(product.createdByUserId) ?? 'Not available')
-                  : 'Not available',
-                status: <StatusBadge status={product.status} />,
-                actions: (
-                  <RowActions>
-                    <Button
-                      size="sm"
-                      disabled={review.pending}
-                      onClick={() => setDecision({ product, action: 'approve' })}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      disabled={review.pending}
-                      onClick={() => setDecision({ product, action: 'reject' })}
-                    >
-                      Reject
-                    </Button>
-                  </RowActions>
-                ),
+              rows={list.data.map((record) => ({
+                product: productNames.get(record.productId) ?? 'Not available',
+                quantity: String(record.quantity),
+                supplier: record.supplier,
+                cost: <MoneyText amountMinor={record.costPriceMinor} />,
+                selling:
+                  record.sellingPriceMinor !== undefined ? (
+                    <MoneyText amountMinor={record.sellingPriceMinor} />
+                  ) : (
+                    'Not available'
+                  ),
+                recordedBy: userNames.get(record.recordedByUserId) ?? 'Not available',
+                receivedAt: <DateText value={record.receivedAt} />,
               }))}
             />
           )}
-        </Section>
-      ) : (
-        myPendingProducts.length > 0 && (
-          <Section title="Your pending items" variant="flush">
-            <RecordList
-              caption="Your pending items"
-              columns={[
-                { key: 'name', header: 'Item' },
-                { key: 'status', header: 'Status' },
-              ]}
-              rows={myPendingProducts.map((product) => ({
-                name: product.name,
-                status: <StatusBadge status={product.status} />,
-              }))}
-            />
-          </Section>
-        )
+        </AsyncBoundary>
       )}
-      <AsyncBoundary
-        loading={list.loading}
-        error={list.error}
-        onRetry={list.reload}
-        skeleton={<ListSkeleton rows={3} />}
-        empty={
-          list.data && list.data.length === 0
-            ? {
-                title: 'No receipts yet',
-                description: 'Record the first stock receipt above.',
-              }
-            : null
-        }
-      >
-        {list.data && list.data.length > 0 && (
-          <RecordList
-            caption={`Receiving history at ${storeNames[store]}`}
-            columns={[
-              { key: 'product', header: 'Item' },
-              { key: 'quantity', header: 'Quantity' },
-              { key: 'supplier', header: 'Supplier' },
-              { key: 'cost', header: 'Cost price' },
-              { key: 'recordedBy', header: 'Recorded by' },
-              { key: 'receivedAt', header: 'Received' },
-            ]}
-            rows={list.data.map((record) => ({
-              product: productNames.get(record.productId) ?? 'Not available',
-              quantity: String(record.quantity),
-              supplier: record.supplier,
-              cost: <MoneyText amountMinor={record.costPriceMinor} />,
-              recordedBy: userNames.get(record.recordedByUserId) ?? 'Not available',
-              receivedAt: <DateText value={record.receivedAt} />,
-            }))}
-          />
-        )}
-      </AsyncBoundary>
       <ConfirmDialog
         open={decision !== null}
         title={decision?.action === 'reject' ? 'Reject item' : 'Approve item'}

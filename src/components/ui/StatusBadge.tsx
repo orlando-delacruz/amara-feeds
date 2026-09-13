@@ -8,7 +8,7 @@ interface StatusBadgeProps {
 }
 
 const labels: Record<StatusBadgeStatus, string> = {
-  pending: 'Pending approval',
+  pending: 'Pending',
   active: 'Active',
   outstanding: 'Outstanding',
   settled: 'Settled',

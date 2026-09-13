@@ -29,6 +29,9 @@ export async function createReceiving(input: NewReceivingInput): Promise<Receivi
   if (input.costPriceMinor < 0) {
     throw new ServiceError('validation', 'Cost price cannot be negative.')
   }
+  if (input.sellingPriceMinor !== undefined && input.sellingPriceMinor < 0) {
+    throw new ServiceError('validation', 'Selling price cannot be negative.')
+  }
   // Rider/vehicle are legacy-only: validated when provided so old records and
   // old callers stay checked, but never required on new receipts.
   if (input.riderId) {
@@ -52,6 +55,7 @@ export async function createReceiving(input: NewReceivingInput): Promise<Receivi
     quantity: input.quantity,
     supplier: input.supplier.trim(),
     costPriceMinor: input.costPriceMinor,
+    ...(input.sellingPriceMinor !== undefined ? { sellingPriceMinor: input.sellingPriceMinor } : {}),
     ...(input.riderId ? { riderId: input.riderId } : {}),
     ...(input.vehicleId ? { vehicleId: input.vehicleId } : {}),
     recordedByUserId: input.recordedByUserId,

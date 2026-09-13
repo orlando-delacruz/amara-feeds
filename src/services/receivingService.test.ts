@@ -23,8 +23,36 @@ describe('receivingService', () => {
     expect((await getStock('amara', 'prod-1')).quantity).toBe(20)
   })
 
-  it('keeps legacy rider/vehicle references when provided', async () => {
+  it('persists an optional selling price on the receipt', async () => {
     const record = await createReceiving({
+      storeId: 'amara',
+      productId: 'prod-1',
+      quantity: 2,
+      supplier: 'Central Supply',
+      costPriceMinor: 110000,
+      sellingPriceMinor: 150000,
+      recordedByUserId: 'user-1',
+    })
+    expect(record.sellingPriceMinor).toBe(150000)
+    const [listed] = await listReceiving({ storeId: 'amara' })
+    expect(listed).toBeDefined()
+  })
+
+  it('rejects a negative selling price', async () => {
+    await expect(
+      createReceiving({
+        storeId: 'amara',
+        productId: 'prod-1',
+        quantity: 2,
+        supplier: 'Central Supply',
+        costPriceMinor: 110000,
+        sellingPriceMinor: -1,
+        recordedByUserId: 'user-1',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+  })
+
+  it('keeps legacy rider/vehicle references when provided', async () => {    const record = await createReceiving({
       storeId: 'zeann',
       productId: 'prod-1',
       quantity: 5,

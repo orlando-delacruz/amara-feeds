@@ -10,6 +10,12 @@ export interface ReceivingRecord {
   supplier: string
   costPriceMinor: Money
   /**
+   * user-requested: selling price captured when stock is added. Reference
+   * info on the receipt only; it does not change sale pricing, which is
+   * entered per sale. Exact fields are Confirmation Required for the schema.
+   */
+  sellingPriceMinor?: Money
+  /**
    * legacy: rider who delivered the stock. No longer collected (explicit user
    * request overriding REQ-RCV-002/DEC-016); retained as optional so existing
    * records stay valid.
@@ -28,6 +34,8 @@ export interface NewReceivingInput {
   quantity: number
   supplier: string
   costPriceMinor: Money
+  /** user-requested selling-price reference; see ReceivingRecord. */
+  sellingPriceMinor?: Money
   /** legacy: optional rider reference; no longer collected on the form. */
   riderId?: RiderId
   /** legacy: optional vehicle reference; no longer collected on the form. */
