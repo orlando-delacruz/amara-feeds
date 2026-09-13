@@ -24,7 +24,11 @@ const Container = styled.div<{ $tone: StatCardTone; $row: boolean }>`
   border: 1px solid ${({ theme }) => theme.color.border.default};
   border-left: 4px solid
     ${({ theme, $tone }) =>
-      $tone === 'brand' ? theme.color.brand[600] : theme.color.border.default};
+      $tone === 'brand'
+        ? theme.color.brand[600]
+        : $tone === 'neutral'
+          ? theme.color.border.default
+          : (theme.color.store[$tone]?.solid ?? theme.color.border.default)};
   border-radius: ${({ theme }) => theme.radius.lg};
   box-shadow: ${({ theme }) => theme.shadow.sm};
 `
@@ -48,13 +52,13 @@ const IconChip = styled.span<{ $tone: StatCardTone }>`
       ? theme.color.brand[50]
       : $tone === 'neutral'
         ? theme.color.surface.subtle
-        : theme.color.store[$tone].background};
+        : (theme.color.store[$tone]?.background ?? theme.color.surface.subtle)};
   color: ${({ theme, $tone }) =>
     $tone === 'brand'
       ? theme.color.brand[700]
       : $tone === 'neutral'
         ? theme.color.text.secondary
-        : theme.color.store[$tone].text};
+        : (theme.color.store[$tone]?.text ?? theme.color.text.secondary)};
 `
 
 const Label = styled.span`
@@ -79,7 +83,7 @@ const Value = styled.span<{ $scale: StatCardValueScale }>`
 
 const Caption = styled.span`
   font-size: ${({ theme }) => theme.font.size.sm};
-  color: ${({ theme }) => theme.color.text.secondary};
+  color: ${({ theme }) => theme.color.text.muted};
 `
 
 const RowValue = styled.span`

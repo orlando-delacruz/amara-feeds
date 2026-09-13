@@ -16,9 +16,27 @@ const StyledInput = styled.input<{ $invalid: boolean }>`
   border: 1px solid ${({ theme }) => theme.color.border.strong};
   border-radius: ${({ theme }) => theme.radius.md};
   background-color: ${({ theme }) => theme.color.white};
+  transition:
+    border-color ${({ theme }) => theme.motion.fast} ease-out,
+    box-shadow ${({ theme }) => theme.motion.fast} ease-out;
+
+  &:hover:not(:disabled) {
+    border-color: ${({ theme }) => theme.color.neutral[300]};
+  }
+
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.color.brand[600]};
+    box-shadow: 0 0 0 3px rgba(21, 115, 71, 0.12);
+  }
 
   &:disabled {
     background-color: ${({ theme }) => theme.color.neutral[100]};
+    color: ${({ theme }) => theme.color.text.muted};
+    cursor: not-allowed;
+  }
+
+  &::placeholder {
     color: ${({ theme }) => theme.color.text.muted};
   }
 
@@ -26,6 +44,10 @@ const StyledInput = styled.input<{ $invalid: boolean }>`
     $invalid &&
     css`
       border-color: ${theme.color.status.danger.text};
+
+      &:focus {
+        box-shadow: 0 0 0 3px rgba(153, 27, 27, 0.12);
+      }
     `}
 `
 

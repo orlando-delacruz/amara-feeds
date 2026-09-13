@@ -218,11 +218,13 @@ export function ExpensesPage() {
         error={netSummary.error}
         onRetry={netSummary.reload}
         skeleton={<ListSkeleton rows={3} />}
+        empty={null}
       >
         {netSummary.data && (
           <NetGrid>
             <Section title="Riders net">
               <RecordList
+                caption="Riders net summary"
                 columns={[
                   { key: 'name', header: 'Rider' },
                   { key: 'sales', header: 'Delivered sales' },
@@ -239,6 +241,7 @@ export function ExpensesPage() {
             </Section>
             <Section title="Vehicles net">
               <RecordList
+                caption="Vehicles net summary"
                 columns={[
                   { key: 'name', header: 'Vehicle' },
                   { key: 'sales', header: 'Delivered sales' },

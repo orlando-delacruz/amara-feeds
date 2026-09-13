@@ -28,6 +28,7 @@ const Group = styled.ul`
   background-color: ${({ theme }) => theme.color.surface.card};
   border: 1px solid ${({ theme }) => theme.color.border.default};
   border-radius: ${({ theme }) => theme.radius.lg};
+  box-shadow: ${({ theme }) => theme.shadow.sm};
   overflow: hidden;
 `
 
@@ -48,6 +49,11 @@ const CardItem = styled.li`
   border: 1px solid ${({ theme }) => theme.color.border.default};
   border-radius: ${({ theme }) => theme.radius.lg};
   box-shadow: ${({ theme }) => theme.shadow.sm};
+  transition: box-shadow ${({ theme }) => theme.motion.base} ease-out;
+
+  &:hover {
+    box-shadow: ${({ theme }) => theme.shadow.raised};
+  }
 `
 
 const CardTitle = styled.span`
@@ -63,7 +69,7 @@ const MetaRow = styled.span`
 `
 
 const MetaLabel = styled.span`
-  color: ${({ theme }) => theme.color.text.secondary};
+  color: ${({ theme }) => theme.color.text.muted};
 `
 
 const MetaValue = styled.span`

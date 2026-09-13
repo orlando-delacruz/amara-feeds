@@ -30,6 +30,11 @@ const InteractiveRow = styled(Link)`
   color: inherit;
   text-decoration: none;
   border-radius: ${({ theme }) => theme.radius.md};
+  padding: 0 ${({ theme }) => theme.space.xs};
+
+  &:hover {
+    background-color: ${({ theme }) => theme.color.surface.subtle};
+  }
 `
 
 const Leading = styled.span`
@@ -39,10 +44,11 @@ const Leading = styled.span`
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: ${({ theme }) => theme.radius.full};
-  background-color: ${({ theme }) => theme.color.surface.subtle};
-  color: ${({ theme }) => theme.color.text.secondary};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background-color: ${({ theme }) => theme.color.brand[50]};
+  color: ${({ theme }) => theme.color.brand[700]};
   font-weight: ${({ theme }) => theme.font.weight.bold};
+  font-size: ${({ theme }) => theme.font.size.sm};
 `
 
 const Texts = styled.span`
@@ -60,7 +66,7 @@ const Title = styled.span`
 
 const Subtitle = styled.span`
   font-size: ${({ theme }) => theme.font.size.sm};
-  color: ${({ theme }) => theme.color.text.secondary};
+  color: ${({ theme }) => theme.color.text.muted};
   overflow-wrap: break-word;
 `
 

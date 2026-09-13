@@ -11,15 +11,21 @@ const Block = styled.span<SkeletonProps>`
   height: ${({ height }) => height ?? '16px'};
   border-radius: ${({ theme }) => theme.radius.md};
   background-color: ${({ theme }) => theme.color.surface.subtle};
-  animation: pulse 1.4s ease-out infinite;
+  background-image: linear-gradient(
+    90deg,
+    ${({ theme }) => theme.color.surface.subtle} 0%,
+    ${({ theme }) => theme.color.neutral[200]} 40%,
+    ${({ theme }) => theme.color.surface.subtle} 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
 
-  @keyframes pulse {
-    0%,
-    100% {
-      opacity: 1;
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
     }
-    50% {
-      opacity: 0.45;
+    100% {
+      background-position: -200% 0;
     }
   }
 `

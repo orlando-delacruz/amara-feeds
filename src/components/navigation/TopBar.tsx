@@ -17,6 +17,7 @@ const Header = styled.header`
   padding-top: env(safe-area-inset-top, 0px);
   background-color: ${({ theme }) => theme.color.surface.card};
   border-bottom: 1px solid ${({ theme }) => theme.color.border.default};
+  box-shadow: ${({ theme }) => theme.shadow.sm};
 `
 
 const Inner = styled.div`
@@ -32,8 +33,9 @@ const Inner = styled.div`
 `
 
 const Brand = styled(Link)`
-  font-weight: ${({ theme }) => theme.font.weight.bold};
-  color: ${({ theme }) => theme.color.text.primary};
+  display: flex;
+  align-items: center;
+  gap: 6px;
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
@@ -42,13 +44,37 @@ const Brand = styled(Link)`
   flex-shrink: 1;
 `
 
+const BrandMark = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+`
+
+const BrandDot = styled.span<{ $color: string }>`
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: ${({ theme }) => theme.radius.full};
+  background-color: ${({ $color }) => $color};
+`
+
+const BrandName = styled.span`
+  font-weight: ${({ theme }) => theme.font.weight.bold};
+  font-size: ${({ theme }) => theme.font.size.lg};
+  color: ${({ theme }) => theme.color.text.primary};
+`
+
 const SectionTag = styled.span`
   font-size: ${({ theme }) => theme.font.size.xs};
   font-weight: ${({ theme }) => theme.font.weight.semibold};
   text-transform: uppercase;
   letter-spacing: ${({ theme }) => theme.font.tracking.wide};
-  color: ${({ theme }) => theme.color.text.secondary};
+  color: ${({ theme }) => theme.color.text.muted};
   white-space: nowrap;
+  background-color: ${({ theme }) => theme.color.surface.subtle};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  padding: 2px ${({ theme }) => theme.space.sm};
 
   @media (max-width: ${({ theme }) => theme.breakpoint.tablet}) {
     display: none;
@@ -115,7 +141,11 @@ export function TopBar({ sectionLabel }: TopBarProps) {
     <Header>
       <Inner>
         <Brand to="/" translate="no">
-          Amara Feeds
+          <BrandMark>
+            <BrandDot $color="#7c3aed" />
+            <BrandDot $color="#c2410c" />
+          </BrandMark>
+          <BrandName>Amara Feeds</BrandName>
         </Brand>
         <SectionTag>{sectionLabel}</SectionTag>
         <Spacer />

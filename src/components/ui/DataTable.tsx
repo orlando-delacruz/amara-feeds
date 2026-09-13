@@ -21,6 +21,7 @@ const Scroller = styled.div`
   background-color: ${({ theme }) => theme.color.surface.card};
   border: 1px solid ${({ theme }) => theme.color.border.default};
   border-radius: ${({ theme }) => theme.radius.lg};
+  box-shadow: ${({ theme }) => theme.shadow.sm};
 `
 
 const Table = styled.table`
@@ -35,7 +36,7 @@ const HeadCell = styled.th`
   font-weight: ${({ theme }) => theme.font.weight.semibold};
   white-space: nowrap;
   border-bottom: 2px solid ${({ theme }) => theme.color.border.strong};
-  background-color: ${({ theme }) => theme.color.neutral[50]};
+  background-color: ${({ theme }) => theme.color.surface.subtle};
 `
 
 const BodyCell = styled.td`
@@ -45,6 +46,12 @@ const BodyCell = styled.td`
 `
 
 const BodyRow = styled.tr`
+  transition: background-color ${({ theme }) => theme.motion.fast} ease-out;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.color.surface.subtle};
+  }
+
   &:last-child ${BodyCell} {
     border-bottom: none;
   }
@@ -76,8 +83,6 @@ export function DataTable({ caption, columns, rows, emptyMessage }: DataTablePro
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            // Rows render in source order; keys are positional because row
-            // identities stay inside services and never cross this seam.
             <BodyRow key={index}>
               {columns.map((column) => (
                 <BodyCell key={column.key}>{row[column.key]}</BodyCell>

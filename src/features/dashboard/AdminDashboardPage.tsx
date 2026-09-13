@@ -14,11 +14,11 @@ import { storeNames } from '@/store/stores'
 import { useBusinessSummaries } from './useBusinessSummaries'
 
 const Hero = styled.div`
-  padding: ${({ theme }) => theme.space.xl};
-  background-color: ${({ theme }) => theme.color.brand[50]};
-  border: 1px solid ${({ theme }) => theme.color.brand[100]};
+  padding: ${({ theme }) => theme.space.xl} ${({ theme }) => theme.space.lg};
+  background: ${({ theme }) => theme.color.brand.gradient};
   border-radius: ${({ theme }) => theme.radius.xl};
   box-shadow: ${({ theme }) => theme.shadow.md};
+  color: ${({ theme }) => theme.color.text.inverse};
 `
 
 const HeroLabel = styled.p`
@@ -26,7 +26,7 @@ const HeroLabel = styled.p`
   font-weight: ${({ theme }) => theme.font.weight.semibold};
   letter-spacing: ${({ theme }) => theme.font.tracking.wide};
   text-transform: uppercase;
-  color: ${({ theme }) => theme.color.brand[700]};
+  opacity: 0.85;
 `
 
 const HeroValue = styled.p`
@@ -36,14 +36,14 @@ const HeroValue = styled.p`
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
   letter-spacing: ${({ theme }) => theme.font.tracking.tight};
   font-variant-numeric: tabular-nums;
-  color: ${({ theme }) => theme.color.text.primary};
+  color: ${({ theme }) => theme.color.text.inverse};
   text-wrap: balance;
 `
 
 const HeroCaption = styled.p`
   margin-top: ${({ theme }) => theme.space.xs};
   font-size: ${({ theme }) => theme.font.size.sm};
-  color: ${({ theme }) => theme.color.text.secondary};
+  opacity: 0.8;
 `
 
 const PairGrid = styled.div`

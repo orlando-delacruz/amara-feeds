@@ -29,6 +29,7 @@ export const GlobalStyle = createGlobalStyle`
     color: ${({ theme }) => theme.color.text.primary};
     background-color: ${({ theme }) => theme.color.surface.page};
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
   }
 
@@ -60,6 +61,7 @@ export const GlobalStyle = createGlobalStyle`
   :focus-visible {
     outline: 2px solid ${({ theme }) => theme.color.focus.ring};
     outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(21, 115, 71, 0.15);
   }
 
   @media (prefers-reduced-motion: reduce) {

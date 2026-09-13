@@ -16,7 +16,16 @@ const variantRole: Record<AlertVariant, 'status' | 'alert'> = {
   danger: 'alert',
 }
 
+const icons: Record<AlertVariant, string> = {
+  info: 'ℹ️',
+  success: '✅',
+  warning: '⚠️',
+  danger: '🚫',
+}
+
 const Wrapper = styled.div<{ $variant: AlertVariant }>`
+  display: flex;
+  gap: ${({ theme }) => theme.space.md};
   padding: ${({ theme }) => theme.space.md};
   border: 1px solid;
   border-radius: ${({ theme }) => theme.radius.md};
@@ -25,16 +34,31 @@ const Wrapper = styled.div<{ $variant: AlertVariant }>`
   color: ${({ theme, $variant }) => theme.color.status[$variant].text};
 `
 
+const AlertIcon = styled.span`
+  flex-shrink: 0;
+  font-size: ${({ theme }) => theme.font.size.md};
+  line-height: 1;
+`
+
+const Content = styled.span`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space.xs};
+  min-width: 0;
+`
+
 const Title = styled.p`
   font-weight: ${({ theme }) => theme.font.weight.semibold};
-  margin-bottom: ${({ theme }) => theme.space.xs};
 `
 
 export function Alert({ variant = 'info', title, children }: AlertProps) {
   return (
     <Wrapper $variant={variant} role={variantRole[variant]}>
-      {title && <Title>{title}</Title>}
-      <div>{children}</div>
+      <AlertIcon aria-hidden="true">{icons[variant]}</AlertIcon>
+      <Content>
+        {title && <Title>{title}</Title>}
+        <div>{children}</div>
+      </Content>
     </Wrapper>
   )
 }

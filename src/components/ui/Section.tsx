@@ -30,15 +30,16 @@ const Header = styled.div`
   align-items: center;
   justify-content: space-between;
   gap: ${({ theme }) => theme.space.md};
-  margin-bottom: ${({ theme }) => theme.space.sm};
+  margin-bottom: ${({ theme }) => theme.space.md};
 `
 
 const Title = styled.h2`
   font-size: ${({ theme }) => theme.font.size.lg};
-  font-weight: ${({ theme }) => theme.font.weight.semibold};
+  font-weight: ${({ theme }) => theme.font.weight.bold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
   letter-spacing: ${({ theme }) => theme.font.tracking.tight};
   text-wrap: balance;
+  color: ${({ theme }) => theme.color.text.primary};
 `
 
 export function Section({ title, action, children, variant = 'card' }: SectionProps) {

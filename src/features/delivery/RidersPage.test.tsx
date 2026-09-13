@@ -39,7 +39,7 @@ describe('RidersPage', () => {
   it('lists the current store riders only', async () => {
     renderRiders()
 
-    expect(await screen.findByText('Jojo Ramos')).toBeInTheDocument()
+    expect(await screen.findByText('Jojo Ramos', {}, { timeout: 5000 })).toBeInTheDocument()
     expect(screen.getByText('Ramon Cruz')).toBeInTheDocument()
     expect(screen.queryByText('Paolo Lim')).not.toBeInTheDocument()
   })

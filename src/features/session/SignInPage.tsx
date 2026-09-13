@@ -34,8 +34,8 @@ const Shell = styled.div`
     min-height: auto;
     max-width: 60rem;
     border: 1px solid ${({ theme }) => theme.color.border.default};
-    border-radius: ${({ theme }) => theme.radius.lg};
-    box-shadow: ${({ theme }) => theme.shadow.md};
+    border-radius: ${({ theme }) => theme.radius.xl};
+    box-shadow: ${({ theme }) => theme.shadow.lg};
     grid-template-columns: 5fr 6fr;
   }
 `
@@ -44,9 +44,9 @@ const BrandPanel = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: ${({ theme }) => theme.space.md};
+  gap: ${({ theme }) => theme.space.lg};
   padding: ${({ theme }) => theme.space.xxl} ${({ theme }) => theme.space.xl};
-  background-color: ${({ theme }) => theme.color.neutral[900]};
+  background: ${({ theme }) => theme.color.brand.gradient};
   color: ${({ theme }) => theme.color.text.inverse};
 
   @media (min-width: ${({ theme }) => theme.breakpoint.desktop}) {
@@ -58,6 +58,7 @@ const Title = styled.h1`
   font-size: ${({ theme }) => theme.font.size.xxl};
   font-weight: ${({ theme }) => theme.font.weight.bold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
+  letter-spacing: ${({ theme }) => theme.font.tracking.tight};
   text-wrap: balance;
 
   @media (min-width: ${({ theme }) => theme.breakpoint.desktop}) {
@@ -67,7 +68,23 @@ const Title = styled.h1`
 
 const Subtitle = styled.p`
   color: ${({ theme }) => theme.color.text.inverse};
-  opacity: 0.75;
+  opacity: 0.85;
+  font-size: ${({ theme }) => theme.font.size.md};
+`
+
+const BrandMark = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: ${({ theme }) => theme.space.sm};
+`
+
+const BrandDot = styled.span<{ $color: string }>`
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: ${({ theme }) => theme.radius.full};
+  background-color: ${({ $color }) => $color};
 `
 
 const StoreStrip = styled.div`
@@ -76,6 +93,7 @@ const StoreStrip = styled.div`
   margin-top: ${({ theme }) => theme.space.sm};
   overflow: hidden;
   border-radius: ${({ theme }) => theme.radius.full};
+  opacity: 0.7;
 `
 
 const StoreStripHalf = styled.span<{ $store: 'amara' | 'zeann' }>`
@@ -86,7 +104,7 @@ const StoreStripHalf = styled.span<{ $store: 'amara' | 'zeann' }>`
 const StoreCaption = styled.p`
   font-size: ${({ theme }) => theme.font.size.sm};
   color: ${({ theme }) => theme.color.text.inverse};
-  opacity: 0.75;
+  opacity: 0.8;
 `
 
 const AccountPanel = styled.div`
@@ -101,15 +119,16 @@ const AccountPanel = styled.div`
 `
 
 const SectionTitle = styled.h2`
-  font-size: ${({ theme }) => theme.font.size.lg};
-  font-weight: ${({ theme }) => theme.font.weight.semibold};
+  font-size: ${({ theme }) => theme.font.size.xl};
+  font-weight: ${({ theme }) => theme.font.weight.bold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
+  letter-spacing: ${({ theme }) => theme.font.tracking.tight};
   text-wrap: balance;
 `
 
 const AccountMeta = styled.p`
   font-size: ${({ theme }) => theme.font.size.sm};
-  color: ${({ theme }) => theme.color.text.secondary};
+  color: ${({ theme }) => theme.color.text.muted};
 `
 
 const Form = styled.form`
@@ -143,6 +162,10 @@ export function SignInPage() {
       <Shell>
         <BrandPanel>
           <div>
+            <BrandMark>
+              <BrandDot $color="#c4b5fd" />
+              <BrandDot $color="#fed7aa" />
+            </BrandMark>
             <Title>Amara Feeds</Title>
             <Subtitle>Store management for Amara and Zeann.</Subtitle>
           </div>

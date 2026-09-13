@@ -360,6 +360,21 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Supersedes / Superseded by:** none.
 - **Open questions or follow-up:** Expense type enum exact values remain Confirmation Required; net appears on Expenses page only (dashboard totals unchanged).
 
+### DEC-018 — Visual refinement: evergreen brand, warm neutrals, Plus Jakarta Sans
+
+- **ID:** DEC-018
+- **Title:** Visual refinement: evergreen brand, warm neutrals, Plus Jakarta Sans
+- **Status:** Accepted
+- **Date:** 2026-09-13
+- **Context:** The UI was the generic "SaaS-card kit" (cool Tailwind-gray neutrals, flat blue primary, system stack typography). It lacked a distinctive visual identity tied to the feeds/agriculture business. The project needed a visual refinement pass to ground the design in its subject without changing functionality.
+- **Decision:** Replace the primary brand color from blue (#2563eb) to evergreen green (brand.600 #157347, brand.700 #0e5c38) with a subtle gradient for primary actions. Replace the cool gray neutral ramp with warm sand neutrals (page #faf9f6, subtle #f4f2ec, border #e9e5db, etc.). Adopt Plus Jakarta Sans as the primary typeface (loaded via Google Fonts, weights 400–700) for a distinctive, warm, modern feel. Add a layered shadow system (sm, md, lg, raised) for depth. Restyle all ~30 UI primitives and 3 bespoke pages (SignInPage, AdminDashboardPage, StaffDashboardPage) to reflect the new palette. Store identity colors (Amara violet, Zeann amber) unchanged.
+- **Alternatives considered:** Self-hosting the webfont woff2 files (rejected for now due to implementation complexity; Google Fonts CDN is acceptable for an internal tool on Vercel). Keeping blue primary (rejected; doesn't reflect the business). Switching to a serif/display font for headings (rejected; the single body+heading family keeps things cohesive on small screens).
+- **Rationale:** The evergreen green directly reflects the feeds/agriculture identity. Warm sand neutrals create a warmer, more inviting feel than cool gray. Plus Jakarta Sans is distinctive, friendly, and highly legible on mobile. The layered shadow system improves depth perception over flat borders.
+- **Consequences:** `src/theme/tokens.ts` updated with new color, font, shadow, and radius tokens. All UI primitives restyled (CSS-only changes, no prop/API changes). `index.html` adds Google Fonts preconnect and stylesheet links. `docs/DESIGN-SYSTEM.md` §2–§8 updated to match new tokens. Tests unaffected (CSS-only changes, no structural HTML/text changes).
+- **Related documents:** `docs/DESIGN-SYSTEM.md` (authoritative visual language, kept in sync), `src/theme/tokens.ts` (implementation), `index.html` (font loading).
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** None. Self-hosting font files remains an option if Google Fonts CDN is undesirable later.
+
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.
 - **Security:** approaches linked to `docs/SECURITY.md`; rules never weakened; no invented detail; trade-offs state constraint, mitigation, and residual follow-up.

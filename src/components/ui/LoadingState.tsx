@@ -10,7 +10,7 @@ const Wrapper = styled.div`
   justify-content: center;
   gap: ${({ theme }) => theme.space.md};
   padding: ${({ theme }) => theme.space.xl};
-  color: ${({ theme }) => theme.color.text.secondary};
+  color: ${({ theme }) => theme.color.text.muted};
 `
 
 const Spinner = styled.span`

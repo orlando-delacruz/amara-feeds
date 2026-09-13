@@ -12,7 +12,7 @@ const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space.sm};
-  margin-bottom: ${({ theme }) => theme.space.md};
+  margin-bottom: ${({ theme }) => theme.space.lg};
 
   @media (min-width: ${({ theme }) => theme.breakpoint.tablet}) {
     flex-direction: row;
@@ -25,13 +25,15 @@ const Title = styled.h1<{ $compact: boolean }>`
   font-size: ${({ theme, $compact }) => ($compact ? theme.font.size.xl : theme.font.size.xxl)};
   font-weight: ${({ theme }) => theme.font.weight.bold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
+  letter-spacing: ${({ theme }) => theme.font.tracking.tight};
   text-wrap: balance;
+  color: ${({ theme }) => theme.color.text.primary};
 `
 
 const Description = styled.p`
   margin-top: ${({ theme }) => theme.space.xs};
   font-size: ${({ theme }) => theme.font.size.sm};
-  color: ${({ theme }) => theme.color.text.secondary};
+  color: ${({ theme }) => theme.color.text.muted};
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

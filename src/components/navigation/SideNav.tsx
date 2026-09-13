@@ -37,6 +37,9 @@ const StyledNavLink = styled(NavLink)`
   font-weight: ${({ theme }) => theme.font.weight.medium};
   color: ${({ theme }) => theme.color.text.secondary};
   text-decoration: none;
+  transition:
+    background-color ${({ theme }) => theme.motion.fast} ease-out,
+    color ${({ theme }) => theme.motion.fast} ease-out;
 
   &:hover {
     background-color: ${({ theme }) => theme.color.neutral[100]};
@@ -46,6 +49,8 @@ const StyledNavLink = styled(NavLink)`
     background-color: ${({ theme }) => theme.color.brand[50]};
     color: ${({ theme }) => theme.color.brand[700]};
     font-weight: ${({ theme }) => theme.font.weight.semibold};
+    border-left: 3px solid ${({ theme }) => theme.color.brand[600]};
+    padding-left: calc(${({ theme }) => theme.space.md} - 3px);
   }
 `
 

@@ -22,7 +22,9 @@ const tones: Record<StatusBadgeStatus, 'warning' | 'success'> = {
 }
 
 const Badge = styled.span<{ $tone: 'warning' | 'success' }>`
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.sm};
   border: 1px solid ${({ theme, $tone }) => theme.color.status[$tone].border};
   border-radius: ${({ theme }) => theme.radius.full};
@@ -33,6 +35,20 @@ const Badge = styled.span<{ $tone: 'warning' | 'success' }>`
   white-space: nowrap;
 `
 
+const Dot = styled.span<{ $tone: 'warning' | 'success' }>`
+  width: 6px;
+  height: 6px;
+  border-radius: ${({ theme }) => theme.radius.full};
+  background-color: ${({ theme, $tone }) => theme.color.status[$tone].text};
+  flex-shrink: 0;
+`
+
 export function StatusBadge({ status }: StatusBadgeProps) {
-  return <Badge $tone={tones[status]}>{labels[status]}</Badge>
+  const tone = tones[status]
+  return (
+    <Badge $tone={tone}>
+      <Dot $tone={tone} aria-hidden="true" />
+      {labels[status]}
+    </Badge>
+  )
 }
