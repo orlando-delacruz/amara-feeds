@@ -6,14 +6,28 @@ import { resetDb } from '@/services/mocks/db'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 
-const adminUser: User = { id: 'user-3', name: 'Owner', role: 'admin' }
+const adminUser: User = {
+  id: 'user-3',
+  name: 'Owner',
+  role: 'admin',
+  username: 'owner',
+  active: true,
+}
+const staffUser: User = {
+  id: 'user-1',
+  name: 'Alice',
+  role: 'staff',
+  storeId: 'amara',
+  username: 'alice',
+  active: true,
+}
 
-function renderReports() {
+function renderReports(path = '/admin/reports', user: User = adminUser) {
   return renderWithProviders(
-    <MemoryRouter initialEntries={['/admin/reports']}>
+    <MemoryRouter initialEntries={[path]}>
       <AppRoutes />
     </MemoryRouter>,
-    { user: adminUser },
+    { user },
   )
 }
 
@@ -35,5 +49,13 @@ describe('ReportsPage', () => {
     renderReports()
     await screen.findAllByText(/Daily sales by store/)
     expect(screen.getByRole('button', { name: 'Print' })).toBeInTheDocument()
+  })
+
+  it('scopes staff reports to the assigned store only', async () => {
+    renderReports('/reports', staffUser)
+    await screen.findAllByText(/Daily sales by store/)
+
+    expect(screen.getAllByText('Amara').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Zeann')).not.toBeInTheDocument()
   })
 })

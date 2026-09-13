@@ -6,6 +6,8 @@ import {
   listCustomers,
   listPaymentTerms,
   listProducts,
+  listRiders,
+  listVehicles,
   previewDueDate,
 } from '@/services'
 import { Alert } from '@/components/ui/Alert'
@@ -19,6 +21,7 @@ import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
 import { AddCustomerDialog } from '@/features/customers/AddCustomerDialog'
 import { useAsyncData, useMutation } from '@/features/shared'
+import { useSession } from '@/features/session/useSession'
 import { toMinor } from '@/lib/money'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
@@ -72,18 +75,21 @@ interface NewSalePageProps {
 export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
   const navigate = useNavigate()
   const { store } = useStore()
+  const { user } = useSession()
   const [customerId, setCustomerId] = useState('')
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false)
   const [items, setItems] = useState<ItemLine[]>([emptyLine])
   const [paymentType, setPaymentType] = useState<PaymentType>('cash')
   const [termsId, setTermsId] = useState('')
   const [deliveryFee, setDeliveryFee] = useState('')
-  const [rider, setRider] = useState('')
-  const [vehicle, setVehicle] = useState('')
+  const [riderId, setRiderId] = useState('')
+  const [vehicleId, setVehicleId] = useState('')
 
   const customers = useAsyncData(() => listCustomers())
   const products = useAsyncData(() => listProducts({ status: 'active' }))
   const terms = useAsyncData(() => listPaymentTerms())
+  const riders = useAsyncData(() => listRiders({ storeId: store, active: true }), store)
+  const vehicles = useAsyncData(() => listVehicles({ storeId: store, active: true }), store)
   const duePreview = useAsyncData(
     () => (paymentType === 'charge' && termsId ? previewDueDate(termsId) : Promise.resolve(null)),
     `${paymentType}:${termsId}`,
@@ -102,7 +108,7 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
     setItems((current) => current.filter((_, i) => i !== index))
   }
 
-  const hasDelivery = Boolean(deliveryFee.trim() || rider.trim() || vehicle.trim())
+  const hasDelivery = Boolean(deliveryFee.trim() || riderId || vehicleId)
 
   const totalMinor =
     items.reduce(
@@ -126,11 +132,12 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
       delivery: hasDelivery
         ? {
             feeMinor: deliveryFee ? toMinor(Number(deliveryFee)) : undefined,
-            rider: rider.trim() || undefined,
-            vehicle: vehicle.trim() || undefined,
+            riderId: riderId || undefined,
+            vehicleId: vehicleId || undefined,
           }
         : undefined,
       termsId: paymentType === 'charge' ? termsId : undefined,
+      recordedByUserId: user?.id ?? '',
     })
     if (sale) {
       navigate(basePath)
@@ -150,6 +157,16 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
   const termOptions = (terms.data ?? []).map((term) => ({
     value: term.id,
     label: term.label,
+  }))
+
+  const riderOptions = (riders.data ?? []).map((rider) => ({
+    value: rider.id,
+    label: rider.name,
+  }))
+
+  const vehicleOptions = (vehicles.data ?? []).map((vehicle) => ({
+    value: vehicle.id,
+    label: vehicle.label,
   }))
 
   return (
@@ -268,17 +285,21 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
               value={deliveryFee}
               onChange={(event) => setDeliveryFee(event.target.value)}
             />
-            <TextField
+            <Select
               id="sale-rider"
-              label="Rider"
-              value={rider}
-              onChange={(event) => setRider(event.target.value)}
+              label="Rider (optional)"
+              options={riderOptions}
+              placeholder="No rider"
+              value={riderId}
+              onChange={(event) => setRiderId(event.target.value)}
             />
-            <TextField
+            <Select
               id="sale-vehicle"
-              label="Vehicle"
-              value={vehicle}
-              onChange={(event) => setVehicle(event.target.value)}
+              label="Vehicle (optional)"
+              options={vehicleOptions}
+              placeholder="No vehicle"
+              value={vehicleId}
+              onChange={(event) => setVehicleId(event.target.value)}
             />
           </Section>
 
@@ -319,6 +340,7 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
           setCustomerId(customer.id)
           customers.reload()
         }}
+        createdByUserId={user?.id}
       />
     </Stack>
   )

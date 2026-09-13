@@ -2,6 +2,7 @@ import type { CreditId, CreditObligation, Payment, RecordPaymentInput } from '@/
 import type { StoreId } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { assertActiveRecorder } from './userService'
 import { ServiceError } from './errors'
 
 export async function listPayments(
@@ -20,6 +21,7 @@ export async function recordPayment(
   input: RecordPaymentInput,
 ): Promise<{ payment: Payment; credit: CreditObligation }> {
   const db = getDb()
+  assertActiveRecorder(input.recordedByUserId)
   const credit = db.credits.find((item) => item.id === input.creditId)
   if (!credit) {
     throw new ServiceError('not_found', 'Credit not found.')
@@ -39,6 +41,7 @@ export async function recordPayment(
     creditId: credit.id,
     storeId: input.storeId,
     amountMinor: input.amountMinor,
+    recordedByUserId: input.recordedByUserId,
     paidAt: new Date().toISOString(),
   }
   db.payments.push(payment)

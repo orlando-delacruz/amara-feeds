@@ -7,8 +7,21 @@ import { resetDb } from '@/services/mocks/db'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 
-const staffUser: User = { id: 'user-1', name: 'Alice', role: 'staff', storeId: 'amara' }
-const adminUser: User = { id: 'user-3', name: 'Owner', role: 'admin' }
+const staffUser: User = {
+  id: 'user-1',
+  name: 'Alice',
+  role: 'staff',
+  storeId: 'amara',
+  username: 'alice',
+  active: true,
+}
+const adminUser: User = {
+  id: 'user-3',
+  name: 'Owner',
+  role: 'admin',
+  username: 'owner',
+  active: true,
+}
 
 function renderAt(path: string, user: User = staffUser) {
   return renderWithProviders(
@@ -26,6 +39,13 @@ describe('SaleListPage', () => {
     renderAt('/sales')
     expect(await screen.findByText('Maria Santos')).toBeInTheDocument()
     expect(screen.getAllByText('Cash').length).toBeGreaterThan(0)
+  })
+
+  it('shows who recorded each sale', async () => {
+    renderAt('/sales')
+    await screen.findByText('Maria Santos')
+    expect(screen.getByText('Recorded by')).toBeInTheDocument()
+    expect(screen.getAllByText('Alice').length).toBeGreaterThan(0)
   })
 
   it('shows an empty state for a date with no sales', async () => {

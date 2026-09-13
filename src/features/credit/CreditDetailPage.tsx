@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { useParams } from 'react-router-dom'
-import { getCreditHistory, listCustomers, listPaymentTerms, recordPayment } from '@/services'
+import {
+  getCreditHistory,
+  listCustomers,
+  listPaymentTerms,
+  listUsers,
+  recordPayment,
+} from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { BackLink } from '@/components/ui/BackLink'
@@ -16,6 +22,8 @@ import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { TextField } from '@/components/ui/TextField'
 import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
+import { getDisplayName } from '@/features/session/displayName'
+import { useSession } from '@/features/session/useSession'
 import { toMinor } from '@/lib/money'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
@@ -69,6 +77,7 @@ const PaymentNote = styled.p`
 export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps) {
   const { creditId } = useParams<{ creditId: string }>()
   const { store } = useStore()
+  const { user } = useSession()
   const [amount, setAmount] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -78,12 +87,14 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
   )
   const customers = useAsyncData(() => listCustomers())
   const terms = useAsyncData(() => listPaymentTerms())
+  const users = useAsyncData(() => listUsers())
   const pay = useMutation(recordPayment)
 
   const credit = history.data?.credit
   const customerNames = new Map(
     (customers.data ?? []).map((customer) => [customer.id, customer.name]),
   )
+  const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
   const termLabels = new Map((terms.data ?? []).map((term) => [term.id, term.label]))
   const settled = credit?.status === 'settled'
 
@@ -96,6 +107,7 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
       creditId: credit.id,
       storeId: store,
       amountMinor: toMinor(Number(amount)),
+      recordedByUserId: user?.id ?? '',
     })
     if (result) {
       setAmount('')
@@ -210,11 +222,13 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
               columns={[
                 { key: 'store', header: 'Payment store' },
                 { key: 'amount', header: 'Amount' },
+                { key: 'recordedBy', header: 'Recorded by' },
                 { key: 'paidAt', header: 'Date' },
               ]}
               rows={(history.data?.payments ?? []).map((payment) => ({
                 store: storeNames[payment.storeId],
                 amount: <MoneyText amountMinor={payment.amountMinor} />,
+                recordedBy: userNames.get(payment.recordedByUserId) ?? 'Not available',
                 paidAt: <DateText value={payment.paidAt} />,
               }))}
               emptyMessage="No payments recorded yet."

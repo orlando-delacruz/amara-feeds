@@ -5,7 +5,13 @@ import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 import { AdminDashboardPage } from './AdminDashboardPage'
 
-const adminUser: User = { id: 'user-3', name: 'Owner', role: 'admin' }
+const adminUser: User = {
+  id: 'user-3',
+  name: 'Owner',
+  role: 'admin',
+  username: 'owner',
+  active: true,
+}
 
 describe('AdminDashboardPage', () => {
   beforeEach(() => resetDb())

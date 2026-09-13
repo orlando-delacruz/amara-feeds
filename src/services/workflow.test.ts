@@ -16,6 +16,7 @@ describe('confirmed workflows (Gate 2)', () => {
       storeId: 'amara',
       paymentType: 'cash',
       lines: [{ productId: 'prod-2', quantity: 4, unitPriceMinor: 6500 }],
+      recordedByUserId: 'user-1',
     })
     expect((await getStock('amara', 'prod-2')).quantity).toBe(before.quantity - 4)
     expect((await getStock('zeann', 'prod-2')).quantity).toBe(40)
@@ -28,6 +29,7 @@ describe('confirmed workflows (Gate 2)', () => {
       paymentType: 'charge',
       termsId: 'terms-30',
       lines: [{ productId: 'prod-4', quantity: 2, unitPriceMinor: 9500 }],
+      recordedByUserId: 'user-1',
     })
     const credits = await listCredits({ customerId: 'cust-3' })
     const obligation = credits.find((credit) => credit.saleId === sale.id)
@@ -37,10 +39,20 @@ describe('confirmed workflows (Gate 2)', () => {
   })
 
   it('partial payments -> settled with one shared history', async () => {
-    await recordPayment({ creditId: 'cred-1', storeId: 'amara', amountMinor: 10000 })
+    await recordPayment({
+      creditId: 'cred-1',
+      storeId: 'amara',
+      amountMinor: 10000,
+      recordedByUserId: 'user-1',
+    })
     expect((await getCredit('cred-1')).status).toBe('outstanding')
 
-    await recordPayment({ creditId: 'cred-1', storeId: 'zeann', amountMinor: 9500 })
+    await recordPayment({
+      creditId: 'cred-1',
+      storeId: 'zeann',
+      amountMinor: 9500,
+      recordedByUserId: 'user-2',
+    })
     const history = await getCreditHistory('cred-1')
     expect(history.credit.status).toBe('settled')
     expect(history.payments).toHaveLength(2)
@@ -54,6 +66,7 @@ describe('confirmed workflows (Gate 2)', () => {
       creditId: 'cred-1',
       storeId: 'amara',
       amountMinor: 5000,
+      recordedByUserId: 'user-1',
     })
     expect(result.credit.originStoreId).toBe('zeann')
     expect(result.payment.storeId).toBe('amara')
@@ -68,6 +81,9 @@ describe('confirmed workflows (Gate 2)', () => {
       quantity: 7,
       supplier: 'Central Supply',
       costPriceMinor: 9000,
+      riderId: 'rider-3',
+      vehicleId: 'vehicle-3',
+      recordedByUserId: 'user-2',
     })
     expect((await getStock('zeann', 'prod-4')).quantity).toBe(zeannBefore.quantity + 7)
     expect((await getStock('amara', 'prod-4')).quantity).toBe(amaraBefore.quantity)

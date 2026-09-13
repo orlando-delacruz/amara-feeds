@@ -45,14 +45,18 @@ Status labels follow `TEMPLATE-GUIDE.md`: Confirmed, Conditional, Confirmation R
 Candidate operation groups, described conceptually — never field names or schema keys:
 
 - **Customer operations:** find or select an existing shared customer; add a new shared customer during a sale or from the customer area. Customer selection is optional for sales.
-- **Sale operations:** record a store-specific sale with optional customer, purchased items and quantities, cash-or-charge payment type, and delivery details when applicable.
+- **Sale operations:** record a store-specific sale with optional customer, purchased items and quantities, cash-or-charge payment type, and delivery details when applicable (delivery fee plus rider and vehicle selected from the store's managed lists).
 - **Credit operations:** raise a shared credit obligation from a charge sale under selected payment terms with an automatically calculated due date.
 - **Payment operations:** record full or partial payments against shared credit through either store, preserving the payment store within the shared history.
 - **Inventory operations:** read store-specific stock; stock changes only through sale deduction and receiving operations, never direct edits.
-- **Receiving operations:** record store-specific receipts with store, item, quantity, supplier, and purchase/cost price.
+- **Receiving operations:** record store-specific receipts with store, item, quantity, supplier, purchase/cost price, and the required delivery rider and vehicle (validated as active at the same store).
 - **Product operations:** staff submit products (entering pending state); admin approves products into active state.
-- **Staff/user operations:** individual store-assigned identities; admin business-wide oversight.
-- **Dashboard/report operations:** retrieve daily sales by store, overall daily sales, outstanding credit, payments, current stock, and received stock; export and printing derive from the same permitted summaries.
+- **Staff/user operations:** individual store-assigned identities; admin business-wide oversight. Admin-only operations: create a staff account (name, username, password, assigned store), update a staff account (rename, change username or store assignment, reset password), and enable/disable an account.
+- **Sign-in operations (mock):** authenticate with username and password against the current localStorage-backed mock; invalid or disabled accounts are denied with plain non-technical feedback. Replaced by Supabase Auth in a later phase.
+- **Rider operations:** list the riders of a store; add a rider; activate/deactivate a rider so inactive riders are not selectable on a sale.
+- **Vehicle operations:** list the vehicle types of a store; add a vehicle type; activate/deactivate a vehicle type so inactive types are not selectable on a sale.
+- **Expense operations:** record store-specific fuel/repair expenses against a rider or vehicle (at least one required); list expenses by store; retrieve per-rider and per-vehicle net summary (delivered-sales value minus expenses). Staff scope to own store; admin scope to selected store via the store control.
+- **Dashboard/report operations:** retrieve daily sales by store, overall daily sales, outstanding credit, payments, current stock, and received stock; export and printing derive from the same permitted summaries. Staff-facing retrievals scope store-specific summaries (sales, stock, received) to the staff member's assigned store.
 
 Final operation sets, required-vs-optional inputs, and option lists are Confirmation Required. Collection rules: no extra personal-data kinds without justification.
 

@@ -6,12 +6,13 @@ import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { TextField } from '@/components/ui/TextField'
 import { useMutation } from '@/features/shared'
-import type { Customer } from '@/domain'
+import type { Customer, UserId } from '@/domain'
 
 interface AddCustomerDialogProps {
   open: boolean
   onClose: () => void
   onCreated: (customer: Customer) => void
+  createdByUserId?: UserId
 }
 
 const Form = styled.form`
@@ -20,14 +21,19 @@ const Form = styled.form`
   gap: ${({ theme }) => theme.space.lg};
 `
 
-export function AddCustomerDialog({ open, onClose, onCreated }: AddCustomerDialogProps) {
+export function AddCustomerDialog({
+  open,
+  onClose,
+  onCreated,
+  createdByUserId,
+}: AddCustomerDialogProps) {
   const [name, setName] = useState('')
   const [contact, setContact] = useState('')
   const { run, pending, error } = useMutation(createCustomer)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const created = await run({ name, contact: contact.trim() || undefined })
+    const created = await run({ name, contact: contact.trim() || undefined, createdByUserId })
     if (created) {
       setName('')
       setContact('')

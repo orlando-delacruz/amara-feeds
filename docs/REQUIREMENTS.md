@@ -68,6 +68,19 @@ Acceptance: given a sale is successfully saved, the relevant store's inventory d
 ## 9. Receiving Stock Requirements
 
 - REQ-RCV-001 (**Must**): Receiving stock MUST record store, item, quantity, supplier, and purchase/cost price.
+- REQ-RCV-002 (**Must**): Receiving stock MUST record the delivery rider and vehicle that brought the stock to the store; both are required before saving a receipt.
+
+## 9a. Delivery (Riders and Vehicles) Requirements
+
+- REQ-DELIV-001 (**Must**): The system MUST maintain a list of delivery riders per store; staff manage their own store's riders and admin manages both stores.
+- REQ-DELIV-002 (**Must**): The system MUST maintain a list of vehicle types per store; staff manage their own store's vehicles and admin manages both stores.
+- REQ-DELIV-003 (**Must**): Delivery on a sale MUST be recorded by selecting from the current store's active riders and vehicle types; inactive entries MUST NOT be selectable.
+
+## 9b. Expense Tracking Requirements
+
+- REQ-EXP-001 (**Must**): The system MUST record fuel and repair expenses per rider or vehicle, scoped to a store.
+- REQ-EXP-002 (**Must**): The system MUST compute a per-rider and per-vehicle net figure: delivered-sales value minus their recorded expenses.
+- REQ-EXP-003 (**Must**): Staff MUST record expenses for their own store only; admin MAY record expenses for either store.
 
 ## 10. Product and Approval Requirements
 
@@ -83,6 +96,13 @@ Acceptance: given a staff member creates a product, it remains inactive until ap
 - REQ-USER-002 (**Must**): Each staff account MUST be assigned to a store.
 - REQ-USER-003 (**Must**): Admin users MUST be able to manage the overall business, including at minimum product approvals and review of sales, customers, credit, payments, stock, received stock, and reports.
 - REQ-USER-004 (**Confirmation Required**): Permission differences between admin and staff beyond the confirmed store assignment and product approval require explicit confirmation.
+- REQ-USER-005 (**Must**): Each operational record (sale, payment, receiving) MUST carry the staff member who recorded it, and a staff member MUST NOT modify another staff member's records. (Attribution is implemented now; edit/delete creator enforcement is Confirmation Required until editing is added.)
+- REQ-USER-006 (**Must**): A staff member MUST only see the overall sales of the store to which they are assigned, and MUST NOT see the sales of the other store.
+- REQ-USER-007 (**Must**): Admin users MUST be able to add staff accounts (name, username, password, assigned store), change a staff member's store assignment or credentials, and disable/enable an account. Disabled accounts MUST NOT be able to sign in.
+
+## 11. Staff and User Access Requirements
+
+- REQ-AUTH-001 (**Must**): Staff and admin MUST sign in with a username and password through a login form; credentials for the current mock implementation are stored locally (localStorage-backed mock) and are replaced by Supabase Auth in a later phase.
 
 ## 12. Admin Dashboard Requirements
 
@@ -99,6 +119,7 @@ Acceptance: given a staff member creates a product, it remains inactive until ap
 - REQ-REP-001 (**Must**): The system MUST support Excel export of the agreed business summaries.
 - REQ-REP-002 (**Must**): The system MUST support printing of the agreed business summaries.
 - REQ-REP-003 (**Confirmation Required**): Exact report columns and formats require explicit confirmation.
+- REQ-REP-004 (**Must**): Staff reports MUST scope store-specific summaries (daily sales, current stock, received stock) to the staff member's assigned store; shared credit and payments remain visible per the shared-credit model.
 
 ## 14. Responsive and Accessibility Requirements
 

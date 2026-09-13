@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listCustomers, listSales } from '@/services'
+import { listCustomers, listSales, listUsers } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { DateText } from '@/components/ui/DateText'
@@ -12,6 +12,7 @@ import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
 import { StoreControl, useAsyncData } from '@/features/shared'
+import { getDisplayName } from '@/features/session/displayName'
 import { todayIso } from '@/lib/dates'
 import { formatDate } from '@/lib/format'
 import { storeNames } from '@/store/stores'
@@ -27,10 +28,16 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
   const [date, setDate] = useState(todayIso())
   const sales = useAsyncData(() => listSales({ storeId: store, date }), `${store}:${date}`)
   const customers = useAsyncData(() => listCustomers())
+  const users = useAsyncData(() => listUsers())
 
   const customerNames = useMemo(
     () => new Map((customers.data ?? []).map((customer) => [customer.id, customer.name])),
     [customers.data],
+  )
+
+  const userNames = useMemo(
+    () => new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)])),
+    [users.data],
   )
 
   return (
@@ -74,6 +81,7 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
               { key: 'payment', header: 'Payment' },
               { key: 'items', header: 'Items' },
               { key: 'total', header: 'Total' },
+              { key: 'recordedBy', header: 'Recorded by' },
               { key: 'createdAt', header: 'Recorded' },
             ]}
             rows={sales.data.map((sale) => ({
@@ -83,6 +91,7 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
               payment: sale.paymentType === 'charge' ? 'Charge' : 'Cash',
               items: String(sale.lines.length),
               total: <MoneyText amountMinor={sale.totalMinor} />,
+              recordedBy: userNames.get(sale.recordedByUserId) ?? 'Not available',
               createdAt: <DateText value={sale.createdAt} />,
             }))}
           />

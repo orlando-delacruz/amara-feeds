@@ -31,7 +31,11 @@ export function readStoredSession(): User | null {
 
 export function writeStoredSession(user: User): void {
   try {
-    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user))
+    // Mock-only hygiene: the session never persists the credential,
+    // even though the mock user carries one for the login form.
+    const sessionUser = { ...user }
+    delete sessionUser.password
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionUser))
   } catch {
     // Storage unavailable (e.g. private mode) — the session simply won't persist.
   }

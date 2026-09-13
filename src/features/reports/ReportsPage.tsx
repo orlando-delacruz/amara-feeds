@@ -6,10 +6,17 @@ import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
 import { Icon } from '@/components/ui/icons'
 import { todayIso } from '@/lib/dates'
+import { useSession } from '@/features/session/useSession'
+import { useStore } from '@/store/useStore'
 import { SummarySections } from './SummarySections'
 
 export function ReportsPage() {
   const [date, setDate] = useState(todayIso())
+  const { user } = useSession()
+  const { store } = useStore()
+  // Staff see only their assigned store's sales, stock, and received stock;
+  // admins see the business-wide summaries.
+  const storeId = user?.role === 'staff' ? store : undefined
 
   return (
     <Stack>
@@ -33,7 +40,7 @@ export function ReportsPage() {
           onChange={(event) => setDate(event.target.value)}
         />
       </FilterBar>
-      <SummarySections date={date} />
+      <SummarySections date={date} storeId={storeId} />
     </Stack>
   )
 }

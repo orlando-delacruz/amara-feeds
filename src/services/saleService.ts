@@ -5,6 +5,7 @@ import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
 import { applyStockDelta } from './inventoryService'
 import { createObligationFromSale } from './creditService'
+import { assertActiveRecorder } from './userService'
 import { ServiceError } from './errors'
 
 function cloneSale(sale: Sale): Sale {
@@ -33,6 +34,7 @@ export async function getSale(id: SaleId): Promise<Sale> {
 }
 
 export async function createSale(input: NewSaleInput): Promise<Sale> {
+  assertActiveRecorder(input.recordedByUserId)
   if (input.lines.length === 0) {
     throw new ServiceError('validation', 'A sale needs at least one item.')
   }
@@ -64,6 +66,7 @@ export async function createSale(input: NewSaleInput): Promise<Sale> {
     lines,
     delivery: input.delivery,
     totalMinor,
+    recordedByUserId: input.recordedByUserId,
     createdAt,
   }
 

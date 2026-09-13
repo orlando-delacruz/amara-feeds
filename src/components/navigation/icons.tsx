@@ -10,6 +10,9 @@ export type NavIconName =
   | 'products'
   | 'reports'
   | 'users'
+  | 'rider'
+  | 'vehicle'
+  | 'expense'
 
 function Base({ children }: { children: ReactNode }) {
   return (
@@ -92,6 +95,27 @@ const navIconPaths: Record<NavIconName, ReactNode> = {
     <Base>
       <circle cx="12" cy="8" r="3.5" />
       <path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" />
+    </Base>
+  ),
+  rider: (
+    <Base>
+      <circle cx="10" cy="7" r="3" />
+      <path d="M3.5 19c0-3.4 2.9-6 6.5-6 1.4 0 2.7.4 3.7 1.2" />
+      <rect x="14.5" y="13" width="6" height="6" rx="1" />
+    </Base>
+  ),
+  vehicle: (
+    <Base>
+      <path d="M2.5 7h12V16H2.5z" />
+      <path d="M14.5 10.5h4L21.5 14V16" />
+      <circle cx="7" cy="17.5" r="1.8" />
+      <circle cx="17" cy="17.5" r="1.8" />
+    </Base>
+  ),
+  expense: (
+    <Base>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
     </Base>
   ),
 }

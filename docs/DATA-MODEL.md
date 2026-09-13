@@ -82,9 +82,9 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.9 Receiving record — Confirmed
 
-- **Concept:** a store-specific stock receipt recording store, item, quantity, supplier, and purchase/cost price.
-- **Source:** REQ-RCV-001; `docs/PROJECT.md` §4.
-- **Boundary:** no additional receiving attributes defined here.
+- **Concept:** a store-specific stock receipt recording store, item, quantity, supplier, purchase/cost price, and the delivery rider and vehicle that brought the stock to the store.
+- **Source:** REQ-RCV-001, REQ-RCV-002; `docs/PROJECT.md` §4.
+- **Boundary:** the rider and vehicle references link to the per-store rider/vehicle managed lists (§4.13, §4.14); both are required on every receiving record.
 
 ### 4.10 Supplier — Confirmed
 
@@ -104,6 +104,24 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 - **Source:** REQ-PROD-002–003; `docs/PROJECT.md` §4.
 - **Boundary:** rejection, editing, resubmission, and any further states or timestamps are Confirmation Required.
 
+### 4.13 Rider — Confirmed (user-confirmed addition)
+
+- **Concept:** a delivery rider associated with one store, selectable on a sale's delivery details.
+- **Source:** REQ-DELIV-001–003.
+- **Boundary:** per-store (never shared); exact rider fields beyond name, store, and active state are Confirmation Required.
+
+### 4.14 Vehicle type — Confirmed (user-confirmed addition)
+
+- **Concept:** a vehicle type (e.g. Motorcycle, Tricycle, Van) associated with one store, selectable on a sale's delivery details.
+- **Source:** REQ-DELIV-001–003.
+- **Boundary:** per-store (never shared); exact vehicle fields beyond label, store, and active state are Confirmation Required.
+
+### 4.15 Expense — Confirmed (user-confirmed addition)
+
+- **Concept:** a store-specific fuel or repair cost recorded against a rider or vehicle (at least one required), used to compute per-rider/vehicle net (delivered-sales value minus expenses).
+- **Source:** REQ-EXP-001–003; client confirmation (fuel/repair costs deducted from rider/vehicle sales).
+- **Boundary:** per-store (never shared); expense type enum (fuel, repair) is Assumed pending exact values; net computation uses only delivery-tagged sales at the same store.
+
 ## 5. Conceptual Relationships
 
 - A customer can have sales at either store; a sale belongs to one store.
@@ -113,6 +131,8 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 - A store maintains its own inventory for products/items; a receiving record increases one store's stock for one product/item, and a successful sale decreases the selling store's stock.
 - A staff identity operates within one assigned store's context; an admin identity oversees both stores.
 - A staff-submitted product is pending until an admin approves it into the active state.
+- A sale, payment, or receiving record carries the staff member who recorded it (record attribution); a customer and product carry an optional added-by reference.
+- A store maintains its own riders and vehicle types, referenced by the sale's delivery details.
 
 No foreign keys, cardinalities, junction tables, or database constraints are introduced here.
 
@@ -149,7 +169,7 @@ No additional lifecycle states are introduced.
 There is no public surface; all business data is restricted to authenticated, permitted users.
 
 - **Shared:** customer identity; credit obligations with balances and statuses; payment history including origin store and payment store.
-- **Store-specific:** sales and their purchased items; inventory/stock; receiving records; staff store assignment and operational store context.
+- **Store-specific:** sales and their purchased items; inventory/stock; receiving records; riders and vehicle types; staff store assignment and operational store context.
 - Submitted data in transit is validated, minimal, and delivered to the confirmed destination; no extra personal-data kinds without justification. The model must never imply that customers or credit balances are duplicated independently per store.
 
 ## 9. Deletion, Retention, and Integrity Principles

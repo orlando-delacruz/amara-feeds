@@ -6,7 +6,14 @@ import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 import { ProductListPage } from './ProductListPage'
 
-const staffUser: User = { id: 'user-1', name: 'Alice', role: 'staff', storeId: 'amara' }
+const staffUser: User = {
+  id: 'user-1',
+  name: 'Alice',
+  role: 'staff',
+  storeId: 'amara',
+  username: 'alice',
+  active: true,
+}
 
 describe('ProductListPage', () => {
   beforeEach(() => resetDb())

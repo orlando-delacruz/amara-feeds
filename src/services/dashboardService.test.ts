@@ -28,7 +28,12 @@ describe('dashboardService', () => {
 
   it('reflects outstanding credit after a payment', async () => {
     const before = await getOutstandingCreditTotal()
-    await recordPayment({ creditId: 'cred-1', storeId: 'amara', amountMinor: 5000 })
+    await recordPayment({
+      creditId: 'cred-1',
+      storeId: 'amara',
+      amountMinor: 5000,
+      recordedByUserId: 'user-1',
+    })
     const after = await getOutstandingCreditTotal()
     expect(after.totalMinor).toBe(before.totalMinor - 5000)
   })

@@ -132,8 +132,8 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.5 Receiving Stock
 
-- **Behavior.** Record a receipt around store, item, quantity, supplier, and purchase/cost price (REQ-RCV-001), then confirm success or report failure with entered data preserved where practical.
-- **Constraints.** No additional receiving fields are defined here.
+- **Behavior.** Record a receipt around store, item, quantity, supplier, purchase/cost price (REQ-RCV-001), and the required delivery rider and vehicle that brought the stock to the store (REQ-RCV-002), then confirm success or report failure with entered data preserved where practical.
+- **Constraints.** Rider and vehicle selects show only the current store's active entries; the form cannot save without both selected.
 
 ### 7.6 Products
 
@@ -147,8 +147,23 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.8 Users / Staff
 
-- **Behavior.** Staff accounts reflect the confirmed store assignment (REQ-USER-001, REQ-USER-002); admin oversight covers the overall business (REQ-USER-003).
+- **Behavior.** Staff accounts reflect the confirmed store assignment (REQ-USER-001, REQ-USER-002); admin oversight covers the overall business (REQ-USER-003). Admin can add a staff account (name, username, password, assigned store), edit it (rename, change username, reassign store, reset password), and enable/disable it; disabled accounts cannot sign in (REQ-USER-007).
 - **Constraints.** No detailed role or permission management beyond the confirmed rules is defined here.
+
+### 7.9 Sign-in
+
+- **Behavior.** A login form with username and password fields, associated labels, a single Sign-in action with clear success/failure feedback, and plain non-technical errors for invalid or disabled accounts. Credentials for the current mock implementation are stored locally and are replaced by Supabase Auth in a later phase.
+- **Constraints.** No fabricated or demo-account content is shown on screen; this is an internal sign-in, not a public flow.
+
+### 7.10 Riders and Vehicles
+
+- **Behavior.** Staff manage their own store's delivery riders and vehicle types; admin manage both stores via the store control. Each page lists, adds, and activates/deactivates entries, with the store context always visible. A sale's delivery details select from the current store's active riders and vehicle types.
+- **Constraints.** Exact rider/vehicle fields are Confirmation Required.
+
+### 7.11 Expenses
+
+- **Behavior.** Staff record fuel and repair expenses for their own store's riders or vehicles; admin manage both stores via the store control. The page shows a per-rider and per-vehicle net summary (delivered-sales value minus recorded expenses) and an expense history with target, type, amount, note, recorded-by, and date.
+- **Constraints.** Expense type enum (fuel, repair) is Assumed pending exact values; net computation uses only delivery-tagged sales at the same store.
 
 ## 8. Action Hierarchy
 

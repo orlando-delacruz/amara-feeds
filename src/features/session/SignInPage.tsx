@@ -1,16 +1,13 @@
+import { useState } from 'react'
 import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
-import { listUsers } from '@/services'
-import { EmptyState } from '@/components/ui/EmptyState'
-import { ErrorState } from '@/components/ui/ErrorState'
-import { LoadingState } from '@/components/ui/LoadingState'
-import { StoreBadge } from '@/components/ui/StoreBadge'
-import { useAsyncData } from '@/features/shared'
-import { getDisplayName } from './displayName'
+import { signIn } from '@/services'
+import { Alert } from '@/components/ui/Alert'
+import { Button } from '@/components/ui/Button'
+import { TextField } from '@/components/ui/TextField'
+import { useMutation } from '@/features/shared'
 import { useSession } from './useSession'
 import type { User } from '@/domain'
-
-type AvatarTone = 'amara' | 'zeann' | 'admin' | 'neutral'
 
 const Page = styled.main`
   display: flex;
@@ -110,128 +107,35 @@ const SectionTitle = styled.h2`
   text-wrap: balance;
 `
 
-const List = styled.ul`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.space.sm};
-  list-style: none;
-`
-
-const AccountButton = styled.button`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space.md};
-  min-height: ${({ theme }) => theme.touch.minTarget};
-  padding: ${({ theme }) => theme.space.md};
-  text-align: left;
-  background-color: ${({ theme }) => theme.color.white};
-  border: 1px solid ${({ theme }) => theme.color.border.strong};
-  border-radius: ${({ theme }) => theme.radius.md};
-  cursor: pointer;
-  transition:
-    background-color ${({ theme }) => theme.motion.fast} ease-out,
-    border-color ${({ theme }) => theme.motion.fast} ease-out,
-    box-shadow ${({ theme }) => theme.motion.fast} ease-out;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.color.neutral[50]};
-    border-color: ${({ theme }) => theme.color.brand[600]};
-    box-shadow: ${({ theme }) => theme.shadow.sm};
-  }
-
-  &:active {
-    background-color: ${({ theme }) => theme.color.neutral[100]};
-    box-shadow: none;
-  }
-`
-
-const Avatar = styled.span<{ $tone: AvatarTone }>`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: ${({ theme }) => theme.radius.full};
-  background-color: ${({ theme, $tone }) =>
-    $tone === 'admin'
-      ? theme.color.brand[50]
-      : $tone === 'neutral'
-        ? theme.color.neutral[100]
-        : theme.color.store[$tone].background};
-  color: ${({ theme, $tone }) =>
-    $tone === 'admin'
-      ? theme.color.brand[700]
-      : $tone === 'neutral'
-        ? theme.color.text.secondary
-        : theme.color.store[$tone].text};
-  font-size: ${({ theme }) => theme.font.size.md};
-  font-weight: ${({ theme }) => theme.font.weight.bold};
-`
-
-const AccountText = styled.span`
-  display: flex;
-  flex-direction: column;
-  gap: ${({ theme }) => theme.space.xs};
-  flex: 1;
-  min-width: 0;
-`
-
-const AccountName = styled.span`
-  font-weight: ${({ theme }) => theme.font.weight.semibold};
-  overflow-wrap: break-word;
-`
-
-const AccountContext = styled.span`
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: ${({ theme }) => theme.space.sm};
-`
-
-const AccountMeta = styled.span`
+const AccountMeta = styled.p`
   font-size: ${({ theme }) => theme.font.size.sm};
   color: ${({ theme }) => theme.color.text.secondary};
 `
 
-const RoleBadge = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.sm};
-  border: 1px solid ${({ theme }) => theme.color.brand[100]};
-  border-radius: ${({ theme }) => theme.radius.full};
-  background-color: ${({ theme }) => theme.color.brand[50]};
-  color: ${({ theme }) => theme.color.brand[700]};
-  font-size: ${({ theme }) => theme.font.size.xs};
-  font-weight: ${({ theme }) => theme.font.weight.semibold};
-  white-space: nowrap;
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space.lg};
 `
 
-function getInitials(displayName: string): string {
-  const parts = displayName.trim().split(/\s+/).filter(Boolean)
-  const initials =
-    parts.length > 1
-      ? `${parts[0]?.slice(0, 1) ?? ''}${parts[parts.length - 1]?.slice(0, 1) ?? ''}`
-      : (parts[0]?.slice(0, 2) ?? '')
-  return initials.toUpperCase() || '?'
-}
-
-function getAvatarTone(user: User): AvatarTone {
-  if (user.role === 'admin') {
-    return 'admin'
-  }
-  return user.storeId ?? 'neutral'
-}
-
 export function SignInPage() {
-  const { signIn } = useSession()
+  const { signIn: setSession } = useSession()
   const navigate = useNavigate()
-  const { data: users, loading, error, reload } = useAsyncData(() => listUsers())
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const login = useMutation(signIn)
 
-  function handleSignIn(user: User) {
-    signIn(user)
+  function handleSignedIn(user: User) {
+    setSession(user)
     navigate(user.role === 'admin' ? '/admin' : '/dashboard', { replace: true })
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const user = await login.run({ username, password })
+    if (user) {
+      handleSignedIn(user)
+    }
   }
 
   return (
@@ -251,44 +155,31 @@ export function SignInPage() {
           <StoreCaption>Two stores, one shared system.</StoreCaption>
         </BrandPanel>
         <AccountPanel>
-          <SectionTitle>Choose your account</SectionTitle>
-          {loading && <LoadingState text="Loading accounts…" />}
-          {error && <ErrorState description={error} onRetry={reload} />}
-          {!loading && !error && users && users.length === 0 && (
-            <EmptyState title="No accounts" description="No accounts are available." />
-          )}
-          {!loading && !error && users && users.length > 0 && (
-            <List>
-              {users.map((user) => {
-                const displayName = getDisplayName(user.name)
-                return (
-                  <li key={user.id}>
-                    <AccountButton type="button" onClick={() => handleSignIn(user)}>
-                      <Avatar $tone={getAvatarTone(user)} aria-hidden="true">
-                        {getInitials(displayName)}
-                      </Avatar>
-                      <AccountText>
-                        <AccountName>{displayName}</AccountName>
-                        <AccountContext>
-                          {user.role === 'admin' ? (
-                            <>
-                              <RoleBadge>Admin</RoleBadge>
-                              <AccountMeta>Both stores</AccountMeta>
-                            </>
-                          ) : (
-                            <>
-                              {user.storeId && <StoreBadge store={user.storeId} />}
-                              <AccountMeta>Staff</AccountMeta>
-                            </>
-                          )}
-                        </AccountContext>
-                      </AccountText>
-                    </AccountButton>
-                  </li>
-                )
-              })}
-            </List>
-          )}
+          <SectionTitle>Sign in</SectionTitle>
+          <AccountMeta>Use your staff account to continue.</AccountMeta>
+          <Form onSubmit={handleSubmit} noValidate>
+            {login.error && <Alert variant="danger">{login.error}</Alert>}
+            <TextField
+              id="sign-in-username"
+              label="Username"
+              autoComplete="username"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              required
+            />
+            <TextField
+              id="sign-in-password"
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+            <Button type="submit" disabled={login.pending}>
+              {login.pending ? 'Signing in…' : 'Sign in'}
+            </Button>
+          </Form>
         </AccountPanel>
       </Shell>
     </Page>

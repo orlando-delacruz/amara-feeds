@@ -1,7 +1,10 @@
-import { screen, within } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
+import { resetDb } from '@/services/mocks/db'
+import { listUsers, updateUser } from '@/services'
 import { renderWithProviders } from '@/test/render'
 
 function renderSignIn() {
@@ -13,48 +16,62 @@ function renderSignIn() {
   )
 }
 
+async function fillLogin(username: string, password: string) {
+  const actor = userEvent.setup()
+  await actor.type(screen.getByLabelText(/^Username/), username)
+  await actor.type(screen.getByLabelText(/^Password/), password)
+  await actor.click(screen.getByRole('button', { name: 'Sign in' }))
+}
+
 describe('SignInPage', () => {
-  it('lists seeded accounts and signs a staff user in to the dashboard', async () => {
-    const user = userEvent.setup()
+  beforeEach(() => resetDb())
+
+  it('signs a staff user in to the dashboard with a username and password', async () => {
     renderSignIn()
+    await fillLogin('alice', 'alice123')
 
-    const staffButton = await screen.findByRole('button', { name: /Alice/ })
-    await user.click(staffButton)
-
-    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Dashboard' }, { timeout: 5000 }),
+    ).toBeInTheDocument()
   })
 
   it('signs an admin in to the admin area', async () => {
-    const user = userEvent.setup()
     renderSignIn()
+    await fillLogin('owner', 'admin123')
 
-    const adminButton = await screen.findByRole('button', { name: /Owner/ })
-    await user.click(adminButton)
+    expect(
+      await screen.findByRole('heading', { name: 'Admin Dashboard' }, { timeout: 5000 }),
+    ).toBeInTheDocument()
+  })
 
-    expect(await screen.findByRole('heading', { name: 'Admin Dashboard' })).toBeInTheDocument()
+  it('rejects incorrect credentials with a plain message', async () => {
+    renderSignIn()
+    await fillLogin('alice', 'wrong-password')
+
+    expect(await screen.findByText('Incorrect username or password.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+  })
+
+  it('rejects a disabled account', async () => {
+    const staff = (await listUsers({})).find((item) => item.username === 'alice')
+    if (!staff) {
+      throw new Error('Seed staff account is missing.')
+    }
+    await updateUser(staff.id, { active: false })
+
+    renderSignIn()
+    await fillLogin('alice', 'alice123')
+
+    expect(
+      await screen.findByText('This account is disabled. Contact the admin.'),
+    ).toBeInTheDocument()
   })
 
   it('renders the brand inside a main landmark', async () => {
     renderSignIn()
 
     expect(screen.getByRole('main')).toBeInTheDocument()
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Amara Feeds' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('heading', { level: 2, name: 'Choose your account' }),
-    ).toBeInTheDocument()
-  })
-
-  it('shows each account with its store or admin context', async () => {
-    renderSignIn()
-
-    const staffButton = await screen.findByRole('button', { name: /Alice/ })
-    expect(within(staffButton).getByText('Amara')).toBeInTheDocument()
-    expect(within(staffButton).getByText('Staff')).toBeInTheDocument()
-
-    const adminButton = await screen.findByRole('button', { name: /Owner/ })
-    expect(within(adminButton).getByText('Admin')).toBeInTheDocument()
-    expect(within(adminButton).getByText('Both stores')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Amara Feeds' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 2, name: 'Sign in' })).toBeInTheDocument()
   })
 })

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { listCustomers, searchCustomers } from '@/services'
+import { listCustomers, listUsers, searchCustomers } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
@@ -9,6 +9,8 @@ import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
 import { useAsyncData } from '@/features/shared'
+import { getDisplayName } from '@/features/session/displayName'
+import { useSession } from '@/features/session/useSession'
 import { AddCustomerDialog } from './AddCustomerDialog'
 
 interface CustomerListPageProps {
@@ -16,6 +18,7 @@ interface CustomerListPageProps {
 }
 
 export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
+  const { user } = useSession()
   const [term, setTerm] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
@@ -24,6 +27,8 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
     () => (term.trim() ? searchCustomers(term) : listCustomers()),
     term,
   )
+  const users = useAsyncData(() => listUsers())
+  const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
 
   function handleCreated() {
     setDialogOpen(false)
@@ -73,10 +78,14 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
             columns={[
               { key: 'name', header: 'Name' },
               { key: 'contact', header: 'Contact' },
+              { key: 'addedBy', header: 'Added by' },
             ]}
             rows={data.map((customer) => ({
               name: customer.name,
               contact: customer.contact ?? 'Not listed',
+              addedBy: customer.createdByUserId
+                ? (userNames.get(customer.createdByUserId) ?? 'Not available')
+                : 'Not available',
             }))}
           />
         )}
@@ -85,6 +94,7 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onCreated={handleCreated}
+        createdByUserId={user?.id}
       />
     </Stack>
   )

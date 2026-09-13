@@ -18,6 +18,8 @@ const staffUser: User = {
   name: 'Alice (Amara staff)',
   role: 'staff',
   storeId: 'amara',
+  username: 'alice',
+  active: true,
 }
 
 function renderAppAt(path: string) {
@@ -50,7 +52,7 @@ describe('mock session persistence', () => {
       </MemoryRouter>,
       { user: null },
     )
-    expect(await screen.findByRole('heading', { name: 'Choose your account' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 
   it('signing out clears the stored session', async () => {
@@ -59,13 +61,13 @@ describe('mock session persistence', () => {
     expect(await screen.findByRole('heading', { name: 'More' })).toBeInTheDocument()
     const main = screen.getByRole('main')
     await userEvent.setup().click(within(main).getByRole('button', { name: 'Sign out' }))
-    expect(await screen.findByRole('heading', { name: 'Choose your account' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
     expect(readStoredSession()).toBeNull()
   })
 
   it('ignores a corrupt stored session', async () => {
     window.localStorage.setItem(SESSION_STORAGE_KEY, 'not-json{{{')
     renderAppAt('/dashboard')
-    expect(await screen.findByRole('heading', { name: 'Choose your account' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 })

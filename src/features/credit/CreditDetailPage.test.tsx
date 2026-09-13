@@ -7,7 +7,14 @@ import { resetDb } from '@/services/mocks/db'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 
-const staffUser: User = { id: 'user-1', name: 'Alice', role: 'staff', storeId: 'amara' }
+const staffUser: User = {
+  id: 'user-1',
+  name: 'Alice',
+  role: 'staff',
+  storeId: 'amara',
+  username: 'alice',
+  active: true,
+}
 
 function renderCredit(path: string) {
   return renderWithProviders(

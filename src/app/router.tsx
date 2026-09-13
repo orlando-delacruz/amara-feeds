@@ -1,10 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { NotFoundPage, PlaceholderPage } from '@/components/PlaceholderPage'
+import { NotFoundPage } from '@/components/PlaceholderPage'
 import { CustomerListPage } from '@/features/customers/CustomerListPage'
 import { CreditDetailPage } from '@/features/credit/CreditDetailPage'
 import { CreditListPage } from '@/features/credit/CreditListPage'
 import { AdminDashboardPage } from '@/features/dashboard/AdminDashboardPage'
 import { StaffDashboardPage } from '@/features/dashboard/StaffDashboardPage'
+import { RidersPage } from '@/features/delivery/RidersPage'
+import { VehiclesPage } from '@/features/delivery/VehiclesPage'
+import { ExpensesPage } from '@/features/expenses/ExpensesPage'
 import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { MorePage } from '@/features/more/MorePage'
 import { ProductApprovalPage } from '@/features/products/ProductApprovalPage'
@@ -16,6 +19,7 @@ import { SaleListPage } from '@/features/sales/SaleListPage'
 import { RequireRole } from '@/features/session/guards'
 import { SignInPage } from '@/features/session/SignInPage'
 import { useHomePath } from '@/features/session/useHomePath'
+import { StaffListPage } from '@/features/users/StaffListPage'
 import { AdminLayout } from './layouts/AdminLayout'
 import { StaffLayout } from './layouts/StaffLayout'
 
@@ -41,6 +45,9 @@ export function AppRoutes() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="receiving" element={<ReceivingPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="riders" element={<RidersPage />} />
+          <Route path="vehicles" element={<VehiclesPage />} />
+          <Route path="expenses" element={<ExpensesPage />} />
           <Route path="more" element={<MorePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
@@ -58,16 +65,11 @@ export function AppRoutes() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="receiving" element={<ReceivingPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="riders" element={<RidersPage />} />
+          <Route path="vehicles" element={<VehiclesPage />} />
+          <Route path="expenses" element={<ExpensesPage />} />
           <Route path="more" element={<MorePage />} />
-          <Route
-            path="users"
-            element={
-              <PlaceholderPage
-                title="Users / Staff"
-                scope="Individual staff accounts with store assignment."
-              />
-            }
-          />
+          <Route path="users" element={<StaffListPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

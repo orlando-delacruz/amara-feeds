@@ -23,8 +23,8 @@ reads **OPEN**.
 
 1. Run `npm run dev` and open the app in a real browser.
 2. Use two viewports: mobile (~390px wide) and desktop (≥1024px).
-3. Use three accounts from the mock sign-in screen: **Alice (Amara staff)**,
-   **Ben (Zeann staff)**, **Owner (admin)**.
+3. Sign in with the seeded credentials: **alice / alice123 (Amara staff)**,
+   **ben / ben123 (Zeann staff)**, **owner / admin123 (admin)**.
 4. For each scenario below: follow the steps, compare against Expected, and report
    back Observed + Verdict (pass/fail) plus anything confusing, broken, or unclear.
 5. Do not "work around" anything odd — report it verbatim.
@@ -34,6 +34,10 @@ Seed facts the scripts rely on (reset on every reload):
 - Customers: Maria Santos, Juan Dela Cruz, Ana Reyes (shared across stores).
 - Active products: Rice 25kg, Sugar 1kg, Instant Coffee. Pending: Cooking Oil 1L.
 - Amara stock: Rice 20, Sugar 50, Coffee 30. Zeann stock: Rice 12, Sugar 40, Coffee 25.
+- Riders: Jojo Ramos, Ramon Cruz (Amara); Paolo Lim (Zeann). Vehicles: Motorcycle,
+  Tricycle (Amara); Motorcycle, Van (Zeann).
+- Receiving records: recv-1 (Amara, Rice 25kg, rider-1/vehicle-1), recv-2 (Zeann, Sugar 1kg, rider-3/vehicle-3), recv-3 (Amara, Sugar 1kg, rider-2/vehicle-2).
+- Expenses: exp-1 (Amara, rider-1 fuel ₱500.00), exp-2 (Amara, vehicle-2 repair ₱1,200.00), exp-3 (Zeann, rider-3+vehicle-3 fuel ₱350.00).
 - Credits: cred-1 outstanding ₱195.00; cred-2 outstanding ₱200.00 with payments from
   **both** Zeann and Amara; cred-3 settled.
 - Today's sales: two at Amara (total ₱2,395.00), one at Zeann (₱195.00).
@@ -41,13 +45,16 @@ Seed facts the scripts rely on (reset on every reload):
 ## 4. Automated Baseline (agent, done)
 
 `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run build` pass.
-`npm run test:run`: **28 files, 79 tests, all passing.**
+`npm run test:run`: **40 files, 151 tests, all passing.**
 
-Automated coverage already includes: sign-in/redirects, store scoping, customer
-list/search/add, product submit/approve gating, stock isolation, receiving, cash and
-charge sales, due-date preview, charge validation, partial-to-settled payments,
-overpayment/settled rejection, cross-store payment history, dashboard summaries,
-reports rendering, and double-submit guarding (`useMutation`).
+Automated coverage already includes: sign-in/redirects (login form), store scoping, staff
+management (add/edit/disable), riders/vehicles per-store management, customer
+list/search/add, product submit/approve gating, stock isolation, receiving (with required rider/vehicle), cash and
+charge sales, rider/vehicle sale-form selects, due-date preview, charge validation,
+partial-to-settled payments, overpayment/settled rejection, cross-store payment history,
+record attribution, dashboard summaries, staff report store-scoping, reports rendering,
+expense recording (fuel/repair per rider/vehicle), delivery net summary computation,
+and double-submit guarding (`useMutation`).
 
 ## 5. Walkthrough Scripts
 
@@ -59,15 +66,16 @@ Template for each scenario — fill in during the interactive pass:
 
 ### W1 — Sign-in, role gating, store context
 
-- Requirements: REQ-USER-001–003, REQ-STORE-001/002.
+- Requirements: REQ-USER-001–003, REQ-STORE-001/002, REQ-AUTH-001.
 - Steps:
-  1. Open `/` signed out. Expected: redirected to the sign-in screen listing the mock accounts.
-  2. Sign in as Alice (Amara staff). Expected: lands on the staff dashboard; header shows store badge "Amara"; **no** store switcher anywhere; user name shown.
-  3. Manually visit `/admin`. Expected: bounced back to the staff area.
-  4. Sign out, sign in as Owner (admin). Expected: lands on the admin dashboard; header shows a store badge only (no header switcher).
-  5. As admin, open Inventory and switch the store to Zeann via the store control. Expected: badge reads "Zeann"; store-specific views follow the selection.
-  6. Sign out. Expected: back at sign-in; protected routes redirect there again.
-- Manual focus: is the current store always obvious? Is it clear the store control is admin-only?
+  1. Open `/` signed out. Expected: redirected to the sign-in login form.
+  2. Try `alice` / wrong password. Expected: plain error, stays signed out.
+  3. Sign in as `alice` / `alice123` (Amara staff). Expected: lands on the staff dashboard; header shows store badge "Amara"; **no** store switcher anywhere; user name shown.
+  4. Manually visit `/admin`. Expected: bounced back to the staff area.
+  5. Sign out, sign in as `owner` / `admin123`. Expected: lands on the admin dashboard; header shows a store badge only (no header switcher).
+  6. As admin, open Inventory and switch the store to Zeann via the store control. Expected: badge reads "Zeann"; store-specific views follow the selection.
+  7. Sign out. Expected: back at sign-in; protected routes redirect there again.
+- Manual focus: is the current store always obvious? Is it clear the store control is admin-only? Are login errors understandable?
 
 ### W2 — Shared customers
 
@@ -90,14 +98,15 @@ Template for each scenario — fill in during the interactive pass:
 
 ### W4 — Inventory and receiving
 
-- Requirements: REQ-INV-001/002, REQ-RCV-001.
+- Requirements: REQ-INV-001/002, REQ-RCV-001, REQ-RCV-002.
 - Steps (CHAIN, no reload):
   1. As Alice, open Inventory. Expected: Rice 20, Sugar 50, Coffee 30 (Amara only).
-  2. Open Receiving. Expected: prior Amara receipts listed.
-  3. Record a receipt: Rice 25kg, quantity 5, any supplier, cost ₱1,100.00. Expected: success, receipt appears, Amara Rice becomes 25.
-  4. As Ben, open Inventory. Expected: Zeann figures unchanged (Rice 12).
-  5. As Owner, review both stores via the store control on the Inventory and Receiving pages.
-- Manual focus: is per-store separation obvious at all times?
+  2. Open Receiving. Expected: prior Amara receipts listed with Rider and Vehicle columns.
+  3. Record a receipt: Rice 25kg, quantity 5, any supplier, cost ₱1,100.00, select a rider, select a vehicle. Expected: success, receipt appears with rider/vehicle, Amara Rice becomes 25.
+  4. Try to save without selecting a rider. Expected: validation error "Select the delivery rider."
+  5. As Ben, open Inventory. Expected: Zeann figures unchanged (Rice 12).
+  6. As Owner, review both stores via the store control on the Inventory and Receiving pages.
+- Manual focus: is per-store separation obvious at all times? Are rider/vehicle selects clearly labeled?
 
 ### W5 — Cash sale with stock effect (CHAIN with W4)
 
@@ -164,6 +173,29 @@ Template for each scenario — fill in during the interactive pass:
   2. Tab through the sale form. Expected: visible focus everywhere, labels announced, errors in text (not color alone).
   3. Check statuses (Pending, Outstanding, Settled) and the store badge. Expected: meaning carried by words, not color alone.
 
+### W13 — Staff management and delivery lists
+
+- Requirements: REQ-USER-007, REQ-DELIV-001–003.
+- Steps:
+  1. As Owner, open Users. Expected: Alice (Amara), Ben (Zeann) listed Active.
+  2. Add staff "Cora" (username `cora`, any password, assigned Zeann). Expected: appears; sign out and sign in as `cora` → lands on the Zeann staff area; Zeann store context only.
+  3. As Owner, disable Ben. Expected: Ben shows Disabled; signing in as `ben` is refused with a plain message. Re-enable Ben.
+  4. As Alice, open Riders and Vehicles. Expected: only Amara riders/vehicles (Jojo, Ramon; Motorcycle, Tricycle). Add "E-bike" vehicle; Zeann must not see it.
+  5. As Owner, open Riders, switch to Zeann. Expected: Paolo Lim only.
+  6. Record a sale with a rider and vehicle selected. Expected: saved; sale list shows the rider/vehicle and "Recorded by".
+- Manual focus: is per-store delivery separation obvious? Is the recorded-by attribution clear on every record?
+
+### W13 — Expenses (fuel/repair) and rider/vehicle net
+
+- Requirements: REQ-EXP-001–003, REQ-RCV-002.
+- Steps:
+  1. As Alice, open Expenses. Expected: seeded Amara expenses listed (fuel for Jojo, repair for Tricycle); net summary shows Jojo's ₱500.00 expense and Tricycle's ₱1,200.00 expense.
+  2. Record a fuel expense for Ramon Cruz: amount ₱750. Expected: success; expense appears in history; Ramon's net updates.
+  3. Switch to Vehicles, record a repair for Motorcycle: amount ₱300. Expected: success; Motorcycle net updates.
+  4. As Ben, open Expenses. Expected: only Zeann expenses (fuel for Paolo/Motorcycle). Amara expenses not visible.
+  5. As Owner, switch store via the store control. Expected: both stores' expenses visible; net summaries update per store.
+- Manual focus: is the net summary clear (delivered sales − expenses = net)? Is the store separation obvious?
+
 ## 6. Findings Log
 
 Format: ID, severity (Blocker/Major/Minor), source scenario, description, disposition
@@ -184,7 +216,7 @@ answered). Existing items live in `docs/REQUIREMENTS.md` §19.
 
 ## 8. Gate 3 Verdict
 
-- **Verdict:** PENDING — interactive pass (W1–W12) not yet performed.
+- **Verdict:** PENDING — interactive pass (W1–W13) not yet performed.
 - Phase 4 opens only when: every scenario above has a record; every finding is FIXED or
   explicitly DEFERRED with rationale; §7 is current; the verification suite is green
   after any rework.

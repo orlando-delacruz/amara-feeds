@@ -10,9 +10,12 @@ import { Icon } from '@/components/ui/icons'
 import { ListSkeleton, StatsSkeleton } from '@/components/ui/Skeletons'
 import { storeNames } from '@/store/stores'
 import { useBusinessSummaries } from '@/features/dashboard/useBusinessSummaries'
+import type { StoreId } from '@/domain'
 
 interface SummarySectionsProps {
   date: string
+  /** When given, store-specific summaries are scoped to this store. */
+  storeId?: StoreId
 }
 
 const Stats = styled.div`
@@ -21,8 +24,8 @@ const Stats = styled.div`
   gap: ${({ theme }) => theme.space.md};
 `
 
-export function SummarySections({ date }: SummarySectionsProps) {
-  const summaries = useBusinessSummaries(date)
+export function SummarySections({ date, storeId }: SummarySectionsProps) {
+  const summaries = useBusinessSummaries(date, storeId)
 
   return (
     <AsyncBoundary

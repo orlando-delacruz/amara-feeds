@@ -14,6 +14,7 @@ describe('saleService', () => {
       storeId: 'amara',
       paymentType: 'cash',
       lines: [{ productId: 'prod-1', quantity: 2, unitPriceMinor: 115000 }],
+      recordedByUserId: 'user-1',
     })
     expect(sale.totalMinor).toBe(230000)
     expect((await getStock('amara', 'prod-1')).quantity).toBe(before.quantity - 2)
@@ -26,6 +27,7 @@ describe('saleService', () => {
       paymentType: 'charge',
       termsId: 'terms-15',
       lines: [{ productId: 'prod-2', quantity: 2, unitPriceMinor: 6500 }],
+      recordedByUserId: 'user-2',
     })
     const credits = await listCredits({ customerId: 'cust-1', originStoreId: 'zeann' })
     const obligation = credits.find((credit) => credit.saleId === sale.id)
@@ -42,6 +44,7 @@ describe('saleService', () => {
         paymentType: 'charge',
         termsId: 'terms-15',
         lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100 }],
+        recordedByUserId: 'user-1',
       }),
     ).rejects.toMatchObject({ code: 'validation' })
     await expect(
@@ -50,6 +53,7 @@ describe('saleService', () => {
         customerId: 'cust-1',
         paymentType: 'charge',
         lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100 }],
+        recordedByUserId: 'user-1',
       }),
     ).rejects.toMatchObject({ code: 'validation' })
   })
@@ -57,9 +61,20 @@ describe('saleService', () => {
   it('does not change stock when a sale is invalid', async () => {
     const before = await getStock('amara', 'prod-1')
     await expect(
-      createSale({ storeId: 'amara', paymentType: 'cash', lines: [] }),
+      createSale({ storeId: 'amara', paymentType: 'cash', lines: [], recordedByUserId: 'user-1' }),
     ).rejects.toMatchObject({ code: 'validation' })
     expect((await getStock('amara', 'prod-1')).quantity).toBe(before.quantity)
+  })
+
+  it('rejects a sale from an unknown recorder', async () => {
+    await expect(
+      createSale({
+        storeId: 'amara',
+        paymentType: 'cash',
+        lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100 }],
+        recordedByUserId: 'user-999',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
   })
 
   it('filters sales by store and date', async () => {

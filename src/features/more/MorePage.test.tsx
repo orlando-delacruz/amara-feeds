@@ -5,8 +5,21 @@ import { AppRoutes } from '@/app/router'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 
-const staffUser: User = { id: 'user-1', name: 'Alice', role: 'staff', storeId: 'amara' }
-const adminUser: User = { id: 'user-3', name: 'Owner', role: 'admin' }
+const staffUser: User = {
+  id: 'user-1',
+  name: 'Alice',
+  role: 'staff',
+  storeId: 'amara',
+  username: 'alice',
+  active: true,
+}
+const adminUser: User = {
+  id: 'user-3',
+  name: 'Owner',
+  role: 'admin',
+  username: 'owner',
+  active: true,
+}
 
 function renderMore(path: string, user: User) {
   renderWithProviders(
@@ -49,6 +62,6 @@ describe('MorePage', () => {
     // Scoped to main: the header keeps its own (CSS-hidden on phones) Sign out button.
     const main = screen.getByRole('main')
     await userEvent.setup().click(within(main).getByRole('button', { name: 'Sign out' }))
-    expect(await screen.findByRole('heading', { name: 'Choose your account' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 })

@@ -9,8 +9,16 @@ const staffUser: User = {
   name: 'Alice (Amara staff)',
   role: 'staff',
   storeId: 'amara',
+  username: 'alice',
+  active: true,
 }
-const adminUser: User = { id: 'user-3', name: 'Owner (admin)', role: 'admin' }
+const adminUser: User = {
+  id: 'user-3',
+  name: 'Owner (admin)',
+  role: 'admin',
+  username: 'owner',
+  active: true,
+}
 
 describe('StoreControl', () => {
   it('renders nothing for staff (store locked to assignment)', () => {

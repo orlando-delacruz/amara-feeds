@@ -1,13 +1,16 @@
 import type {
   CreditObligation,
   Customer,
+  Expense,
   Payment,
   PaymentTerms,
   Product,
   ReceivingRecord,
+  Rider,
   Sale,
   StockLevel,
   User,
+  Vehicle,
 } from '@/domain'
 import { resetIdCounter } from './ids'
 import { createSeedData } from './seed'
@@ -22,6 +25,9 @@ export interface MockDatabase {
   payments: Payment[]
   terms: PaymentTerms[]
   users: User[]
+  riders: Rider[]
+  vehicles: Vehicle[]
+  expenses: Expense[]
 }
 
 let db: MockDatabase = createSeedData()

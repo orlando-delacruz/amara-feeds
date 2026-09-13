@@ -1,4 +1,12 @@
-import type { CustomerId, PaymentTermsId, ProductId, SaleId } from './ids'
+import type {
+  CustomerId,
+  PaymentTermsId,
+  ProductId,
+  RiderId,
+  SaleId,
+  UserId,
+  VehicleId,
+} from './ids'
 import type { StoreId } from './store'
 import type { Money } from '@/lib/money'
 
@@ -14,8 +22,10 @@ export interface SaleLine {
 export interface DeliveryInfo {
   /** assumed: delivery fields are confirmed in kind (fee, rider, vehicle); exact shape is Confirmation Required */
   feeMinor?: Money
-  rider?: string
-  vehicle?: string
+  /** assumed: reference to the store's managed rider list */
+  riderId?: RiderId
+  /** assumed: reference to the store's managed vehicle list */
+  vehicleId?: VehicleId
 }
 
 export interface Sale {
@@ -27,6 +37,8 @@ export interface Sale {
   delivery?: DeliveryInfo
   /** assumed: derived total = sum(lines) + delivery fee */
   totalMinor: Money
+  /** assumed: staff member who recorded the sale; staff cannot modify another staff's records */
+  recordedByUserId: UserId
   createdAt: string
 }
 
@@ -38,4 +50,6 @@ export interface NewSaleInput {
   delivery?: DeliveryInfo
   /** required when paymentType is 'charge'; opaque selection (options are Confirmation Required) */
   termsId?: PaymentTermsId
+  /** assumed: signed-in staff member recording the sale */
+  recordedByUserId: UserId
 }

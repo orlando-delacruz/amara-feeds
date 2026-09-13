@@ -44,6 +44,27 @@ export const staffNavItems: NavItem[] = [
     primary: false,
     description: 'Daily summaries and printing',
   },
+  {
+    to: '/riders',
+    label: 'Riders',
+    icon: 'rider',
+    primary: false,
+    description: 'Delivery riders at your store',
+  },
+  {
+    to: '/vehicles',
+    label: 'Vehicles',
+    icon: 'vehicle',
+    primary: false,
+    description: 'Vehicle types used for deliveries',
+  },
+  {
+    to: '/expenses',
+    label: 'Expenses',
+    icon: 'expense',
+    primary: false,
+    description: 'Fuel and repair costs per rider/vehicle',
+  },
 ]
 
 export const adminNavItems: NavItem[] = [
@@ -85,6 +106,27 @@ export const adminNavItems: NavItem[] = [
     icon: 'users',
     primary: false,
     description: 'Staff accounts and store assignment',
+  },
+  {
+    to: '/admin/riders',
+    label: 'Riders',
+    icon: 'rider',
+    primary: false,
+    description: 'Delivery riders per store',
+  },
+  {
+    to: '/admin/vehicles',
+    label: 'Vehicles',
+    icon: 'vehicle',
+    primary: false,
+    description: 'Vehicle types used for deliveries',
+  },
+  {
+    to: '/admin/expenses',
+    label: 'Expenses',
+    icon: 'expense',
+    primary: false,
+    description: 'Fuel and repair costs per rider/vehicle',
   },
 ]
 

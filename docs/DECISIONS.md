@@ -98,6 +98,12 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-009 | Operations-board dashboard and app-wide visual rhythm | Accepted | 2026-09-10 |
 | DEC-010 | Tight responsive scale and flat grouped dashboard | Accepted | 2026-09-10 |
 | DEC-011 | More page, centered tabs, dashboard value hierarchy | Accepted | 2026-09-10 |
+| DEC-012 | Production login form with localStorage credentials | Accepted | 2026-09-13 |
+| DEC-013 | Creator attribution on records (no edit/delete) | Accepted | 2026-09-13 |
+| DEC-014 | Staff management page (add/edit/disable) | Accepted | 2026-09-13 |
+| DEC-015 | Per-store riders and vehicles management | Accepted | 2026-09-13 |
+| DEC-016 | Required rider/vehicle on receiving | Accepted | 2026-09-13 |
+| DEC-017 | Per rider/vehicle expense tracking with net | Accepted | 2026-09-13 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -263,6 +269,96 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Related documents:** `docs/DESIGN-SYSTEM.md` §6, `docs/UI-UX.md` §§5–6, 9–10.
 - **Supersedes / Superseded by:** none.
 - **Open questions or follow-up:** None.
+
+### DEC-012 — Production login form with localStorage credentials
+
+- **ID:** DEC-012
+- **Title:** Production login form with localStorage credentials
+- **Status:** Accepted
+- **Date:** 2026-09-13
+- **Context:** The mock sign-in was an account picker listing seeded users, which is not production-like. The user asked for a real login form (username + password) backed for now by localStorage, with real Supabase Auth still replacing it in a later phase (`docs/SECURITY.md` §2, DEC-005 follow-up).
+- **Decision:** Replace the account picker with a login form (username + password fields with autocomplete, single Sign-in submit, plain-language error on invalid or disabled accounts, `useMutation` double-submit guard). Credentials are stored only in the in-memory mock database with seeded demo accounts (`alice`/`alice123`, `ben`/`ben123`, `owner`/`admin123`); `signIn` validates against the mock. The persisted session strips the password before writing to localStorage.
+- **Alternatives considered:** Keeping the picker — rejected; not production-like. Persisting the password with the session — rejected; mock-hygiene rule keeps credentials out of storage.
+- **Rationale:** Gives a real sign-in experience now without building auth, consistent with the mock-seam approach; the Supabase Auth swap in Phase 6 stays bounded to replacing `signIn` and the session provider.
+- **Consequences:** Demo credentials are mock-only and documented off-screen (README); the session stored in localStorage never includes the password; real authentication replaces this in Phases 4–6.
+- **Related documents:** `docs/SECURITY.md` §§2, 6, `docs/UI-UX.md` §§2, 14, `docs/TECH-STACK.md` §3, `ROADMAP.md` §3 (Phases 2, 6).
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Authentication flow detail (session handling, provisioning, recovery) remains Confirmation Required.
+
+### DEC-013 — Creator attribution on records (no edit/delete)
+
+- **ID:** DEC-013
+- **Title:** Creator attribution on records (no edit/delete)
+- **Status:** Accepted
+- **Date:** 2026-09-13
+- **Context:** The user requires that each staff member has their own records and cannot modify another staff member's input. Today no edit/delete exists anywhere (edit/cancel/reversal are Confirmation Required), so the confirmed behavior is attribution now, with enforcement deferred.
+- **Decision:** Add `recordedByUserId` to sales, payments, and receiving records (and `createdByUserId` to customers, consistent with products), set from the signed-in session on every create, validated against a known active account by the services. Lists and details display "Recorded by"/"Added by". No edit/delete is added; any future edit/delete must be restricted to the creator and is Confirmation Required.
+- **Alternatives considered:** Adding edit/delete for own records now — rejected; touches sale/stock/credit invariants that remain unconfirmed. Hiding other staff's records entirely — rejected; staff still see their store's overall sales for dashboards and reporting.
+- **Rationale:** Establishes per-staff ownership and traceability immediately at the mock seam, cheaply, without inventing unconfirmed editing behavior.
+- **Consequences:** Create services now require `recordedByUserId`; seeded records are backfilled; the mock enforces the recorder exists and is active (frontend checks are never a security boundary).
+- **Related documents:** `docs/DATA-MODEL.md` §8, `docs/API.md` §5, `ROADMAP.md` §6, `docs/REQUIREMENTS.md` §11.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Edit/cancel/reversal behavior and its creator checks remain Confirmation Required.
+
+### DEC-014 — Staff management page (add/edit/disable)
+
+- **ID:** DEC-014
+- **Title:** Staff management page (add/edit/disable)
+- **Status:** Accepted
+- **Date:** 2026-09-13
+- **Context:** `docs/UI-UX.md` §7.8 and REQ-USER-001–003 require store-assigned staff accounts, but `/admin/users` was a placeholder. The user asked for a super-admin page to add staff and to manage store assignment and account status.
+- **Decision:** Build `StaffListPage` at `/admin/users` (admin only): list staff with name, username, assigned-store badge, and Active/Disabled status; `AddStaffDialog` (name, username, password, assigned store); `EditStaffDialog` (rename, change username, reassign store, reset password); disable/enable toggle with confirmation. Staff only — no admin-account creation.
+- **Alternatives considered:** Creating admin accounts too — rejected by the user's choice; the seeded admin stays the single super admin. Edit/disable deferred — rejected; the user explicitly chose add + edit/disable.
+- **Rationale:** Gives the admin full control of store assignment and account lifecycle in the mock, matching the confirmed store-assignment rule.
+- **Consequences:** `createUser` requires a store for staff and unique usernames; disabled accounts are rejected at sign-in; the admin nav "Users" entry now points to a real page.
+- **Related documents:** `docs/REQUIREMENTS.md` §11, `docs/UI-UX.md` §7.8, `docs/DATA-MODEL.md` §4.11.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Detailed permission differences remain Confirmation Required (REQ-USER-004).
+
+### DEC-015 — Per-store riders and vehicles management
+
+- **ID:** DEC-015
+- **Title:** Per-store riders and vehicles management
+- **Status:** Accepted
+- **Date:** 2026-09-13
+- **Context:** Delivery details today are free-text rider/vehicle strings on the sale form. The user asked for pages to see and manage the delivery people and the vehicle types used, managed by both staff and admin.
+- **Decision:** Add per-store `Rider` and `Vehicle` entities managed from new `RidersPage`/`VehiclesPage` (staff → their store only; admin → both stores via the store control). Pages list, add, and activate/deactivate entries. The sale form's rider and vehicle fields become dropdowns over the active riders/vehicles of the current store; inactive entries are hidden from the sale form.
+- **Alternatives considered:** Shared (business-wide) rider/vehicle lists — rejected; delivery is per-store operational context. Free-text kept with reference lists only — rejected; the user chose both staff and admin manage, which implies per-store selection on the sale form.
+- **Rationale:** Makes delivery attribution consistent and traceable per store while keeping the change bounded to the mock seam and the existing store-context pattern.
+- **Consequences:** New domain concepts, services, and nav entries ("Riders", "Vehicles") under the More destination for both roles; `DeliveryInfo` references `riderId`/`vehicleId`; exact rider/vehicle fields remain Confirmation Required.
+- **Related documents:** `docs/DATA-MODEL.md` §4, `docs/UI-UX.md` §7.1, `docs/REQUIREMENTS.md` §5 (REQ-SALE-004), `docs/API.md` §5.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** None beyond the Confirmation Required rider/vehicle field detail.
+
+### DEC-016 — Required rider/vehicle on receiving
+
+- **ID:** DEC-016
+- **Title:** Required rider/vehicle on receiving
+- **Status:** Accepted
+- **Date:** 2026-09-13
+- **Context:** The client confirmed that the rider who delivers stock to the store is distinct from the rider who delivers sales to customers. Receiving records need to trace which rider and vehicle brought the stock, for expense attribution.
+- **Decision:** Receiving records require both `riderId` and `vehicleId` (required fields, not optional). The service validates that the selected rider and vehicle belong to the same store and are active; seed receiving records are backfilled with matching rider/vehicle references.
+- **Alternatives considered:** Optional rider/vehicle on receiving — rejected; the client emphasized traceability for every stock delivery. Separate rider lists for receiving vs sales delivery — rejected; both use the same per-store rider/vehicle managed lists.
+- **Rationale:** Ensures every stock receipt is traceable to a specific rider and vehicle, enabling accurate per-rider/vehicle expense tracking and net computation.
+- **Consequences:** `ReceivingRecord` and `NewReceivingInput` gain required `riderId`/`vehicleId`; receiving service validates existence, store match, and active state; seed data backfilled; receiving form gains two required Selects; history shows rider/vehicle columns.
+- **Related documents:** `docs/DATA-MODEL.md` §4.9, §4.13, §4.14, `docs/UI-UX.md` §7.5, `docs/REQUIREMENTS.md` REQ-RCV-002, `docs/API.md`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** None.
+
+### DEC-017 — Per rider/vehicle expense tracking with net
+
+- **ID:** DEC-017
+- **Title:** Per rider/vehicle expense tracking with net
+- **Status:** Accepted
+- **Date:** 2026-09-13
+- **Context:** The client explained that riders and vehicles incur expenses (fuel, repairs) which are deducted from their sales. This requires recording expenses and computing a per-rider/vehicle net figure.
+- **Decision:** Add a store-scoped `Expense` entity (fuel/repair type, amount, optional note, rider and/or vehicle reference) with a new `ExpensesPage` (staff own store, admin both stores). A `getDeliveryNetSummary` service computes per-rider and per-vehicle net = delivered-sales value (sum of that store's sales whose delivery references the rider/vehicle) minus their recorded expenses. The net summary and expense history appear on the Expenses page.
+- **Alternatives considered:** Store-level net (expenses reduce total store sales) — rejected; client said "their sales" per rider/vehicle. Per-delivery expenses (attached to each sale) — rejected; expenses are rider/vehicle-level, not per-delivery.
+- **Rationale:** Matches the client's per-rider/vehicle expense model; keeps the change bounded to a new page and service function without touching existing dashboards or reports.
+- **Consequences:** New `Expense` domain concept and `expenseService`; `ExpenseType` enum (fuel, repair) is Assumed pending exact values; sales-delivery rider/vehicle stays optional (untagged sales excluded from net); Expenses page added to nav for both roles; new routes `/expenses` and `/admin/expenses`.
+- **Related documents:** `docs/DATA-MODEL.md` §4.15, `docs/UI-UX.md` §7.11, `docs/REQUIREMENTS.md` REQ-EXP-001–003, `docs/API.md`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Expense type enum exact values remain Confirmation Required; net appears on Expenses page only (dashboard totals unchanged).
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

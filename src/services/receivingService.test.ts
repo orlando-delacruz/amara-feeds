@@ -14,8 +14,13 @@ describe('receivingService', () => {
       quantity: 5,
       supplier: 'Central Supply',
       costPriceMinor: 110000,
+      riderId: 'rider-3',
+      vehicleId: 'vehicle-3',
+      recordedByUserId: 'user-2',
     })
     expect(record.id).toBeTruthy()
+    expect(record.riderId).toBe('rider-3')
+    expect(record.vehicleId).toBe('vehicle-3')
     expect((await getStock('zeann', 'prod-1')).quantity).toBe(before.quantity + 5)
     expect((await getStock('amara', 'prod-1')).quantity).toBe(20)
   })
@@ -28,6 +33,71 @@ describe('receivingService', () => {
         quantity: 0,
         supplier: 'Central Supply',
         costPriceMinor: 110000,
+        riderId: 'rider-1',
+        vehicleId: 'vehicle-1',
+        recordedByUserId: 'user-1',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+  })
+
+  it('rejects a missing rider', async () => {
+    await expect(
+      createReceiving({
+        storeId: 'amara',
+        productId: 'prod-1',
+        quantity: 5,
+        supplier: 'Central Supply',
+        costPriceMinor: 110000,
+        riderId: '',
+        vehicleId: 'vehicle-1',
+        recordedByUserId: 'user-1',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+  })
+
+  it('rejects a missing vehicle', async () => {
+    await expect(
+      createReceiving({
+        storeId: 'amara',
+        productId: 'prod-1',
+        quantity: 5,
+        supplier: 'Central Supply',
+        costPriceMinor: 110000,
+        riderId: 'rider-1',
+        vehicleId: '',
+        recordedByUserId: 'user-1',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+  })
+
+  it('rejects a rider not belonging to the store', async () => {
+    await expect(
+      createReceiving({
+        storeId: 'amara',
+        productId: 'prod-1',
+        quantity: 5,
+        supplier: 'Central Supply',
+        costPriceMinor: 110000,
+        riderId: 'rider-3',
+        vehicleId: 'vehicle-1',
+        recordedByUserId: 'user-1',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+  })
+
+  it('rejects an inactive rider', async () => {
+    const { setRiderActive } = await import('./riderService')
+    await setRiderActive('rider-1', false)
+    await expect(
+      createReceiving({
+        storeId: 'amara',
+        productId: 'prod-1',
+        quantity: 5,
+        supplier: 'Central Supply',
+        costPriceMinor: 110000,
+        riderId: 'rider-1',
+        vehicleId: 'vehicle-1',
+        recordedByUserId: 'user-1',
       }),
     ).rejects.toMatchObject({ code: 'validation' })
   })
