@@ -35,7 +35,30 @@ interface ItemLine {
 
 const emptyLine: ItemLine = { productId: '', quantity: '', unitPrice: '' }
 
-const ItemRow = styled.div`
+const ItemCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space.sm};
+  padding: ${({ theme }) => theme.space.md};
+  border: 1px solid ${({ theme }) => theme.color.border.default};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background-color: ${({ theme }) => theme.color.surface.card};
+`
+
+const ItemHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.space.sm};
+`
+
+const ItemTitle = styled.span`
+  font-size: ${({ theme }) => theme.font.size.sm};
+  font-weight: ${({ theme }) => theme.font.weight.semibold};
+  color: ${({ theme }) => theme.color.text.secondary};
+`
+
+const ItemFields = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: ${({ theme }) => theme.space.sm};
@@ -46,7 +69,7 @@ const ItemRow = styled.div`
   }
 
   @media (min-width: ${({ theme }) => theme.breakpoint.tablet}) {
-    grid-template-columns: 1fr 5rem 7rem auto;
+    grid-template-columns: 1fr 5rem 7rem;
 
     > :first-child {
       grid-column: auto;
@@ -55,6 +78,24 @@ const ItemRow = styled.div`
 `
 const RemoveButton = styled(Button)`
   min-height: ${({ theme }) => theme.touch.minTarget};
+  flex-shrink: 0;
+`
+
+const AddItemRow = styled.div`
+  display: flex;
+  justify-content: stretch;
+
+  > button {
+    flex: 1;
+  }
+
+  @media (min-width: ${({ theme }) => theme.breakpoint.tablet}) {
+    justify-content: flex-start;
+
+    > button {
+      flex: 0 1 auto;
+    }
+  }
 `
 
 const Actions = styled.div`
@@ -200,48 +241,56 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
 
           <Section title="Items">
             {items.map((line, index) => (
-              <ItemRow key={index}>
-                <Select
-                  id={`sale-line-product-${index}`}
-                  label="Item"
-                  options={productOptions}
-                  placeholder="Select an item"
-                  value={line.productId}
-                  onChange={(event) => updateItem(index, { productId: event.target.value })}
-                  required
-                />
-                <TextField
-                  id={`sale-line-qty-${index}`}
-                  label="Qty"
-                  type="number"
-                  min={1}
-                  value={line.quantity}
-                  onChange={(event) => updateItem(index, { quantity: event.target.value })}
-                  required
-                />
-                <TextField
-                  id={`sale-line-price-${index}`}
-                  label="Unit price"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={line.unitPrice}
-                  onChange={(event) => updateItem(index, { unitPrice: event.target.value })}
-                  required
-                />
-                <RemoveButton
-                  variant="danger"
-                  size="sm"
-                  onClick={() => removeItem(index)}
-                  disabled={items.length === 1}
-                >
-                  Remove
-                </RemoveButton>
-              </ItemRow>
+              <ItemCard key={index}>
+                <ItemHeader>
+                  <ItemTitle>Item {index + 1}</ItemTitle>
+                  <RemoveButton
+                    variant="danger"
+                    size="sm"
+                    onClick={() => removeItem(index)}
+                    disabled={items.length === 1}
+                    aria-label={`Remove item ${index + 1}`}
+                  >
+                    Remove
+                  </RemoveButton>
+                </ItemHeader>
+                <ItemFields>
+                  <Select
+                    id={`sale-line-product-${index}`}
+                    label="Item"
+                    options={productOptions}
+                    placeholder="Select an item"
+                    value={line.productId}
+                    onChange={(event) => updateItem(index, { productId: event.target.value })}
+                    required
+                  />
+                  <TextField
+                    id={`sale-line-qty-${index}`}
+                    label="Qty"
+                    type="number"
+                    min={1}
+                    value={line.quantity}
+                    onChange={(event) => updateItem(index, { quantity: event.target.value })}
+                    required
+                  />
+                  <TextField
+                    id={`sale-line-price-${index}`}
+                    label="Unit price"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={line.unitPrice}
+                    onChange={(event) => updateItem(index, { unitPrice: event.target.value })}
+                    required
+                  />
+                </ItemFields>
+              </ItemCard>
             ))}
-            <Button variant="secondary" onClick={addItem}>
-              Add item
-            </Button>
+            <AddItemRow>
+              <Button variant="secondary" onClick={addItem}>
+                Add item
+              </Button>
+            </AddItemRow>
           </Section>
 
           <Section title="Payment">

@@ -16,6 +16,9 @@ const StyledInput = styled.input<{ $invalid: boolean }>`
   border: 1px solid ${({ theme }) => theme.color.border.strong};
   border-radius: ${({ theme }) => theme.radius.md};
   background-color: ${({ theme }) => theme.color.white};
+  color: ${({ theme }) => theme.color.text.primary};
+  font: inherit;
+  color-scheme: light;
   transition:
     border-color ${({ theme }) => theme.motion.fast} ease-out,
     box-shadow ${({ theme }) => theme.motion.fast} ease-out;
@@ -38,6 +41,27 @@ const StyledInput = styled.input<{ $invalid: boolean }>`
 
   &::placeholder {
     color: ${({ theme }) => theme.color.text.muted};
+  }
+
+  &[type='date'],
+  &[type='time'],
+  &[type='datetime-local'] {
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &::-webkit-calendar-picker-indicator {
+    width: 20px;
+    height: 20px;
+    margin-left: ${({ theme }) => theme.space.sm};
+    padding: 0;
+    border-radius: ${({ theme }) => theme.radius.sm};
+    cursor: pointer;
+    opacity: 0.65;
+  }
+
+  &:hover:not(:disabled)::-webkit-calendar-picker-indicator {
+    opacity: 1;
   }
 
   ${({ $invalid, theme }) =>

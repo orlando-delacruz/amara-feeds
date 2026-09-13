@@ -35,12 +35,20 @@ export async function recordPayment(
   if (input.amountMinor > credit.balanceMinor) {
     throw new ServiceError('validation', 'Payment cannot exceed the remaining balance.')
   }
+  const method = input.method?.trim()
+  if (method !== undefined && method.length === 0) {
+    throw new ServiceError('validation', 'Payment method is required.')
+  }
+  if (method && method.length > 40) {
+    throw new ServiceError('validation', 'Payment method must be 40 characters or fewer.')
+  }
 
   const payment: Payment = {
     id: nextId('pay'),
     creditId: credit.id,
     storeId: input.storeId,
     amountMinor: input.amountMinor,
+    ...(method ? { method } : {}),
     recordedByUserId: input.recordedByUserId,
     paidAt: new Date().toISOString(),
   }

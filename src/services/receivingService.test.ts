@@ -14,15 +14,28 @@ describe('receivingService', () => {
       quantity: 5,
       supplier: 'Central Supply',
       costPriceMinor: 110000,
+      recordedByUserId: 'user-2',
+    })
+    expect(record.id).toBeTruthy()
+    expect(record.riderId).toBeUndefined()
+    expect(record.vehicleId).toBeUndefined()
+    expect((await getStock('zeann', 'prod-1')).quantity).toBe(before.quantity + 5)
+    expect((await getStock('amara', 'prod-1')).quantity).toBe(20)
+  })
+
+  it('keeps legacy rider/vehicle references when provided', async () => {
+    const record = await createReceiving({
+      storeId: 'zeann',
+      productId: 'prod-1',
+      quantity: 5,
+      supplier: 'Central Supply',
+      costPriceMinor: 110000,
       riderId: 'rider-3',
       vehicleId: 'vehicle-3',
       recordedByUserId: 'user-2',
     })
-    expect(record.id).toBeTruthy()
     expect(record.riderId).toBe('rider-3')
     expect(record.vehicleId).toBe('vehicle-3')
-    expect((await getStock('zeann', 'prod-1')).quantity).toBe(before.quantity + 5)
-    expect((await getStock('amara', 'prod-1')).quantity).toBe(20)
   })
 
   it('rejects a non-positive quantity', async () => {
@@ -33,38 +46,6 @@ describe('receivingService', () => {
         quantity: 0,
         supplier: 'Central Supply',
         costPriceMinor: 110000,
-        riderId: 'rider-1',
-        vehicleId: 'vehicle-1',
-        recordedByUserId: 'user-1',
-      }),
-    ).rejects.toMatchObject({ code: 'validation' })
-  })
-
-  it('rejects a missing rider', async () => {
-    await expect(
-      createReceiving({
-        storeId: 'amara',
-        productId: 'prod-1',
-        quantity: 5,
-        supplier: 'Central Supply',
-        costPriceMinor: 110000,
-        riderId: '',
-        vehicleId: 'vehicle-1',
-        recordedByUserId: 'user-1',
-      }),
-    ).rejects.toMatchObject({ code: 'validation' })
-  })
-
-  it('rejects a missing vehicle', async () => {
-    await expect(
-      createReceiving({
-        storeId: 'amara',
-        productId: 'prod-1',
-        quantity: 5,
-        supplier: 'Central Supply',
-        costPriceMinor: 110000,
-        riderId: 'rider-1',
-        vehicleId: '',
         recordedByUserId: 'user-1',
       }),
     ).rejects.toMatchObject({ code: 'validation' })

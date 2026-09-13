@@ -17,6 +17,7 @@ import { DateText } from '@/components/ui/DateText'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
+import { Select } from '@/components/ui/Select'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
@@ -24,6 +25,7 @@ import { TextField } from '@/components/ui/TextField'
 import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
+import { PAYMENT_METHOD_PRESETS } from '@/domain'
 import { toMinor } from '@/lib/money'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
@@ -79,6 +81,8 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
   const { store } = useStore()
   const { user } = useSession()
   const [amount, setAmount] = useState('')
+  const [method, setMethod] = useState<string>('Cash')
+  const [customMethod, setCustomMethod] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
 
   const history = useAsyncData(
@@ -103,18 +107,27 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
     if (!credit) {
       return
     }
+    const resolvedMethod = method === 'Other' ? customMethod.trim() : method
     const result = await pay.run({
       creditId: credit.id,
       storeId: store,
       amountMinor: toMinor(Number(amount)),
+      method: resolvedMethod,
       recordedByUserId: user?.id ?? '',
     })
     if (result) {
       setAmount('')
+      setMethod('Cash')
+      setCustomMethod('')
       setNotice('Payment recorded.')
       history.reload()
     }
   }
+
+  const methodOptions = PAYMENT_METHOD_PRESETS.map((preset) => ({
+    value: preset,
+    label: preset === 'Other' ? 'Other (specify)' : preset,
+  }))
 
   return (
     <Stack>
@@ -205,6 +218,25 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
                         onChange={(event) => setAmount(event.target.value)}
                         required
                       />
+                      <Select
+                        id="payment-method"
+                        label="Payment method"
+                        options={methodOptions}
+                        value={method}
+                        onChange={(event) => setMethod(event.target.value)}
+                        required
+                      />
+                      {method === 'Other' && (
+                        <TextField
+                          id="payment-method-custom"
+                          label="Specify payment method"
+                          placeholder="e.g. Maya, Palawan, COD"
+                          value={customMethod}
+                          onChange={(event) => setCustomMethod(event.target.value)}
+                          maxLength={40}
+                          required
+                        />
+                      )}
                       <PaymentNote>Payment will be recorded at {storeNames[store]}.</PaymentNote>
                     </PaymentFields>
                     <PaymentActions>
@@ -222,12 +254,14 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
               columns={[
                 { key: 'store', header: 'Payment store' },
                 { key: 'amount', header: 'Amount' },
+                { key: 'method', header: 'Method' },
                 { key: 'recordedBy', header: 'Recorded by' },
                 { key: 'paidAt', header: 'Date' },
               ]}
               rows={(history.data?.payments ?? []).map((payment) => ({
                 store: storeNames[payment.storeId],
                 amount: <MoneyText amountMinor={payment.amountMinor} />,
+                method: payment.method ?? 'Not listed',
                 recordedBy: userNames.get(payment.recordedByUserId) ?? 'Not available',
                 paidAt: <DateText value={payment.paidAt} />,
               }))}

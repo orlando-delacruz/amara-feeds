@@ -1,13 +1,6 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import {
-  createReceiving,
-  listProducts,
-  listReceiving,
-  listRiders,
-  listUsers,
-  listVehicles,
-} from '@/services'
+import { createProduct, createReceiving, listProducts, listReceiving, listUsers } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
@@ -27,7 +20,9 @@ import { useSession } from '@/features/session/useSession'
 import { toMinor } from '@/lib/money'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
-import type { Product, Rider, Vehicle } from '@/domain'
+import type { Product } from '@/domain'
+
+export const NEW_RECEIVING_ITEM_VALUE = '__new__'
 
 const Fields = styled.div`
   display: grid;
@@ -47,20 +42,18 @@ const Actions = styled.div`
 
 interface ReceivingFormState {
   productId: string
+  customItemName: string
   quantity: string
   supplier: string
   costPrice: string
-  riderId: string
-  vehicleId: string
 }
 
 const emptyForm: ReceivingFormState = {
   productId: '',
+  customItemName: '',
   quantity: '',
   supplier: '',
   costPrice: '',
-  riderId: '',
-  vehicleId: '',
 }
 
 export function ReceivingPage() {
@@ -70,9 +63,7 @@ export function ReceivingPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const list = useAsyncData(() => listReceiving({ storeId: store }), store)
-  const products = useAsyncData(() => listProducts({ status: 'active' }))
-  const riders = useAsyncData(() => listRiders({ storeId: store, active: true }), store)
-  const vehicles = useAsyncData(() => listVehicles({ storeId: store, active: true }), store)
+  const products = useAsyncData(() => listProducts())
   const users = useAsyncData(() => listUsers())
   const receive = useMutation(createReceiving)
 
@@ -80,32 +71,52 @@ export function ReceivingPage() {
     setForm((current) => ({ ...current, [key]: value }))
   }
 
+  const isCustomItem = form.productId === NEW_RECEIVING_ITEM_VALUE
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!form.productId) {
+    let productId = form.productId
+    if (!productId) {
       setFormError('Choose an item before recording the receipt.')
       setNotice(null)
       return
     }
-    if (!form.riderId) {
-      setFormError('Select the delivery rider.')
-      setNotice(null)
-      return
-    }
-    if (!form.vehicleId) {
-      setFormError('Select the delivery vehicle.')
-      setNotice(null)
-      return
+    if (isCustomItem) {
+      const name = form.customItemName.trim()
+      if (!name) {
+        setFormError('Enter a name for the new item.')
+        setNotice(null)
+        return
+      }
+      // Reuse an existing product (any status) on a case-insensitive match so
+      // repeat custom entries do not create duplicates.
+      const existing = (products.data ?? []).find(
+        (product: Product) => product.name.toLowerCase() === name.toLowerCase(),
+      )
+      if (existing) {
+        productId = existing.id
+      } else {
+        try {
+          const created = await createProduct({
+            name,
+            createdByUserId: user?.id,
+          })
+          productId = created.id
+          products.reload()
+        } catch (error) {
+          setFormError(error instanceof Error ? error.message : 'Could not add the new item.')
+          setNotice(null)
+          return
+        }
+      }
     }
     setFormError(null)
     const record = await receive.run({
       storeId: store,
-      productId: form.productId,
+      productId,
       quantity: Number(form.quantity),
       supplier: form.supplier,
       costPriceMinor: toMinor(Number(form.costPrice)),
-      riderId: form.riderId,
-      vehicleId: form.vehicleId,
       recordedByUserId: user?.id ?? '',
     })
     if (record) {
@@ -115,27 +126,19 @@ export function ReceivingPage() {
     }
   }
 
-  const productOptions = (products.data ?? []).map((product: Product) => ({
-    value: product.id,
-    label: product.name,
-  }))
-
-  const riderOptions = (riders.data ?? []).map((rider: Rider) => ({
-    value: rider.id,
-    label: rider.name,
-  }))
-
-  const vehicleOptions = (vehicles.data ?? []).map((vehicle: Vehicle) => ({
-    value: vehicle.id,
-    label: vehicle.label,
-  }))
+  const activeProducts = (products.data ?? []).filter(
+    (product: Product) => product.status === 'active',
+  )
+  const productOptions = [
+    ...activeProducts.map((product: Product) => ({
+      value: product.id,
+      label: product.name,
+    })),
+    { value: NEW_RECEIVING_ITEM_VALUE, label: 'Add new item…' },
+  ]
 
   const productNames = new Map(
     (products.data ?? []).map((product: Product) => [product.id, product.name]),
-  )
-  const riderNames = new Map((riders.data ?? []).map((rider: Rider) => [rider.id, rider.name]))
-  const vehicleNames = new Map(
-    (vehicles.data ?? []).map((vehicle: Vehicle) => [vehicle.id, vehicle.label]),
   )
   const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
 
@@ -166,6 +169,17 @@ export function ReceivingPage() {
               onChange={(event) => updateForm('productId', event.target.value)}
               required
             />
+            {isCustomItem && (
+              <TextField
+                id="receiving-product-custom"
+                label="New item name"
+                placeholder="e.g. Hog Pellets 50kg"
+                value={form.customItemName}
+                onChange={(event) => updateForm('customItemName', event.target.value)}
+                maxLength={80}
+                required
+              />
+            )}
             <TextField
               id="receiving-quantity"
               label="Quantity"
@@ -190,24 +204,6 @@ export function ReceivingPage() {
               step="0.01"
               value={form.costPrice}
               onChange={(event) => updateForm('costPrice', event.target.value)}
-              required
-            />
-            <Select
-              id="receiving-rider"
-              label="Rider (delivered this stock)"
-              options={riderOptions}
-              placeholder="Select a rider"
-              value={form.riderId}
-              onChange={(event) => updateForm('riderId', event.target.value)}
-              required
-            />
-            <Select
-              id="receiving-vehicle"
-              label="Vehicle"
-              options={vehicleOptions}
-              placeholder="Select a vehicle"
-              value={form.vehicleId}
-              onChange={(event) => updateForm('vehicleId', event.target.value)}
               required
             />
           </Fields>
@@ -240,8 +236,6 @@ export function ReceivingPage() {
               { key: 'quantity', header: 'Quantity' },
               { key: 'supplier', header: 'Supplier' },
               { key: 'cost', header: 'Cost price' },
-              { key: 'rider', header: 'Rider' },
-              { key: 'vehicle', header: 'Vehicle' },
               { key: 'recordedBy', header: 'Recorded by' },
               { key: 'receivedAt', header: 'Received' },
             ]}
@@ -250,8 +244,6 @@ export function ReceivingPage() {
               quantity: String(record.quantity),
               supplier: record.supplier,
               cost: <MoneyText amountMinor={record.costPriceMinor} />,
-              rider: riderNames.get(record.riderId) ?? 'Not available',
-              vehicle: vehicleNames.get(record.vehicleId) ?? 'Not available',
               recordedBy: userNames.get(record.recordedByUserId) ?? 'Not available',
               receivedAt: <DateText value={record.receivedAt} />,
             }))}

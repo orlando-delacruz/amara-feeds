@@ -29,21 +29,21 @@ export async function createReceiving(input: NewReceivingInput): Promise<Receivi
   if (input.costPriceMinor < 0) {
     throw new ServiceError('validation', 'Cost price cannot be negative.')
   }
-  if (!input.riderId) {
-    throw new ServiceError('validation', 'Delivery rider is required.')
+  // Rider/vehicle are legacy-only: validated when provided so old records and
+  // old callers stay checked, but never required on new receipts.
+  if (input.riderId) {
+    const rider = getDb().riders.find((r) => r.id === input.riderId && r.storeId === input.storeId)
+    if (!rider || !rider.active) {
+      throw new ServiceError('validation', 'Selected rider is not active at this store.')
+    }
   }
-  if (!input.vehicleId) {
-    throw new ServiceError('validation', 'Delivery vehicle is required.')
-  }
-  const rider = getDb().riders.find((r) => r.id === input.riderId && r.storeId === input.storeId)
-  if (!rider || !rider.active) {
-    throw new ServiceError('validation', 'Selected rider is not active at this store.')
-  }
-  const vehicle = getDb().vehicles.find(
-    (v) => v.id === input.vehicleId && v.storeId === input.storeId,
-  )
-  if (!vehicle || !vehicle.active) {
-    throw new ServiceError('validation', 'Selected vehicle is not active at this store.')
+  if (input.vehicleId) {
+    const vehicle = getDb().vehicles.find(
+      (v) => v.id === input.vehicleId && v.storeId === input.storeId,
+    )
+    if (!vehicle || !vehicle.active) {
+      throw new ServiceError('validation', 'Selected vehicle is not active at this store.')
+    }
   }
   const record: ReceivingRecord = {
     id: nextId('recv'),
@@ -52,8 +52,8 @@ export async function createReceiving(input: NewReceivingInput): Promise<Receivi
     quantity: input.quantity,
     supplier: input.supplier.trim(),
     costPriceMinor: input.costPriceMinor,
-    riderId: input.riderId,
-    vehicleId: input.vehicleId,
+    ...(input.riderId ? { riderId: input.riderId } : {}),
+    ...(input.vehicleId ? { vehicleId: input.vehicleId } : {}),
     recordedByUserId: input.recordedByUserId,
     receivedAt: new Date().toISOString(),
   }

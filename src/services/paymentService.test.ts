@@ -82,4 +82,36 @@ describe('paymentService', () => {
       }),
     ).rejects.toMatchObject({ code: 'validation' })
   })
+
+  it('stores the payment method when provided', async () => {
+    const result = await recordPayment({
+      creditId: 'cred-1',
+      storeId: 'amara',
+      amountMinor: 5000,
+      method: 'GCash',
+      recordedByUserId: 'user-1',
+    })
+    expect(result.payment.method).toBe('GCash')
+  })
+
+  it('rejects an empty or overlong payment method', async () => {
+    await expect(
+      recordPayment({
+        creditId: 'cred-1',
+        storeId: 'amara',
+        amountMinor: 100,
+        method: '   ',
+        recordedByUserId: 'user-1',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+    await expect(
+      recordPayment({
+        creditId: 'cred-1',
+        storeId: 'amara',
+        amountMinor: 100,
+        method: 'x'.repeat(41),
+        recordedByUserId: 'user-1',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+  })
 })

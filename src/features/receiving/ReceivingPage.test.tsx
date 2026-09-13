@@ -23,13 +23,6 @@ describe('ReceivingPage', () => {
     expect(await screen.findByText('Central Supply')).toBeInTheDocument()
   })
 
-  it('shows rider and vehicle columns in history', async () => {
-    renderWithProviders(<ReceivingPage />, { user: staffUser })
-    await screen.findByText('Central Supply')
-    expect(screen.getAllByText('Jojo Ramos').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Motorcycle').length).toBeGreaterThan(0)
-  })
-
   it('records a stock receipt for the current store', async () => {
     const user = userEvent.setup()
     renderWithProviders(<ReceivingPage />, { user: staffUser })
@@ -39,12 +32,26 @@ describe('ReceivingPage', () => {
     await user.type(screen.getByLabelText(/^Quantity/), '5')
     await user.type(screen.getByLabelText(/^Supplier/), 'New Supplier Co')
     await user.type(screen.getByLabelText(/Cost price/), '1150')
-    await user.selectOptions(screen.getByLabelText(/Rider/), 'rider-1')
-    await user.selectOptions(screen.getByLabelText(/Vehicle/), 'vehicle-1')
     await user.click(screen.getByRole('button', { name: 'Record receiving' }))
 
     expect(await screen.findByText('Receiving recorded.')).toBeInTheDocument()
     expect(await screen.findByText('New Supplier Co')).toBeInTheDocument()
+  })
+
+  it('records a receipt with a custom new item', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ReceivingPage />, { user: staffUser })
+    await screen.findByText('Central Supply')
+
+    await user.selectOptions(screen.getByLabelText(/^Item/), '__new__')
+    await user.type(screen.getByLabelText(/New item name/), 'Hog Pellets 50kg')
+    await user.type(screen.getByLabelText(/^Quantity/), '4')
+    await user.type(screen.getByLabelText(/^Supplier/), 'Custom Mill')
+    await user.type(screen.getByLabelText(/Cost price/), '2200')
+    await user.click(screen.getByRole('button', { name: 'Record receiving' }))
+
+    expect(await screen.findByText('Receiving recorded.')).toBeInTheDocument()
+    expect(await screen.findByText('Hog Pellets 50kg')).toBeInTheDocument()
   })
 
   it('surfaces a rejected quantity', async () => {
@@ -56,8 +63,6 @@ describe('ReceivingPage', () => {
     await user.type(screen.getByLabelText(/^Quantity/), '0')
     await user.type(screen.getByLabelText(/^Supplier/), 'Acme')
     await user.type(screen.getByLabelText(/Cost price/), '100')
-    await user.selectOptions(screen.getByLabelText(/Rider/), 'rider-1')
-    await user.selectOptions(screen.getByLabelText(/Vehicle/), 'vehicle-1')
     await user.click(screen.getByRole('button', { name: 'Record receiving' }))
 
     expect(
@@ -65,17 +70,17 @@ describe('ReceivingPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('surfaces a missing rider', async () => {
+  it('surfaces a missing custom item name', async () => {
     const user = userEvent.setup()
     renderWithProviders(<ReceivingPage />, { user: staffUser })
     await screen.findByText('Central Supply')
 
-    await user.selectOptions(screen.getByLabelText(/^Item/), 'prod-1')
+    await user.selectOptions(screen.getByLabelText(/^Item/), '__new__')
     await user.type(screen.getByLabelText(/^Quantity/), '5')
     await user.type(screen.getByLabelText(/^Supplier/), 'Acme')
     await user.type(screen.getByLabelText(/Cost price/), '100')
     await user.click(screen.getByRole('button', { name: 'Record receiving' }))
 
-    expect(await screen.findByText('Select the delivery rider.')).toBeInTheDocument()
+    expect(await screen.findByText('Enter a name for the new item.')).toBeInTheDocument()
   })
 })
