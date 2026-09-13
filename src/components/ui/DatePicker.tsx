@@ -83,16 +83,28 @@ const FieldValue = styled.span`
 `
 
 const Calendar = styled.div`
-  position: absolute;
+  position: fixed;
   z-index: ${({ theme }) => theme.zIndex.dialog};
-  top: calc(100% + ${({ theme }) => theme.space.sm});
-  left: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: min(340px, calc(100vw - 32px));
-  overflow: hidden;
+  max-height: min(520px, calc(100dvh - 32px));
+  overflow: auto;
   background-color: ${({ theme }) => theme.color.surface.card};
   border: 1px solid ${({ theme }) => theme.color.border.default};
   border-radius: ${({ theme }) => theme.radius.lg};
   box-shadow: ${({ theme }) => theme.shadow.md};
+
+  @media (min-width: ${({ theme }) => theme.breakpoint.tablet}) {
+    position: absolute;
+    left: auto;
+    right: 0;
+    top: calc(100% + ${({ theme }) => theme.space.sm});
+    transform: none;
+    max-height: none;
+    overflow: hidden;
+  }
 `
 
 const CalendarHead = styled.div`
