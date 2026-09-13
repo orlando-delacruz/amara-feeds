@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import styled from 'styled-components'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { RecordList } from '@/components/ui/RecordList'
 import { Section } from '@/components/ui/Section'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Stack } from '@/components/ui/Stack'
 import { StatCard } from '@/components/ui/StatCard'
 import { Icon } from '@/components/ui/icons'
@@ -116,6 +118,33 @@ export function AdminDashboardPage() {
   const date = todayIso()
   const summaries = useBusinessSummaries(date)
   const data = summaries.data
+  const [period, setPeriod] = useState<'today' | 'weekly' | 'monthly'>('today')
+
+  const periodSales = data
+    ? period === 'today'
+      ? {
+          overall: data.overall,
+          perStore: data.perStore,
+          heroLabel: 'Overall daily sales',
+          rangeCaption: 'sales across Amara and Zeann',
+          columnCaption: 'today',
+        }
+      : period === 'weekly'
+        ? {
+            overall: data.weekly.overall,
+            perStore: data.weekly.perStore,
+            heroLabel: 'Overall weekly sales',
+            rangeCaption: 'sales · last 7 days',
+            columnCaption: 'last 7 days',
+          }
+        : {
+            overall: data.monthly.overall,
+            perStore: data.monthly.perStore,
+            heroLabel: 'Overall monthly sales',
+            rangeCaption: 'sales · this month',
+            columnCaption: 'this month',
+          }
+    : null
 
   return (
     <Stack>
@@ -139,17 +168,29 @@ export function AdminDashboardPage() {
           <Stack>
             <StatsSkeleton count={1} />
             <StatsSkeleton count={2} />
+            <StatsSkeleton count={2} />
+            <StatsSkeleton count={2} />
             <ListSkeleton rows={2} />
           </Stack>
         }
       >
-        {data && (
+        {data && periodSales && (
           <Stack gap="lg">
-            <Stamp>
+            <SegmentedControl
+              label="Sales period"
+              value={period}
+              onChange={(next) => setPeriod(next as 'today' | 'weekly' | 'monthly')}
+              options={[
+                { value: 'today', label: 'Today' },
+                { value: 'weekly', label: 'Weekly' },
+                { value: 'monthly', label: 'Monthly' },
+              ]}
+            />
+            <Stamp key={period}>
               <StatCard
-                label="Overall daily sales"
-                value={<MoneyText amountMinor={data.overall.totalMinor} />}
-                caption={`${data.overall.saleCount} sales across Amara and Zeann`}
+                label={periodSales.heroLabel}
+                value={<MoneyText amountMinor={periodSales.overall.totalMinor} />}
+                caption={`${periodSales.overall.saleCount} ${periodSales.rangeCaption}`}
                 tone="brand"
                 icon={<Icon name="card" />}
                 valueScale="hero"
@@ -158,7 +199,7 @@ export function AdminDashboardPage() {
             </Stamp>
 
             <DepotBoard>
-              {data.perStore.map((row) => (
+              {periodSales.perStore.map((row) => (
                 <StoreColumn key={row.storeId}>
                   <ColumnHeader $store={row.storeId}>
                     <span>{storeNames[row.storeId]}</span>
@@ -168,7 +209,7 @@ export function AdminDashboardPage() {
                     <DayValue>
                       <MoneyText amountMinor={row.totalMinor} />
                     </DayValue>
-                    <DayCaption>today</DayCaption>
+                    <DayCaption>{periodSales.columnCaption}</DayCaption>
                   </DayFigure>
                 </StoreColumn>
               ))}

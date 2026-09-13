@@ -20,6 +20,21 @@ export interface OutstandingCreditTotal {
   count: number
 }
 
+export interface PeriodSalesByStore {
+  storeId: StoreId
+  startDate: string
+  endDate: string
+  totalMinor: Money
+  saleCount: number
+}
+
+export interface OverallPeriodSales {
+  startDate: string
+  endDate: string
+  totalMinor: Money
+  saleCount: number
+}
+
 export interface PaymentsSummary {
   totalMinor: Money
   count: number

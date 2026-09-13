@@ -342,5 +342,6 @@ export function createSeedData(): MockDatabase {
     riders,
     vehicles,
     expenses,
+    auditLog: [],
   }
 }

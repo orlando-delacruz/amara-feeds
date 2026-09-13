@@ -1,18 +1,30 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import { createProduct, createReceiving, listProducts, listReceiving, listUsers } from '@/services'
+import {
+  approveProduct,
+  createProduct,
+  createReceiving,
+  listProducts,
+  listReceiving,
+  listUsers,
+  logAuditEvent,
+  rejectProduct,
+} from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DateText } from '@/components/ui/DateText'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
+import { Section } from '@/components/ui/Section'
 import { Select } from '@/components/ui/Select'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
+import { StatusBadge } from '@/components/ui/StatusBadge'
 import { TextField } from '@/components/ui/TextField'
 import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
 import { getDisplayName } from '@/features/session/displayName'
@@ -40,6 +52,13 @@ const Actions = styled.div`
   margin-top: ${({ theme }) => theme.space.md};
 `
 
+const RowActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.space.sm};
+  justify-content: flex-end;
+`
+
 interface ReceivingFormState {
   productId: string
   customItemName: string
@@ -62,10 +81,17 @@ export function ReceivingPage() {
   const [form, setForm] = useState<ReceivingFormState>(emptyForm)
   const [notice, setNotice] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const [decision, setDecision] = useState<{ product: Product; action: 'approve' | 'reject' } | null>(
+    null,
+  )
   const list = useAsyncData(() => listReceiving({ storeId: store }), store)
   const products = useAsyncData(() => listProducts())
   const users = useAsyncData(() => listUsers())
   const receive = useMutation(createReceiving)
+  const review = useMutation((input: { id: string; action: 'approve' | 'reject' }) =>
+    input.action === 'approve' ? approveProduct(input.id) : rejectProduct(input.id),
+  )
+  const isAdmin = user?.role === 'admin'
 
   function updateForm<K extends keyof ReceivingFormState>(key: K, value: string) {
     setForm((current) => ({ ...current, [key]: value }))
@@ -76,6 +102,7 @@ export function ReceivingPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     let productId = form.productId
+    let submittedNewItem = false
     if (!productId) {
       setFormError('Choose an item before recording the receipt.')
       setNotice(null)
@@ -102,6 +129,7 @@ export function ReceivingPage() {
             createdByUserId: user?.id,
           })
           productId = created.id
+          submittedNewItem = true
           products.reload()
         } catch (error) {
           setFormError(error instanceof Error ? error.message : 'Could not add the new item.')
@@ -121,8 +149,35 @@ export function ReceivingPage() {
     })
     if (record) {
       setForm(emptyForm)
-      setNotice('Receiving recorded.')
+      setNotice(
+        submittedNewItem
+          ? 'New item submitted for admin approval. Receiving recorded.'
+          : 'Receiving recorded.',
+      )
       list.reload()
+    }
+  }
+
+  async function handleDecision() {
+    if (!decision || !user) {
+      return
+    }
+    const saved = await review.run({ id: decision.product.id, action: decision.action })
+    if (saved) {
+      await logAuditEvent({
+        action: decision.action === 'approve' ? 'product.approved' : 'product.rejected',
+        actorUserId: user.id,
+        actorRole: user.role,
+        relatedUserId: decision.product.createdByUserId,
+        subject: saved.name,
+      })
+      setNotice(
+        decision.action === 'approve'
+          ? `${saved.name} is now active.`
+          : `${saved.name} was rejected and removed.`,
+      )
+      setDecision(null)
+      products.reload()
     }
   }
 
@@ -141,12 +196,22 @@ export function ReceivingPage() {
     (products.data ?? []).map((product: Product) => [product.id, product.name]),
   )
   const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
+  const pendingProducts = (products.data ?? []).filter(
+    (product: Product) => product.status === 'pending',
+  )
+  const myPendingProducts = pendingProducts.filter(
+    (product: Product) => product.createdByUserId === user?.id,
+  )
 
   return (
     <Stack>
       <PageHeader
         title="Receiving Stock"
-        description={`Record stock received at ${storeNames[store]}.`}
+        description={
+          isAdmin
+            ? `Record stock received at ${storeNames[store]}. Review staff-submitted items below.`
+            : `Record stock received at ${storeNames[store]}. New items stay pending until an admin approves them.`
+        }
         size="compact"
       />
       {notice && <Alert variant="success">{notice}</Alert>}
@@ -214,6 +279,66 @@ export function ReceivingPage() {
           </Actions>
         </form>
       </Card>
+      {isAdmin ? (
+        <Section title="Pending items" variant="flush">
+          {review.error && <Alert variant="danger">{review.error}</Alert>}
+          {pendingProducts.length === 0 ? (
+            <Alert variant="success">No items awaiting approval.</Alert>
+          ) : (
+            <RecordList
+              caption="Pending items"
+              columns={[
+                { key: 'name', header: 'Item' },
+                { key: 'submittedBy', header: 'Submitted by' },
+                { key: 'status', header: 'Status' },
+                { key: 'actions', header: 'Actions' },
+              ]}
+              rows={pendingProducts.map((product) => ({
+                name: product.name,
+                submittedBy: product.createdByUserId
+                  ? (userNames.get(product.createdByUserId) ?? 'Not available')
+                  : 'Not available',
+                status: <StatusBadge status={product.status} />,
+                actions: (
+                  <RowActions>
+                    <Button
+                      size="sm"
+                      disabled={review.pending}
+                      onClick={() => setDecision({ product, action: 'approve' })}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      disabled={review.pending}
+                      onClick={() => setDecision({ product, action: 'reject' })}
+                    >
+                      Reject
+                    </Button>
+                  </RowActions>
+                ),
+              }))}
+            />
+          )}
+        </Section>
+      ) : (
+        myPendingProducts.length > 0 && (
+          <Section title="Your pending items" variant="flush">
+            <RecordList
+              caption="Your pending items"
+              columns={[
+                { key: 'name', header: 'Item' },
+                { key: 'status', header: 'Status' },
+              ]}
+              rows={myPendingProducts.map((product) => ({
+                name: product.name,
+                status: <StatusBadge status={product.status} />,
+              }))}
+            />
+          </Section>
+        )
+      )}
       <AsyncBoundary
         loading={list.loading}
         error={list.error}
@@ -250,6 +375,21 @@ export function ReceivingPage() {
           />
         )}
       </AsyncBoundary>
+      <ConfirmDialog
+        open={decision !== null}
+        title={decision?.action === 'reject' ? 'Reject item' : 'Approve item'}
+        message={
+          decision
+            ? decision.action === 'reject'
+              ? `Reject "${decision.product.name}"? It will be removed.`
+              : `Approve "${decision.product.name}"? It will become active.`
+            : ''
+        }
+        confirmLabel={decision?.action === 'reject' ? 'Reject' : 'Approve'}
+        pending={review.pending}
+        onConfirm={handleDecision}
+        onCancel={() => setDecision(null)}
+      />
     </Stack>
   )
 }

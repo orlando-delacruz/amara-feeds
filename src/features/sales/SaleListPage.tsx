@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { listCustomers, listSales, listUsers } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { DateText } from '@/components/ui/DateText'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { MoneyText } from '@/components/ui/MoneyText'
@@ -10,7 +11,6 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
-import { TextField } from '@/components/ui/TextField'
 import { StoreControl, useAsyncData } from '@/features/shared'
 import { getDisplayName } from '@/features/session/displayName'
 import { todayIso } from '@/lib/dates'
@@ -50,13 +50,7 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
       />
       <FilterBar>
         <StoreControl />
-        <TextField
-          id="sales-date"
-          label="Date"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-        />
+        <DatePicker id="sales-date" label="Date" value={date} onChange={setDate} />
       </FilterBar>
       <AsyncBoundary
         loading={sales.loading}

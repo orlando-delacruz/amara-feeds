@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDb } from '@/services/mocks/db'
@@ -12,6 +12,14 @@ const staffUser: User = {
   role: 'staff',
   storeId: 'amara',
   username: 'alice',
+  active: true,
+}
+
+const adminUser: User = {
+  id: 'user-3',
+  name: 'Owner',
+  role: 'admin',
+  username: 'owner',
   active: true,
 }
 
@@ -50,7 +58,9 @@ describe('ReceivingPage', () => {
     await user.type(screen.getByLabelText(/Cost price/), '2200')
     await user.click(screen.getByRole('button', { name: 'Record receiving' }))
 
-    expect(await screen.findByText('Receiving recorded.')).toBeInTheDocument()
+    expect(
+      await screen.findByText('New item submitted for admin approval. Receiving recorded.'),
+    ).toBeInTheDocument()
     expect(await screen.findByText('Hog Pellets 50kg')).toBeInTheDocument()
   })
 
@@ -82,5 +92,37 @@ describe('ReceivingPage', () => {
     await user.click(screen.getByRole('button', { name: 'Record receiving' }))
 
     expect(await screen.findByText('Enter a name for the new item.')).toBeInTheDocument()
+  })
+
+  it('shows staff their own pending items', async () => {
+    renderWithProviders(<ReceivingPage />, { user: staffUser })
+    expect(await screen.findByText('Your pending items')).toBeInTheDocument()
+    expect(screen.getByText('Cooking Oil 1L')).toBeInTheDocument()
+  })
+
+  it('lets admins approve pending items from receiving', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ReceivingPage />, { user: adminUser })
+    expect(await screen.findByText('Pending items')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Approve' }))
+    const approveDialog = await screen.findByRole('dialog', { name: 'Approve item' })
+    await user.click(within(approveDialog).getByRole('button', { name: 'Approve' }))
+
+    expect(await screen.findByText('Cooking Oil 1L is now active.')).toBeInTheDocument()
+  })
+
+  it('lets admins reject pending items from receiving', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ReceivingPage />, { user: adminUser })
+    expect(await screen.findByText('Pending items')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Reject' }))
+    const rejectDialog = await screen.findByRole('dialog', { name: 'Reject item' })
+    await user.click(within(rejectDialog).getByRole('button', { name: 'Reject' }))
+
+    expect(
+      await screen.findByText('Cooking Oil 1L was rejected and removed.'),
+    ).toBeInTheDocument()
   })
 })

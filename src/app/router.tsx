@@ -8,10 +8,9 @@ import { StaffDashboardPage } from '@/features/dashboard/StaffDashboardPage'
 import { RidersPage } from '@/features/delivery/RidersPage'
 import { VehiclesPage } from '@/features/delivery/VehiclesPage'
 import { ExpensesPage } from '@/features/expenses/ExpensesPage'
+import { AuditTrailPage } from '@/features/history/AuditTrailPage'
 import { InventoryPage } from '@/features/inventory/InventoryPage'
 import { MorePage } from '@/features/more/MorePage'
-import { ProductApprovalPage } from '@/features/products/ProductApprovalPage'
-import { ProductListPage } from '@/features/products/ProductListPage'
 import { ReceivingPage } from '@/features/receiving/ReceivingPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { NewSalePage } from '@/features/sales/NewSalePage'
@@ -41,9 +40,9 @@ export function AppRoutes() {
           <Route path="customers" element={<CustomerListPage />} />
           <Route path="credit" element={<CreditListPage />} />
           <Route path="credit/:creditId" element={<CreditDetailPage />} />
-          <Route path="products" element={<ProductListPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="receiving" element={<ReceivingPage />} />
+          <Route path="history" element={<AuditTrailPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="riders" element={<RidersPage />} />
           <Route path="vehicles" element={<VehiclesPage />} />
@@ -61,9 +60,9 @@ export function AppRoutes() {
           <Route path="sales/new" element={<NewSalePage basePath="/admin/sales" />} />
           <Route path="credit" element={<CreditListPage basePath="/admin/credit" />} />
           <Route path="credit/:creditId" element={<CreditDetailPage basePath="/admin/credit" />} />
-          <Route path="products" element={<ProductApprovalPage />} />
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="receiving" element={<ReceivingPage />} />
+          <Route path="history" element={<AuditTrailPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="riders" element={<RidersPage />} />
           <Route path="vehicles" element={<VehiclesPage />} />

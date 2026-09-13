@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   getCurrentStock,
   getDailySalesByStore,
+  getMonthlySalesByStore,
   getOutstandingCreditTotal,
   getOverallDailySales,
+  getOverallMonthlySales,
+  getOverallWeeklySales,
   getPaymentsSummary,
   getReceivedStock,
+  getWeeklySalesByStore,
 } from './dashboardService'
 import { recordPayment } from './paymentService'
 import { resetDb } from './mocks/db'
@@ -24,6 +28,31 @@ describe('dashboardService', () => {
     const overall = await getOverallDailySales(todayIso())
     expect(overall.saleCount).toBe(3)
     expect(overall.totalMinor).toBe((amara?.totalMinor ?? 0) + (zeann?.totalMinor ?? 0))
+  })
+
+  it('reports weekly sales as the trailing 7 days including yesterday', async () => {
+    const date = todayIso()
+    const perStore = await getWeeklySalesByStore(date)
+    const amara = perStore.find((row) => row.storeId === 'amara')
+    const zeann = perStore.find((row) => row.storeId === 'zeann')
+    expect(amara?.saleCount).toBe(2)
+    expect(zeann?.saleCount).toBe(2)
+
+    const overall = await getOverallWeeklySales(date)
+    expect(overall.saleCount).toBe(4)
+    expect(overall.totalMinor).toBe((amara?.totalMinor ?? 0) + (zeann?.totalMinor ?? 0))
+    expect(overall.endDate).toBe(date)
+  })
+
+  it('reports monthly sales from the first of the month', async () => {
+    const date = todayIso()
+    const perStore = await getMonthlySalesByStore(date)
+    expect(perStore.length).toBe(2)
+    expect(perStore[0].startDate).toBe(`${date.slice(0, 7)}-01`)
+
+    const overall = await getOverallMonthlySales(date)
+    expect(overall.saleCount).toBeGreaterThanOrEqual(3)
+    expect(overall.totalMinor).toBe(perStore.reduce((sum, row) => sum + row.totalMinor, 0))
   })
 
   it('reflects outstanding credit after a payment', async () => {

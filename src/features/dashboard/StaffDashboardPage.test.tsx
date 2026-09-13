@@ -20,7 +20,15 @@ describe('StaffDashboardPage', () => {
   it('shows today summary for the current store', async () => {
     renderWithProviders(<StaffDashboardPage />, { user: staffUser })
     expect(await screen.findByText("Today's sales")).toBeInTheDocument()
-    expect(screen.getByText('₱2,395.00')).toBeInTheDocument()
+    expect(screen.getAllByText('₱2,395.00').length).toBeGreaterThan(0)
     expect(screen.getByText(/Outstanding credit/)).toBeInTheDocument()
+  })
+
+  it('shows weekly and monthly sales for the current store', async () => {
+    renderWithProviders(<StaffDashboardPage />, { user: staffUser })
+    expect(await screen.findByText('Weekly sales')).toBeInTheDocument()
+    expect(screen.getByText('Monthly sales')).toBeInTheDocument()
+    expect(screen.getByText(/last 7 days/)).toBeInTheDocument()
+    expect(screen.getByText(/this month/)).toBeInTheDocument()
   })
 })

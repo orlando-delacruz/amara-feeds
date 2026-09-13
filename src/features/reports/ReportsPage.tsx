@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Stack } from '@/components/ui/Stack'
-import { TextField } from '@/components/ui/TextField'
 import { Icon } from '@/components/ui/icons'
 import { todayIso } from '@/lib/dates'
 import { useSession } from '@/features/session/useSession'
@@ -32,13 +32,7 @@ export function ReportsPage() {
         size="compact"
       />
       <FilterBar>
-        <TextField
-          id="report-date"
-          label="Date"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-        />
+        <DatePicker id="report-date" label="Date" value={date} onChange={setDate} />
       </FilterBar>
       <SummarySections date={date} storeId={storeId} />
     </Stack>

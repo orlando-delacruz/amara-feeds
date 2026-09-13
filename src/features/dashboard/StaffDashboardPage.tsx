@@ -1,8 +1,15 @@
 import styled from 'styled-components'
-import { getCurrentStock, getDailySalesByStore, getOutstandingCreditTotal } from '@/services'
+import {
+  getCurrentStock,
+  getDailySalesByStore,
+  getMonthlySalesByStore,
+  getOutstandingCreditTotal,
+  getWeeklySalesByStore,
+} from '@/services'
 import type { StoreId } from '@/domain'
 import { Stack } from '@/components/ui/Stack'
 import { StatCard } from '@/components/ui/StatCard'
+import { Section } from '@/components/ui/Section'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Icon } from '@/components/ui/icons'
 import { MoneyText } from '@/components/ui/MoneyText'
@@ -56,17 +63,21 @@ export function StaffDashboardPage() {
   const { store } = useStore()
   const date = todayIso()
   const data = useAsyncData(async () => {
-    const [sales, outstanding, stock] = await Promise.all([
+    const [sales, outstanding, stock, weekly, monthly] = await Promise.all([
       getDailySalesByStore(date),
       getOutstandingCreditTotal(),
       getCurrentStock(),
+      getWeeklySalesByStore(date),
+      getMonthlySalesByStore(date),
     ])
     return {
       storeSales: sales.find((row) => row.storeId === store),
       outstanding,
       stockCount: stock.filter((row) => row.storeId === store).length,
+      weeklySales: weekly.find((row) => row.storeId === store),
+      monthlySales: monthly.find((row) => row.storeId === store),
     }
-  }, store)
+  }, `${store}:${date}`)
 
   return (
     <Stack>
@@ -81,7 +92,13 @@ export function StaffDashboardPage() {
         error={data.error}
         onRetry={data.reload}
         empty={null}
-        skeleton={<StatsSkeleton count={3} />}
+        skeleton={
+          <Stack>
+            <StatsSkeleton count={1} />
+            <StatsSkeleton count={2} />
+            <StatsSkeleton count={2} />
+          </Stack>
+        }
       >
         {data.data && (
           <Stack gap="lg">
@@ -120,6 +137,24 @@ export function StaffDashboardPage() {
                 outline
               />
             </Plates>
+            <Section title="Weekly & monthly sales" variant="flush">
+              <Plates>
+                <StatCard
+                  label="Weekly sales"
+                  value={<MoneyText amountMinor={data.data.weeklySales?.totalMinor ?? 0} />}
+                  caption={`${data.data.weeklySales?.saleCount ?? 0} sales · last 7 days`}
+                  tone={store}
+                  icon={<Icon name="calendar" />}
+                />
+                <StatCard
+                  label="Monthly sales"
+                  value={<MoneyText amountMinor={data.data.monthlySales?.totalMinor ?? 0} />}
+                  caption={`${data.data.monthlySales?.saleCount ?? 0} sales · this month`}
+                  tone={store}
+                  icon={<Icon name="calendar" />}
+                />
+              </Plates>
+            </Section>
           </Stack>
         )}
       </AsyncBoundary>

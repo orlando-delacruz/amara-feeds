@@ -1,4 +1,5 @@
 import type {
+  AuditEvent,
   CreditObligation,
   Customer,
   Expense,
@@ -28,6 +29,8 @@ export interface MockDatabase {
   riders: Rider[]
   vehicles: Vehicle[]
   expenses: Expense[]
+  /** Frontend-only session audit log; cleared on reset. */
+  auditLog: AuditEvent[]
 }
 
 let db: MockDatabase = createSeedData()

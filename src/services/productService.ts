@@ -46,3 +46,17 @@ export async function approveProduct(id: ProductId): Promise<Product> {
   product.status = 'active'
   return { ...product }
 }
+
+export async function rejectProduct(id: ProductId): Promise<Product> {
+  const db = getDb()
+  const index = db.products.findIndex((item) => item.id === id)
+  if (index === -1) {
+    throw new ServiceError('not_found', 'Product not found.')
+  }
+  const product = db.products[index]
+  if (product.status !== 'pending') {
+    throw new ServiceError('conflict', 'Only pending products can be rejected.')
+  }
+  const [removed] = db.products.splice(index, 1)
+  return { ...removed }
+}

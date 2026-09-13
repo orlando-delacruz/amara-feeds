@@ -1,6 +1,7 @@
 export * from './customer'
 export * from './credit'
 export * from './dashboard'
+export * from './audit'
 export * from './expense'
 export * from './ids'
 export * from './inventory'
