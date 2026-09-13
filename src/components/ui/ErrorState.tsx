@@ -1,6 +1,7 @@
 import styled from 'styled-components'
 import type { ReactNode } from 'react'
 import { Button } from './Button'
+import { Icon } from './icons'
 
 interface ErrorStateProps {
   title?: string
@@ -30,8 +31,8 @@ const IconCircle = styled.span`
   width: 56px;
   height: 56px;
   border-radius: ${({ theme }) => theme.radius.full};
-  background-color: rgba(153, 27, 27, 0.1);
-  font-size: 24px;
+  background-color: ${({ theme }) => theme.color.focus.dangerGlow};
+  color: ${({ theme }) => theme.color.status.danger.text};
   margin-bottom: ${({ theme }) => theme.space.xs};
 `
 
@@ -55,7 +56,9 @@ export function ErrorState({
 }: ErrorStateProps) {
   return (
     <Wrapper role="alert">
-      <IconCircle aria-hidden="true">⚠️</IconCircle>
+      <IconCircle aria-hidden="true">
+        <Icon name="alert" />
+      </IconCircle>
       <Title>{title}</Title>
       <Description>{description}</Description>
       {onRetry && (

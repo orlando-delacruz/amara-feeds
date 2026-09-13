@@ -21,17 +21,35 @@ const Wrapper = styled.div`
   }
 `
 
+const TitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space.sm};
+  min-width: 0;
+`
+
+const Marker = styled.span`
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background-color: ${({ theme }) => theme.color.brand[600]};
+`
+
 const Title = styled.h1<{ $compact: boolean }>`
+  font-family: ${({ theme }) => theme.font.familyCondensed};
   font-size: ${({ theme, $compact }) => ($compact ? theme.font.size.xl : theme.font.size.xxl)};
   font-weight: ${({ theme }) => theme.font.weight.bold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
-  letter-spacing: ${({ theme }) => theme.font.tracking.tight};
+  letter-spacing: ${({ theme }) => theme.font.tracking.wide};
+  text-transform: uppercase;
   text-wrap: balance;
   color: ${({ theme }) => theme.color.text.primary};
 `
 
 const Description = styled.p`
   margin-top: ${({ theme }) => theme.space.xs};
+  margin-left: ${({ theme }) => `calc(${theme.space.sm} + 12px + ${theme.space.sm})`};
   font-size: ${({ theme }) => theme.font.size.sm};
   color: ${({ theme }) => theme.color.text.muted};
   display: -webkit-box;
@@ -51,7 +69,10 @@ export function PageHeader({ title, description, actions, size = 'default' }: Pa
   return (
     <Wrapper>
       <div style={{ minWidth: 0 }}>
-        <Title $compact={size === 'compact'}>{title}</Title>
+        <TitleRow>
+          <Marker aria-hidden="true" />
+          <Title $compact={size === 'compact'}>{title}</Title>
+        </TitleRow>
         {description && <Description>{description}</Description>}
       </div>
       {actions && <Actions>{actions}</Actions>}

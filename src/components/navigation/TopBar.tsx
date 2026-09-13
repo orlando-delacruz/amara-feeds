@@ -33,15 +33,33 @@ const Inner = styled.div`
 `
 
 const Brand = styled(Link)`
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: ${({ theme }) => theme.space.sm};
+  padding: ${({ theme }) => theme.space.xs} ${({ theme }) => theme.space.md};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background-color: ${({ theme }) => theme.color.brand[600]};
+  color: ${({ theme }) => theme.color.text.inverse};
   text-decoration: none;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   min-width: 0;
   flex-shrink: 1;
+  overflow: hidden;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.color.brand[700]};
+  }
+`
+
+const BrandName = styled.span`
+  font-family: ${({ theme }) => theme.font.familyCondensed};
+  font-size: ${({ theme }) => theme.font.size.lg};
+  font-weight: ${({ theme }) => theme.font.weight.bold};
+  letter-spacing: ${({ theme }) => theme.font.tracking.wide};
+  text-transform: uppercase;
+  line-height: ${({ theme }) => theme.font.lineHeight.tight};
+  overflow: hidden;
+  text-overflow: ellipsis;
 `
 
 const BrandMark = styled.span`
@@ -51,18 +69,14 @@ const BrandMark = styled.span`
   flex-shrink: 0;
 `
 
-const BrandDot = styled.span<{ $color: string }>`
+const BrandChip = styled.span<{ $color: string }>`
   display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: ${({ theme }) => theme.radius.full};
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: ${({ theme }) => theme.radius.sm};
   background-color: ${({ $color }) => $color};
-`
-
-const BrandName = styled.span`
-  font-weight: ${({ theme }) => theme.font.weight.bold};
-  font-size: ${({ theme }) => theme.font.size.lg};
-  color: ${({ theme }) => theme.color.text.primary};
+  border: 1px solid rgba(255, 255, 255, 0.55);
 `
 
 const SectionTag = styled.span`
@@ -141,9 +155,9 @@ export function TopBar({ sectionLabel }: TopBarProps) {
     <Header>
       <Inner>
         <Brand to="/" translate="no">
-          <BrandMark>
-            <BrandDot $color="#7c3aed" />
-            <BrandDot $color="#c2410c" />
+          <BrandMark aria-hidden="true">
+            <BrandChip $color="#5a3fa6" />
+            <BrandChip $color="#b6450f" />
           </BrandMark>
           <BrandName>Amara Feeds</BrandName>
         </Brand>

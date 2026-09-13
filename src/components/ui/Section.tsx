@@ -33,11 +33,28 @@ const Header = styled.div`
   margin-bottom: ${({ theme }) => theme.space.md};
 `
 
+const TitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space.sm};
+  min-width: 0;
+`
+
+const Marker = styled.span`
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background-color: ${({ theme }) => theme.color.brand[600]};
+`
+
 const Title = styled.h2`
+  font-family: ${({ theme }) => theme.font.familyCondensed};
   font-size: ${({ theme }) => theme.font.size.lg};
-  font-weight: ${({ theme }) => theme.font.weight.bold};
+  font-weight: ${({ theme }) => theme.font.weight.semibold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
-  letter-spacing: ${({ theme }) => theme.font.tracking.tight};
+  letter-spacing: ${({ theme }) => theme.font.tracking.wide};
+  text-transform: uppercase;
   text-wrap: balance;
   color: ${({ theme }) => theme.color.text.primary};
 `
@@ -46,7 +63,10 @@ export function Section({ title, action, children, variant = 'card' }: SectionPr
   return (
     <Container $variant={variant}>
       <Header>
-        <Title>{title}</Title>
+        <TitleRow>
+          <Marker aria-hidden="true" />
+          <Title>{title}</Title>
+        </TitleRow>
         {action}
       </Header>
       {children}

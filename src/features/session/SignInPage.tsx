@@ -46,8 +46,9 @@ const BrandPanel = styled.div`
   justify-content: center;
   gap: ${({ theme }) => theme.space.lg};
   padding: ${({ theme }) => theme.space.xxl} ${({ theme }) => theme.space.xl};
-  background: ${({ theme }) => theme.color.brand.gradient};
+  background-color: ${({ theme }) => theme.color.brand[600]};
   color: ${({ theme }) => theme.color.text.inverse};
+  box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.14);
 
   @media (min-width: ${({ theme }) => theme.breakpoint.desktop}) {
     padding: ${({ theme }) => theme.space.xxxl};
@@ -55,10 +56,12 @@ const BrandPanel = styled.div`
 `
 
 const Title = styled.h1`
+  font-family: ${({ theme }) => theme.font.familyCondensed};
   font-size: ${({ theme }) => theme.font.size.xxl};
   font-weight: ${({ theme }) => theme.font.weight.bold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
-  letter-spacing: ${({ theme }) => theme.font.tracking.tight};
+  letter-spacing: ${({ theme }) => theme.font.tracking.wide};
+  text-transform: uppercase;
   text-wrap: balance;
 
   @media (min-width: ${({ theme }) => theme.breakpoint.desktop}) {
@@ -67,8 +70,7 @@ const Title = styled.h1`
 `
 
 const Subtitle = styled.p`
-  color: ${({ theme }) => theme.color.text.inverse};
-  opacity: 0.85;
+  color: ${({ theme }) => theme.color.brand.tint};
   font-size: ${({ theme }) => theme.font.size.md};
 `
 
@@ -81,10 +83,12 @@ const BrandMark = styled.span`
 
 const BrandDot = styled.span<{ $color: string }>`
   display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: ${({ theme }) => theme.radius.full};
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: ${({ theme }) => theme.radius.sm};
   background-color: ${({ $color }) => $color};
+  border: 1px solid rgba(255, 255, 255, 0.5);
 `
 
 const StoreStrip = styled.div`
@@ -103,8 +107,7 @@ const StoreStripHalf = styled.span<{ $store: 'amara' | 'zeann' }>`
 
 const StoreCaption = styled.p`
   font-size: ${({ theme }) => theme.font.size.sm};
-  color: ${({ theme }) => theme.color.text.inverse};
-  opacity: 0.8;
+  color: ${({ theme }) => theme.color.brand.tint};
 `
 
 const AccountPanel = styled.div`
@@ -119,10 +122,12 @@ const AccountPanel = styled.div`
 `
 
 const SectionTitle = styled.h2`
+  font-family: ${({ theme }) => theme.font.familyCondensed};
   font-size: ${({ theme }) => theme.font.size.xl};
   font-weight: ${({ theme }) => theme.font.weight.bold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
-  letter-spacing: ${({ theme }) => theme.font.tracking.tight};
+  letter-spacing: ${({ theme }) => theme.font.tracking.wide};
+  text-transform: uppercase;
   text-wrap: balance;
 `
 
@@ -163,8 +168,8 @@ export function SignInPage() {
         <BrandPanel>
           <div>
             <BrandMark>
-              <BrandDot $color="#c4b5fd" />
-              <BrandDot $color="#fed7aa" />
+              <BrandDot $color="#5a3fa6" />
+              <BrandDot $color="#b6450f" />
             </BrandMark>
             <Title>Amara Feeds</Title>
             <Subtitle>Store management for Amara and Zeann.</Subtitle>

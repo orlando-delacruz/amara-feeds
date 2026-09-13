@@ -104,6 +104,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-015 | Per-store riders and vehicles management | Accepted | 2026-09-13 |
 | DEC-016 | Required rider/vehicle on receiving | Accepted | 2026-09-13 |
 | DEC-017 | Per rider/vehicle expense tracking with net | Accepted | 2026-09-13 |
+| DEC-019 | Identity redesign: painted delivery-vehicle signage | Accepted | 2026-09-13 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -364,7 +365,7 @@ No formal decision records existed before Phase 0. The following records were cr
 
 - **ID:** DEC-018
 - **Title:** Visual refinement: evergreen brand, warm neutrals, Plus Jakarta Sans
-- **Status:** Accepted
+- **Status:** Superseded
 - **Date:** 2026-09-13
 - **Context:** The UI was the generic "SaaS-card kit" (cool Tailwind-gray neutrals, flat blue primary, system stack typography). It lacked a distinctive visual identity tied to the feeds/agriculture business. The project needed a visual refinement pass to ground the design in its subject without changing functionality.
 - **Decision:** Replace the primary brand color from blue (#2563eb) to evergreen green (brand.600 #157347, brand.700 #0e5c38) with a subtle gradient for primary actions. Replace the cool gray neutral ramp with warm sand neutrals (page #faf9f6, subtle #f4f2ec, border #e9e5db, etc.). Adopt Plus Jakarta Sans as the primary typeface (loaded via Google Fonts, weights 400–700) for a distinctive, warm, modern feel. Add a layered shadow system (sm, md, lg, raised) for depth. Restyle all ~30 UI primitives and 3 bespoke pages (SignInPage, AdminDashboardPage, StaffDashboardPage) to reflect the new palette. Store identity colors (Amara violet, Zeann amber) unchanged.
@@ -372,8 +373,24 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Rationale:** The evergreen green directly reflects the feeds/agriculture identity. Warm sand neutrals create a warmer, more inviting feel than cool gray. Plus Jakarta Sans is distinctive, friendly, and highly legible on mobile. The layered shadow system improves depth perception over flat borders.
 - **Consequences:** `src/theme/tokens.ts` updated with new color, font, shadow, and radius tokens. All UI primitives restyled (CSS-only changes, no prop/API changes). `index.html` adds Google Fonts preconnect and stylesheet links. `docs/DESIGN-SYSTEM.md` §2–§8 updated to match new tokens. Tests unaffected (CSS-only changes, no structural HTML/text changes).
 - **Related documents:** `docs/DESIGN-SYSTEM.md` (authoritative visual language, kept in sync), `src/theme/tokens.ts` (implementation), `index.html` (font loading).
-- **Supersedes / Superseded by:** none.
+- **Supersedes / Superseded by:** superseded by DEC-019 (identity redesign: painted delivery-vehicle signage).
 - **Open questions or follow-up:** None. Self-hosting font files remains an option if Google Fonts CDN is undesirable later.
+
+### DEC-019 — Identity redesign: painted delivery-vehicle signage
+
+- **ID:** DEC-019
+- **Title:** Identity redesign: painted delivery-vehicle signage
+- **Status:** Accepted
+- **Date:** 2026-09-13
+- **Context:** The owner reopened the visual identity for redesign (recorded in PRODUCT.md, 2026-09-13); the incumbent evergreen-green/warm-sand/Plus Jakarta Sans identity was no longer binding. The dashboards (and the app they set the tone for) read as the generic neutral-card SaaS kit: same-size white cards, a blue/green flat primary, and no connection to the business's physical world. The target surface brief (`.impeccable/surfaces/dashboard.md`) pinned the replacement world and its seed key.
+- **Decision:** Replace the visual world with **painted delivery-vehicle signage** ("The Depot Route Board"), seeded `f161c156` / assigned `f35ee7f3`: saturated flat enamel plates with hard edges and no gradients on a warm workshop-wall ground; route-board capitals (Barlow Condensed) for plates and headers; Barlow for body; tabular numerals for every figure; a persistent now-mark on today's date; every zone labeled by its literal name; named balance states (healthy / attention / critical) for credit and stock. Implemented first on the staff and admin dashboards (route board header, enamel hero plate, hollow stencil plates, admin depot board with two store columns), with the tokens (deep depot-enamel brand, Amara violet / Zeann rust store enamels, warm wall ground, small radii, `paint` shadow) landing in `src/theme/tokens.ts` so the rest of the app follows the same world.
+- **Alternatives considered:** Keeping and polishing the incumbent evergreen identity — rejected; the identity was explicitly reopened and the incumbent read as category-default. The six challenger forms dealt by the concept roll (seven-segment instrument family, arcade phosphor, labanotation, console void, iridescent cloud, tensegrity column) — each fused and weighed against the painted-vehicle world on audience identification and product clarity; all declined (a seven-segment mask cannot carry forms/credit history; the others do not belong to a store worker's world), with two disciplines raised into the chosen world: leader-line captions on plates (tensegrity donation) and "absence is drawn" — empty data stays visible as hollow stencil plates (seven-segment donation).
+- **Rationale:** The painted delivery fleet is the audience's own world — store staff read route boards, livery, and painted plate work every day, so a store's day reads the way a route board does: one big figure, two store columns, a persistent now. Store identity becomes unmistakable (each store is an enamel color), and the world is honest to the feeds/agriculture business (deep depot-enamel green-black) without the category's neutral-card grid.
+- **Consequences:** `src/theme/tokens.ts`, `index.html` (Barlow + Barlow Condensed fonts), `src/components/ui/StatCard.tsx` (enamel plate / stencil plate / paper tag), the two dashboard pages and their new `RouteBoard`/`BalanceState` primitives updated; `DESIGN.md` and `.impeccable/design.json` written from the built world; `docs/DESIGN-SYSTEM.md` rewritten to match. DEC-018 is superseded. Rest of app surfaces inherit the world through the shared tokens/primitives; a full per-surface pass (sign-in, lists, forms, nav chrome) is follow-up, not part of this record. Balance-state thresholds for stock (0 empty / 1–2 low / ≥3 stocked) and credit (0 healthy / >0 attention) are assumed UI choices, not confirmed business rules.
+- **Related documents:** `DESIGN.md`, `.impeccable/design.json`, `docs/DESIGN-SYSTEM.md`, `.impeccable/surfaces/dashboard.md`, `src/theme/tokens.ts`, `src/components/ui/StatCard.tsx`, `src/features/dashboard/`.
+- **Supersedes:** DEC-018 (visual refinement: evergreen brand, warm neutrals, Plus Jakarta Sans).
+- **Superseded by:** none.
+- **Open questions or follow-up:** Brand artwork and a logo remain Confirmation Required; stock balance-state thresholds remain assumed; app-wide surface rollout of the new primitives is follow-up.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

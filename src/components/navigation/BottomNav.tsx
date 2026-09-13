@@ -18,7 +18,7 @@ const Bar = styled.nav`
   padding-right: max(${({ theme }) => theme.space.md}, env(safe-area-inset-right, 0px));
   background-color: ${({ theme }) => theme.color.surface.card};
   border-top: 1px solid ${({ theme }) => theme.color.border.default};
-  box-shadow: 0 -2px 10px rgba(33, 31, 26, 0.06);
+  box-shadow: 0 -2px 10px rgba(33, 31, 24, 0.06);
 
   @media (min-width: ${({ theme }) => theme.breakpoint.desktop}) {
     display: none;
@@ -55,11 +55,18 @@ const tabLinkStyles = css`
   color: ${({ theme }) => theme.color.text.muted};
   text-decoration: none;
   border-radius: ${({ theme }) => theme.radius.md} ${({ theme }) => theme.radius.md} 0 0;
+  transition:
+    background-color ${({ theme }) => theme.motion.fast} ease-out,
+    color ${({ theme }) => theme.motion.fast} ease-out;
+
+  &:active {
+    background-color: ${({ theme }) => theme.color.brand[50]};
+  }
 
   &.active {
-    color: ${({ theme }) => theme.color.brand[700]};
+    color: ${({ theme }) => theme.color.text.inverse};
     font-weight: ${({ theme }) => theme.font.weight.semibold};
-    background-color: ${({ theme }) => theme.color.brand[50]};
+    background-color: ${({ theme }) => theme.color.brand[600]};
   }
 `
 

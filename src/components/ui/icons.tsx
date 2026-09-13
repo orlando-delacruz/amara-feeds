@@ -1,7 +1,17 @@
 import type { ReactNode } from 'react'
 
 export type IconName =
-  'chevron-right' | 'calendar' | 'plus' | 'print' | 'alert' | 'box' | 'card' | 'search'
+  | 'chevron-right'
+  | 'calendar'
+  | 'plus'
+  | 'print'
+  | 'alert'
+  | 'box'
+  | 'card'
+  | 'search'
+  | 'check'
+  | 'x'
+  | 'info'
 
 function Base({ children }: { children: ReactNode }) {
   return (
@@ -63,6 +73,15 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <circle cx="11" cy="11" r="7" />
       <path d="M16.5 16.5L21 21" />
+    </>
+  ),
+  check: <path d="M5 12.5l4.5 4.5L19 7" />,
+  x: <path d="M6 6l12 12M18 6L6 18" />,
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" />
+      <path d="M12 7.5v.01" />
     </>
   ),
 }

@@ -1,5 +1,7 @@
 import styled from 'styled-components'
 import type { ReactNode } from 'react'
+import { Icon } from './icons'
+import type { IconName } from './icons'
 
 export type AlertVariant = 'info' | 'success' | 'warning' | 'danger'
 
@@ -16,11 +18,11 @@ const variantRole: Record<AlertVariant, 'status' | 'alert'> = {
   danger: 'alert',
 }
 
-const icons: Record<AlertVariant, string> = {
-  info: 'ℹ️',
-  success: '✅',
-  warning: '⚠️',
-  danger: '🚫',
+const icons: Record<AlertVariant, IconName> = {
+  info: 'info',
+  success: 'check',
+  warning: 'alert',
+  danger: 'x',
 }
 
 const Wrapper = styled.div<{ $variant: AlertVariant }>`
@@ -35,9 +37,11 @@ const Wrapper = styled.div<{ $variant: AlertVariant }>`
 `
 
 const AlertIcon = styled.span`
+  display: inline-flex;
   flex-shrink: 0;
-  font-size: ${({ theme }) => theme.font.size.md};
-  line-height: 1;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
 `
 
 const Content = styled.span`
@@ -54,7 +58,9 @@ const Title = styled.p`
 export function Alert({ variant = 'info', title, children }: AlertProps) {
   return (
     <Wrapper $variant={variant} role={variantRole[variant]}>
-      <AlertIcon aria-hidden="true">{icons[variant]}</AlertIcon>
+      <AlertIcon aria-hidden="true">
+        <Icon name={icons[variant]} />
+      </AlertIcon>
       <Content>
         {title && <Title>{title}</Title>}
         <div>{children}</div>

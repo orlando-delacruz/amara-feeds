@@ -28,34 +28,32 @@ const sizeStyles: Record<ButtonSize, ReturnType<typeof css>> = {
 
 const variantStyles: Record<ButtonVariant, ReturnType<typeof css>> = {
   primary: css`
-    background: ${({ theme }) => theme.color.brand.gradient};
+    background-color: ${({ theme }) => theme.color.brand[600]};
     color: ${({ theme }) => theme.color.text.inverse};
-    box-shadow:
-      0 1px 3px rgba(21, 115, 71, 0.2),
-      0 1px 2px rgba(21, 115, 71, 0.12);
+    box-shadow: ${({ theme }) => theme.shadow.paint};
 
     &:hover:not(:disabled) {
+      background-color: ${({ theme }) => theme.color.brand[700]};
       box-shadow:
-        0 4px 12px rgba(21, 115, 71, 0.28),
-        0 2px 4px rgba(21, 115, 71, 0.12);
-      filter: brightness(1.06);
+        0 3px 8px rgba(21, 60, 110, 0.3),
+        0 8px 20px rgba(30, 78, 140, 0.22);
     }
 
     &:active:not(:disabled) {
       transform: translateY(0.5px);
-      box-shadow: 0 1px 2px rgba(21, 115, 71, 0.16);
+      box-shadow: ${({ theme }) => theme.shadow.paint};
     }
   `,
   secondary: css`
-    background-color: ${({ theme }) => theme.color.white};
+    background-color: ${({ theme }) => theme.color.surface.card};
     color: ${({ theme }) => theme.color.text.primary};
-    border: 1px solid ${({ theme }) => theme.color.border.strong};
-    box-shadow: 0 1px 2px rgba(33, 31, 26, 0.04);
+    border: 2px solid ${({ theme }) => theme.color.border.strong};
+    box-shadow: 0 1px 2px rgba(33, 31, 24, 0.05);
 
     &:hover:not(:disabled) {
-      background-color: ${({ theme }) => theme.color.neutral[50]};
-      border-color: ${({ theme }) => theme.color.neutral[300]};
-      box-shadow: 0 2px 6px rgba(33, 31, 26, 0.06);
+      border-color: ${({ theme }) => theme.color.brand[600]};
+      color: ${({ theme }) => theme.color.brand[700]};
+      box-shadow: 0 2px 6px rgba(33, 31, 24, 0.07);
     }
 
     &:active:not(:disabled) {
@@ -73,11 +71,11 @@ const variantStyles: Record<ButtonVariant, ReturnType<typeof css>> = {
   danger: css`
     background-color: ${({ theme }) => theme.color.status.danger.text};
     color: ${({ theme }) => theme.color.text.inverse};
-    box-shadow: 0 1px 3px rgba(153, 27, 27, 0.2);
+    box-shadow: 0 2px 6px rgba(169, 42, 29, 0.25);
 
     &:hover:not(:disabled) {
-      box-shadow: 0 4px 12px rgba(153, 27, 27, 0.28);
       filter: brightness(0.92);
+      box-shadow: 0 4px 12px rgba(169, 42, 29, 0.3);
     }
 
     &:active:not(:disabled) {

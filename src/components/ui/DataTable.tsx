@@ -33,7 +33,11 @@ const Table = styled.table`
 const HeadCell = styled.th`
   padding: ${({ theme }) => theme.space.sm} ${({ theme }) => theme.space.md};
   text-align: left;
+  font-family: ${({ theme }) => theme.font.familyCondensed};
+  font-size: ${({ theme }) => theme.font.size.sm};
   font-weight: ${({ theme }) => theme.font.weight.semibold};
+  letter-spacing: ${({ theme }) => theme.font.tracking.wide};
+  text-transform: uppercase;
   white-space: nowrap;
   border-bottom: 2px solid ${({ theme }) => theme.color.border.strong};
   background-color: ${({ theme }) => theme.color.surface.subtle};

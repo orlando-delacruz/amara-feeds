@@ -34,7 +34,7 @@ const StyledSelect = styled.select<{ $invalid: boolean }>`
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.color.brand[600]};
-    box-shadow: 0 0 0 3px rgba(21, 115, 71, 0.12);
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.color.focus.glow};
   }
 
   &:disabled {
@@ -49,7 +49,7 @@ const StyledSelect = styled.select<{ $invalid: boolean }>`
       border-color: ${theme.color.status.danger.text};
 
       &:focus {
-        box-shadow: 0 0 0 3px rgba(153, 27, 27, 0.12);
+        box-shadow: 0 0 0 3px ${theme.color.focus.dangerGlow};
       }
     `}
 `

@@ -58,10 +58,44 @@ export const GlobalStyle = createGlobalStyle`
     max-width: 100%;
   }
 
+  ::selection {
+    background-color: ${({ theme }) => theme.color.brand[100]};
+    color: ${({ theme }) => theme.color.text.primary};
+  }
+
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background-color: ${({ theme }) => theme.color.surface.page};
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: ${({ theme }) => theme.color.border.strong};
+    border: 3px solid ${({ theme }) => theme.color.surface.page};
+    border-radius: ${({ theme }) => theme.radius.full};
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: ${({ theme }) => theme.color.neutral[400]};
+  }
+
+  input,
+  textarea {
+    caret-color: ${({ theme }) => theme.color.brand[600]};
+  }
+
+  a {
+    text-underline-offset: 3px;
+    text-decoration-thickness: 2px;
+  }
+
   :focus-visible {
     outline: 2px solid ${({ theme }) => theme.color.focus.ring};
     outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(21, 115, 71, 0.15);
+    box-shadow: 0 0 0 4px ${({ theme }) => theme.color.focus.glow};
   }
 
   @media (prefers-reduced-motion: reduce) {

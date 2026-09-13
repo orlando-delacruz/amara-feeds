@@ -1,5 +1,6 @@
 import styled from 'styled-components'
 import type { ReactNode } from 'react'
+import { Icon } from './icons'
 
 interface EmptyStateProps {
   title: string
@@ -29,7 +30,6 @@ const IconCircle = styled.span`
   border-radius: ${({ theme }) => theme.radius.full};
   background-color: ${({ theme }) => theme.color.surface.subtle};
   color: ${({ theme }) => theme.color.text.muted};
-  font-size: 24px;
   margin-bottom: ${({ theme }) => theme.space.xs};
 `
 
@@ -48,7 +48,9 @@ const Description = styled.p`
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
     <Wrapper>
-      <IconCircle aria-hidden="true">📋</IconCircle>
+      <IconCircle aria-hidden="true">
+        <Icon name="box" />
+      </IconCircle>
       <Title>{title}</Title>
       {description && <Description>{description}</Description>}
       {action}

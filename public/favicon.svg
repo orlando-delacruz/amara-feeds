@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#1d4ed8" />
-  <text x="32" y="42" font-family="system-ui, -apple-system, sans-serif" font-size="28" font-weight="700" fill="#ffffff" text-anchor="middle">AZ</text>
+  <rect width="64" height="64" fill="#1e4e8c" />
+  <rect x="1" y="1" width="62" height="62" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="2" />
+  <rect x="9" y="9" width="46" height="46" fill="none" stroke="#ffffff" stroke-opacity="0.9" stroke-width="3" />
+  <text x="32" y="43" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="1">AZ</text>
 </svg>

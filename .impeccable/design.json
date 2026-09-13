@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-13T00:00:00.000Z",
+  "title": "Design System: Amara Feeds — Store Management",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Depot Enamel", "canonical": "#1d3a2f", "tonalRamp": ["#0d1a15", "#12261d", "#173226", "#1d3a2f", "#2a4f42", "#3c6355", "#5a7c6f", "#8ba79c"] },
+      "primary-deep": { "role": "primary", "displayName": "Depot Enamel Deep", "canonical": "#152b22", "tonalRamp": ["#0a1511", "#0f2019", "#12261d", "#152b22", "#23443a", "#33564a", "#55756b", "#86a399"] },
+      "cream": { "role": "neutral", "displayName": "Stencil Cream", "canonical": "#f7f2e6", "tonalRamp": ["#d8cbb0", "#e2d7c0", "#eae0cc", "#f0e8d8", "#f7f2e6", "#faf6ee", "#fbf9f3", "#fdfcf8"] },
+      "wall": { "role": "neutral", "displayName": "Workshop Wall", "canonical": "#f4f0e6", "tonalRamp": ["#cfc7b4", "#dbd4c4", "#e6e0d2", "#ece6d9", "#f4f0e6", "#f7f4ec", "#faf8f1", "#fcfbf7"] },
+      "paper": { "role": "neutral", "displayName": "Unpainted Paper", "canonical": "#fbf8f0", "tonalRamp": ["#d6cdb8", "#e2dbc9", "#ede7d8", "#f5f0e5", "#fbf8f0", "#fcfaf4", "#fdfcf8", "#fefefb"] },
+      "ink": { "role": "neutral", "displayName": "Warm Ink", "canonical": "#26221a", "tonalRamp": ["#100e0a", "#17140e", "#1d1a13", "#26221a", "#3a352b", "#4e483d", "#6f685c", "#9c9587"] },
+      "amara-violet": { "role": "secondary", "displayName": "Amara Enamel", "canonical": "#4a2b9e", "tonalRamp": ["#1c0f40", "#2a175f", "#38217d", "#4a2b9e", "#6a4bbd", "#8b70d1", "#ab97de", "#cfc4ee"] },
+      "zeann-rust": { "role": "secondary", "displayName": "Zeann Enamel", "canonical": "#93340e", "tonalRamp": ["#3a1405", "#55200a", "#742a0c", "#93340e", "#b6501f", "#cf7343", "#df9c79", "#efc3ab"] },
+      "healthy": { "role": "tertiary", "displayName": "Healthy Paint", "canonical": "#1c5c33", "tonalRamp": ["#0c2716", "#103a1f", "#164c2a", "#1c5c33", "#2a7a49", "#4a9a68", "#7cb890", "#bcd9c5"] },
+      "attention": { "role": "tertiary", "displayName": "Attention Paint", "canonical": "#8a4d06", "tonalRamp": ["#3a1f02", "#53300a", "#6e3f06", "#8a4d06", "#ad6810", "#cf8a38", "#e3b171", "#f2d9b0"] },
+      "critical": { "role": "tertiary", "displayName": "Critical Paint", "canonical": "#96290a", "tonalRamp": ["#3f0e03", "#5c1805", "#7c2008", "#96290a", "#b9431f", "#d66a48", "#e79b82", "#f2c6b7"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Route Hero", "purpose": "The single enamel figure of the day — today's sales, overall daily sales." },
+      "title": { "displayName": "Route Title", "purpose": "Page names on route boards and store column headers." },
+      "body": { "displayName": "Workshop Body", "purpose": "Prose, lists, and form labels." },
+      "label": { "displayName": "Stencil Label", "purpose": "Plate labels, zone names, and the now-mark." }
+    },
+    "shadows": [
+      { "name": "paint", "value": "0 6px 16px rgba(21, 43, 34, 0.26), 0 2px 5px rgba(21, 43, 34, 0.2)", "purpose": "Enamel plates and route boards only." },
+      { "name": "sm", "value": "0 1px 2px rgba(38, 34, 26, 0.06), 0 2px 6px rgba(38, 34, 26, 0.05)", "purpose": "Elevated surfaces such as dialogs." },
+      { "name": "md", "value": "0 6px 14px rgba(38, 34, 26, 0.12), 0 2px 5px rgba(38, 34, 26, 0.06)", "purpose": "Elevated surfaces, dialogs." },
+      { "name": "lg", "value": "0 14px 30px rgba(38, 34, 26, 0.18), 0 4px 10px rgba(38, 34, 26, 0.08)", "purpose": "Prominent surfaces." },
+      { "name": "raised", "value": "0 10px 22px rgba(38, 34, 26, 0.16), 0 3px 8px rgba(38, 34, 26, 0.08)", "purpose": "Interactive hover lift." }
+    ],
+    "motion": [
+      { "name": "plate-stamp", "value": "plateIn 260ms cubic-bezier(0.16, 1, 0.3, 1) both", "purpose": "The hero plate stamps into place once on load." },
+      { "name": "now-pulse", "value": "nowPulse 2s ease-in-out infinite", "purpose": "The persistent now-mark pulses on today's date." },
+      { "name": "fast", "value": "120ms ease-out", "purpose": "Feedback transitions." },
+      { "name": "base", "value": "200ms ease-out", "purpose": "Standard state transitions." }
+    ],
+    "breakpoints": [
+      { "name": "base", "value": "< 430px", "purpose": "Single column; tab bar with up to five destinations plus More." },
+      { "name": "phoneWide", "value": "430px", "purpose": "Plate grids pair into two columns." },
+      { "name": "tablet", "value": "640px", "purpose": "Lists render as data tables." },
+      { "name": "desktop", "value": "1024px", "purpose": "Side navigation replaces the tab bar; content max-width 72rem." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Enamel Hero Plate",
+      "kind": "card",
+      "refersTo": "plate-hero",
+      "description": "The day's single dominant figure on a filled depot/store enamel plate with a paint edge and plate shadow.",
+      "html": "<div class=\"ds-plate-hero\"><span class=\"ds-plate-label\">Overall daily sales</span><span class=\"ds-plate-value\">₱2,590.00</span><span class=\"ds-plate-caption\">4 sales across Amara and Zeann</span></div>",
+      "css": ".ds-plate-hero { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 6px; background: #1d3a2f; color: #f7f2e6; border: 1px solid rgba(0,0,0,0.28); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 0 0 1px rgba(0,0,0,0.12), 0 6px 16px rgba(21,43,34,0.26), 0 2px 5px rgba(21,43,34,0.2); font-family: 'Barlow', sans-serif; } .ds-plate-label { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #c7d8c9; } .ds-plate-value { font-size: 44px; font-weight: 700; line-height: 1.06; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #f7f2e6; } .ds-plate-caption { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #c7d8c9; } .ds-plate-caption::before { content: ''; width: 14px; height: 2px; background: currentColor; opacity: 0.7; }"
+    },
+    {
+      "name": "Stencil Plate",
+      "kind": "card",
+      "refersTo": "plate-stencil",
+      "description": "A secondary named plate painted on the wall — hollow outline, no shadow, with a status chip.",
+      "html": "<div class=\"ds-stencil\"><span class=\"ds-stencil-label\">Outstanding credit</span><span class=\"ds-stencil-value\">₱395.00</span><span class=\"ds-stencil-caption\">3 obligations</span><span class=\"ds-chip\">Attention</span></div>",
+      "css": ".ds-stencil { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 6px; border: 2px solid #2a271f; background: transparent; font-family: 'Barlow', sans-serif; } .ds-stencil-label { font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #2a271f; } .ds-stencil-value { font-size: 30px; font-weight: 700; line-height: 1.06; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #2a271f; } .ds-stencil-caption { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #2a271f; } .ds-stencil-caption::before { content: ''; width: 14px; height: 2px; background: currentColor; opacity: 0.7; } .ds-chip { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 2px; background: #8a4d06; color: #f7f2e6; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; } .ds-chip::before { content: ''; width: 5px; height: 5px; border-radius: 9999px; background: currentColor; opacity: 0.85; }"
+    },
+    {
+      "name": "Route Board",
+      "kind": "custom",
+      "refersTo": "plate-hero",
+      "description": "The depot-enamel page header: page name, store route line, and the persistent now-mark with a 3px livery stripe.",
+      "html": "<header class=\"ds-route\"><div><h1 class=\"ds-route-title\">Dashboard</h1><span class=\"ds-route-line\">Amara</span></div><span class=\"ds-now\"><span class=\"ds-now-dot\"></span>Today · Sat, Sep 13</span><span class=\"ds-route-stripe\"></span></header>",
+      "css": ".ds-route { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px 15px; background: #1d3a2f; color: #f7f2e6; border: 1px solid rgba(0,0,0,0.3); border-radius: 6px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 1px rgba(0,0,0,0.12), 0 6px 16px rgba(21,43,34,0.26), 0 2px 5px rgba(21,43,34,0.2); overflow: hidden; font-family: 'Barlow', sans-serif; } .ds-route-title { margin: 0; font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.06; color: #f7f2e6; } .ds-route-line { display: inline-flex; align-items: center; gap: 8px; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #f7f2e6; opacity: 0.85; } .ds-route-line::before { content: ''; width: 14px; height: 2px; background: currentColor; opacity: 0.7; } .ds-now { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; } .ds-now-dot { width: 9px; height: 9px; border-radius: 9999px; background: #f7f2e6; animation: ds-now 2s ease-in-out infinite; } @keyframes ds-now { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } } .ds-route-stripe { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #4a2b9e; }"
+    },
+    {
+      "name": "Depot Store Column",
+      "kind": "card",
+      "refersTo": "plate-hero",
+      "description": "One store's column on the admin depot board — enamel header strip, condensed day figure, leader-lined caption.",
+      "html": "<div class=\"ds-depot\"><header class=\"ds-depot-h\"><span>Amara</span><span class=\"ds-depot-count\">2 sales</span></header><div class=\"ds-depot-body\"><span class=\"ds-depot-value\">₱1,340.00</span><span class=\"ds-depot-caption\">today</span></div></div>",
+      "css": ".ds-depot { display: flex; flex-direction: column; background: #fbf8f0; border: 1px solid #ddd5c4; border-radius: 6px; overflow: hidden; font-family: 'Barlow', sans-serif; } .ds-depot-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px; background: #4a2b9e; color: #f7f2e6; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; } .ds-depot-count { font-size: 13px; font-weight: 600; opacity: 0.85; } .ds-depot-body { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; } .ds-depot-value { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; line-height: 1.06; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #26221a; } .ds-depot-caption { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #6f6755; } .ds-depot-caption::before { content: ''; width: 14px; height: 2px; background: currentColor; opacity: 0.7; }"
+    },
+    {
+      "name": "Paper Tag",
+      "kind": "card",
+      "refersTo": "plate-stencil",
+      "description": "The row-level reading between plates — outstanding credit and payments today.",
+      "html": "<div class=\"ds-tag\"><span class=\"ds-dot\"></span><span class=\"ds-tag-label\">Outstanding credit</span><span class=\"ds-tag-chip\">Attention</span><span class=\"ds-tag-value\">₱395.00</span></div>",
+      "css": ".ds-tag { display: flex; align-items: center; gap: 12px; padding: 16px; background: #fbf8f0; border: 1px solid #ddd5c4; border-radius: 6px; font-family: 'Barlow', sans-serif; } .ds-dot { width: 10px; height: 10px; border-radius: 2px; background: #2a271f; flex-shrink: 0; } .ds-tag-label { font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #57503f; } .ds-tag-chip { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 2px; background: #8a4d06; color: #f7f2e6; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; } .ds-tag-value { margin-left: auto; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; color: #2a271f; }"
+    },
+    {
+      "name": "Balance State Chip",
+      "kind": "chip",
+      "refersTo": "chip-status",
+      "description": "Named balance state on credit and stock plates — Healthy, Attention, Critical — always with words.",
+      "html": "<span class=\"ds-chip ds-chip-healthy\"><span class=\"ds-rivet\"></span>Healthy</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 2px; background: #1c5c33; color: #f7f2e6; font-family: 'Barlow Condensed', sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; } .ds-chip-healthy { background: #1c5c33; } .ds-chip-attention { background: #8a4d06; } .ds-chip-critical { background: #96290a; } .ds-rivet { width: 5px; height: 5px; border-radius: 9999px; background: currentColor; opacity: 0.85; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Depot Route Board",
+    "overview": "Amara Feeds runs on painted vehicle signage. The interface is drawn the way a Philippine delivery fleet is painted: flat enamel plates on a warm workshop wall, stencil caps on the route board, and hard-edged color that tells you which store a number belongs to. A store's day reads the way a route board does — one big figure, two store columns, a persistent now. The staff dashboard is the driver's own route plate; the admin dashboard is the depot board both stores are pinned to. The world refuses the neutral card grid and the hero-metric template: figures live on painted plates and store columns, not in same-size white cards.",
+    "keyCharacteristics": [
+      "Saturated enamel panels with hard edges and no gradients, on a warm wall ground.",
+      "Route-board capitals (Barlow Condensed) for plates and headers; clean grotesque (Barlow) for body; tabular numerals for every figure.",
+      "A persistent now-mark pulses on today's date; plates stamp in once on load.",
+      "Every zone is labeled by its literal name; named balance states (healthy / attention / critical) carry credit and stock.",
+      "Empty data stays visible as hollow stencil plates rather than disappearing."
+    ],
+    "rules": [
+      { "name": "The Flat Paint Rule", "body": "Enamel plates are flat — hard edges, no gradients, no soft-fill panels. The only depth is the plate's own drop shadow and a 1px dark paint edge.", "section": "colors" },
+      { "name": "The Enamel Reserve Rule", "body": "The saturated store enamels appear only as figures on plates and column headers — never as thin accents scattered over the wall.", "section": "colors" },
+      { "name": "The Tabular Plate Rule", "body": "Every figure (money, quantity, count) uses tabular numerals so numbers on a plate align; figures are never set in proportional figures.", "section": "typography" },
+      { "name": "The Paint Edge Rule", "body": "A filled enamel plate always carries the 1px dark inner edge; without it the plate floats like a card.", "section": "elevation" },
+      { "name": "The Flush Board Rule", "body": "Unpainted paper boards rest flat on the wall — a hairline border at rest, shadow only as a state response. A 1px border under a resting shadow is the ghost card.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do set every figure in tabular numerals and let plates carry the day's one big number.",
+      "Do keep store context in the frame — the store name always renders as text on its enamel.",
+      "Do draw empty data as a hollow stencil plate so absence stays visible.",
+      "Do pair every status chip and store color with its word."
+    ],
+    "donts": [
+      "Don't use gradients, glass, or soft-fill panels — paint is flat and hard-edged.",
+      "Don't scatter the store enamels as thin accents; the enamels own plates and headers only.",
+      "Don't set plate figures in the body grotesque — painted numbers are condensed.",
+      "Don't drop the paint edge or shadow from a filled plate (it stops reading as metal).",
+      "Don't put a kicker above a heading — the heading carries its own weight."
+    ]
+  }
+}
