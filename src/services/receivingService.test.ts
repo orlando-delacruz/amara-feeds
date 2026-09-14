@@ -96,7 +96,8 @@ describe('receivingService', () => {
     ).rejects.toMatchObject({ code: 'validation' })
   })
 
-  it('keeps legacy rider/vehicle references when provided', async () => {    const record = await createReceiving({
+  it('keeps legacy rider/vehicle references when provided', async () => {
+    const record = await createReceiving({
       storeId: 'zeann',
       productId: 'prod-1',
       quantity: 5,

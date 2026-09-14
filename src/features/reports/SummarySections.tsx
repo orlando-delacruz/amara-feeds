@@ -9,15 +9,16 @@ import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Icon } from '@/components/ui/icons'
 import { ListSkeleton, StatsSkeleton } from '@/components/ui/Skeletons'
 import { storeNames } from '@/store/stores'
-import { useBusinessSummaries } from '@/features/dashboard/useBusinessSummaries'
+import { useReportSummaries } from '@/features/reports/useReportSummaries'
 import type { DataTableRow } from '@/components/ui/DataTable'
 import type { StoreId } from '@/domain'
 
 interface SummarySectionsProps {
-  date: string
+  from: string
+  to: string
   /** When given, store-specific summaries are scoped to this store. */
   storeId?: StoreId
-  summaries: ReturnType<typeof useBusinessSummaries>
+  summaries: ReturnType<typeof useReportSummaries>
 }
 
 const Stats = styled.div`
@@ -65,8 +66,16 @@ function productCard(
   )
 }
 
-export function SummarySections({ date, storeId, summaries }: SummarySectionsProps) {
+export function SummarySections({ from, to, storeId, summaries }: SummarySectionsProps) {
   const stockWide = !storeId
+  const rangeLabel =
+    from === to ? (
+      <DateText value={from} />
+    ) : (
+      <>
+        From <DateText value={from} /> to <DateText value={to} />
+      </>
+    )
 
   return (
     <AsyncBoundary
@@ -83,16 +92,9 @@ export function SummarySections({ date, storeId, summaries }: SummarySectionsPro
     >
       {summaries.data && (
         <Stack>
-          <Section
-            title={
-              <>
-                Daily sales by store <DateText value={date} />
-              </>
-            }
-            variant="flush"
-          >
+          <Section title={<>Sales by store {rangeLabel}</>} variant="flush">
             <RecordList
-              caption="Daily sales by store"
+              caption="Sales by store"
               variant="grouped"
               columns={[
                 { key: 'store', header: 'Store' },
@@ -109,7 +111,7 @@ export function SummarySections({ date, storeId, summaries }: SummarySectionsPro
 
           <Stats>
             <StatCard
-              label="Overall daily sales"
+              label="Overall sales"
               value={<MoneyText amountMinor={summaries.data.overall.totalMinor} />}
               caption={`${summaries.data.overall.saleCount} sales`}
               tone="brand"
@@ -162,14 +164,7 @@ export function SummarySections({ date, storeId, summaries }: SummarySectionsPro
             />
           </Section>
 
-          <Section
-            title={
-              <>
-                Received stock <DateText value={date} />
-              </>
-            }
-            variant="flush"
-          >
+          <Section title={<>Received stock {rangeLabel}</>} variant="flush">
             <RecordList
               caption="Received stock"
               variant="grouped"

@@ -19,7 +19,11 @@ export function CartProvider({ children, initialLines }: CartProviderProps) {
       if (existing) {
         return current.map((item) =>
           item.productId === line.productId
-            ? { ...item, quantity: item.quantity + line.quantity, unitPriceMinor: line.unitPriceMinor }
+            ? {
+                ...item,
+                quantity: item.quantity + line.quantity,
+                unitPriceMinor: line.unitPriceMinor,
+              }
             : item,
         )
       }
@@ -33,7 +37,10 @@ export function CartProvider({ children, initialLines }: CartProviderProps) {
 
   const clear = useCallback(() => setLines([]), [])
 
-  const value = useMemo(() => ({ lines, addLine, removeLine, clear }), [lines, addLine, removeLine, clear])
+  const value = useMemo(
+    () => ({ lines, addLine, removeLine, clear }),
+    [lines, addLine, removeLine, clear],
+  )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 }

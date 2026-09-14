@@ -34,33 +34,33 @@ Required** and must not be invented.
 
 ### 3.1 Ground and neutrals (warm workshop wall)
 
-| Token         | Value     | Use                                          |
-| ------------- | --------- | -------------------------------------------- |
-| `neutral.50`  | `#f6f3ec` | Warm wall highlight                          |
-| `neutral.100` | `#efe9de` | Subtle fills                                 |
-| `neutral.200` | `#e0d8c7` | Recessed fills                               |
-| `neutral.300` | `#c8bea9` | —                                            |
-| `neutral.400` | `#7d7463` | Placeholder-adjacent, decorative dots        |
-| `neutral.500` | `#5c5647` | —                                            |
-| `neutral.600` | `#4c473b` | —                                            |
-| `neutral.700` | `#3a362d` | —                                            |
-| `neutral.800` | `#2a271f` | Stencil outline paint, dark tag ink          |
-| `neutral.900` | `#201d17` | —                                            |
-| `surface.page`    | `#f4f0e6` | Page ground (workshop wall)                  |
-| `surface.subtle`  | `#ece6d9` | Filter bars, icon chips, skeleton base       |
-| `surface.card`    | `#fbf8f0` | Unpainted paper boards, cards, list groups   |
-| `surface.overlay` | `rgba(32, 29, 23, 0.5)` | Dialog backdrop                   |
-| `text.primary`    | `#26221a` | Body text                                    |
-| `text.secondary`  | `#57503f` | Secondary text                               |
-| `text.muted`      | `#6f6755` | Muted text                                   |
-| `text.inverse`    | `#f7f2e6` | Stencil cream ink on painted plates          |
-| `border.default`  | `#ddd5c4` | Default hairline borders                     |
-| `border.strong`   | `#c6bca6` | Strong borders                               |
+| Token             | Value                   | Use                                        |
+| ----------------- | ----------------------- | ------------------------------------------ |
+| `neutral.50`      | `#f6f3ec`               | Warm wall highlight                        |
+| `neutral.100`     | `#efe9de`               | Subtle fills                               |
+| `neutral.200`     | `#e0d8c7`               | Recessed fills                             |
+| `neutral.300`     | `#c8bea9`               | —                                          |
+| `neutral.400`     | `#7d7463`               | Placeholder-adjacent, decorative dots      |
+| `neutral.500`     | `#5c5647`               | —                                          |
+| `neutral.600`     | `#4c473b`               | —                                          |
+| `neutral.700`     | `#3a362d`               | —                                          |
+| `neutral.800`     | `#2a271f`               | Stencil outline paint, dark tag ink        |
+| `neutral.900`     | `#201d17`               | —                                          |
+| `surface.page`    | `#f4f0e6`               | Page ground (workshop wall)                |
+| `surface.subtle`  | `#ece6d9`               | Filter bars, icon chips, skeleton base     |
+| `surface.card`    | `#fbf8f0`               | Unpainted paper boards, cards, list groups |
+| `surface.overlay` | `rgba(32, 29, 23, 0.5)` | Dialog backdrop                            |
+| `text.primary`    | `#26221a`               | Body text                                  |
+| `text.secondary`  | `#57503f`               | Secondary text                             |
+| `text.muted`      | `#6f6755`               | Muted text                                 |
+| `text.inverse`    | `#f7f2e6`               | Stencil cream ink on painted plates        |
+| `border.default`  | `#ddd5c4`               | Default hairline borders                   |
+| `border.strong`   | `#c6bca6`               | Strong borders                             |
 
 ### 3.2 Brand (depot enamel — chrome, primary figure, focus)
 
-| Token    | Value     |
-| -------- | --------- |
+| Token        | Value     |
+| ------------ | --------- |
 | `brand.50`   | `#eef2ec` |
 | `brand.100`  | `#dbe3da` |
 | `brand.600`  | `#1d3a2f` |
@@ -73,12 +73,12 @@ daily sales plate, primary actions, and the focus ring. **No gradients** — pai
 
 ### 3.3 Status paints (chips — always used with words)
 
-| Status  | Paint (chip fill) | Wash background | Border    |
-| ------- | ----------------- | --------------- | --------- |
-| Healthy | `#1c5c33`         | `#e6efe3`       | `#c2d7bc` |
-| Attention | `#8a4d06`       | `#fcf0dc`       | `#ecd29f` |
-| Critical | `#96290a`        | `#fbe7e0`       | `#efc3b4` |
-| Info    | `#174a38`         | `#e8f0ec`       | `#c8dcd1` |
+| Status    | Paint (chip fill) | Wash background | Border    |
+| --------- | ----------------- | --------------- | --------- |
+| Healthy   | `#1c5c33`         | `#e6efe3`       | `#c2d7bc` |
+| Attention | `#8a4d06`         | `#fcf0dc`       | `#ecd29f` |
+| Critical  | `#96290a`         | `#fbe7e0`       | `#efc3b4` |
+| Info      | `#174a38`         | `#e8f0ec`       | `#c8dcd1` |
 
 Named balance states (healthy / attention / critical) are the vocabulary for credit and
 stock on the dashboards (`src/features/dashboard/BalanceState.tsx`).
@@ -96,11 +96,11 @@ next to it.
 
 ### 3.5 Focus treatment
 
-| Token         | Value                 |
-| ------------- | --------------------- |
-| `focus.ring`  | `#1d3a2f` (2px outline, 2px offset, soft glow) |
-| `focus.glow`  | `rgba(29, 58, 47, 0.18)` |
-| `focus.dangerGlow` | `rgba(150, 41, 10, 0.16)` |
+| Token              | Value                                          |
+| ------------------ | ---------------------------------------------- |
+| `focus.ring`       | `#1d3a2f` (2px outline, 2px offset, soft glow) |
+| `focus.glow`       | `rgba(29, 58, 47, 0.18)`                       |
+| `focus.dangerGlow` | `rgba(150, 41, 10, 0.16)`                      |
 
 ## 4. Typography
 
@@ -125,12 +125,12 @@ next to it.
 
 ## 6. Breakpoints and Layout
 
-| Token         | Value    | Layout effect                                                                                           |
-| ------------- | -------- | ------------------------------------------------------------------------------------------------------- |
-| base (mobile) | < 430px  | Fixed tab bar (max 5 destinations + More); single column; lists render as cards; chrome truncates        |
-| `phoneWide`   | ≥ 430px  | Plate grids pair into two columns; store columns pair on the admin depot board                           |
-| `tablet`      | ≥ 640px  | Wider forms and lists; lists render as data tables                                                       |
-| `desktop`     | ≥ 1024px | Side navigation replaces the tab bar; content max-width                                                  |
+| Token         | Value    | Layout effect                                                                                     |
+| ------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| base (mobile) | < 430px  | Fixed tab bar (max 5 destinations + More); single column; lists render as cards; chrome truncates |
+| `phoneWide`   | ≥ 430px  | Plate grids pair into two columns; store columns pair on the admin depot board                    |
+| `tablet`      | ≥ 640px  | Wider forms and lists; lists render as data tables                                                |
+| `desktop`     | ≥ 1024px | Side navigation replaces the tab bar; content max-width                                           |
 
 Navigation destinations are identical on all viewports (`docs/UI-UX.md` §6). The dashboard
 is a vertical board: route header, dominant plate, then a two-column plate grid. Fixed

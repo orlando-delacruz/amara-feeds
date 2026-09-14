@@ -31,11 +31,17 @@ export interface DeliveryInfo {
 export interface Sale {
   id: SaleId
   storeId: StoreId
+  /** Business date for the sale (YYYY-MM-DD); may differ from createdAt. */
+  saleDate: string
   customerId?: CustomerId
   paymentType: PaymentType
+  /** Assumed collection channel (for example Cash, GCash, or a custom Other value). */
+  paymentMethod?: string
   lines: SaleLine[]
   delivery?: DeliveryInfo
-  /** assumed: derived total = sum(lines) + delivery fee */
+  /** Assumed discount in minor units, applied once to the whole sale. */
+  discountMinor?: Money
+  /** assumed: derived total = sum(lines) + delivery fee - discount */
   totalMinor: Money
   /** assumed: staff member who recorded the sale; staff cannot modify another staff's records */
   recordedByUserId: UserId
@@ -44,10 +50,16 @@ export interface Sale {
 
 export interface NewSaleInput {
   storeId: StoreId
+  /** Business date for the sale (YYYY-MM-DD); defaults to today. */
+  saleDate?: string
   customerId?: CustomerId
   paymentType: PaymentType
+  /** Assumed collection channel; exact methods are Confirmation Required. */
+  paymentMethod?: string
   lines: SaleLine[]
   delivery?: DeliveryInfo
+  /** Assumed discount in minor units, applied once to the whole sale. */
+  discountMinor?: Money
   /** required when paymentType is 'charge'; opaque selection (options are Confirmation Required) */
   termsId?: PaymentTermsId
   /** assumed: signed-in staff member recording the sale */

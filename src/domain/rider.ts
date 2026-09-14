@@ -20,3 +20,9 @@ export interface NewRiderInput {
   storeId: StoreId
   createdByUserId?: UserId
 }
+
+/** Fields an existing rider may have changed. Omitted fields are left as-is. */
+export interface UpdateRiderInput {
+  name?: string
+  active?: boolean
+}

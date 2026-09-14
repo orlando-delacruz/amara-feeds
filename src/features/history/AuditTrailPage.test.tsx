@@ -30,8 +30,21 @@ describe('AuditTrailPage', () => {
   it('shows admins the business-wide history', async () => {
     renderWithProviders(<AuditTrailPage />, { user: adminUser })
     expect(await screen.findByText('History')).toBeInTheDocument()
-    expect(await screen.findByText('Sale recorded')).toBeInTheDocument()
-    expect(screen.getByText('Payment recorded')).toBeInTheDocument()
+    expect((await screen.findAllByText('Sale recorded')).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Payment recorded').length).toBeGreaterThan(0)
+  })
+
+  it('lets admins filter history by store', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<AuditTrailPage />, { user: adminUser })
+
+    expect((await screen.findAllByText(/Sale at Amara/)).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Sale at Zeann/).length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('radio', { name: 'Zeann' }))
+
+    expect((await screen.findAllByText(/Sale at Zeann/)).length).toBeGreaterThan(0)
+    expect(screen.queryAllByText(/Sale at Amara/)).toHaveLength(0)
   })
 
   it('scopes staff to their own actions plus connected admin decisions', async () => {

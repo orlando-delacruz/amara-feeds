@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDb } from '@/services/mocks/db'
-import {
-  listAuditEvents,
-  listAuditEventsForUser,
-  logAuditEvent,
-} from '@/services/auditService'
+import { listAuditEvents, listAuditEventsForUser, logAuditEvent } from '@/services/auditService'
 import type { User } from '@/domain'
 
 const adminUser: User = {

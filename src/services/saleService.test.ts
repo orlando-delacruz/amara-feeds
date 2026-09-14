@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createSale, listSales } from './saleService'
 import { getStock } from './inventoryService'
-import { listCredits } from './creditService'
+import { listCredits, previewDueDate } from './creditService'
 import { resetDb } from './mocks/db'
-import { addDays, todayIso } from '@/lib/dates'
+import { todayIso } from '@/lib/dates'
 
 describe('saleService', () => {
   beforeEach(() => resetDb())
@@ -34,7 +34,7 @@ describe('saleService', () => {
     expect(obligation).toBeDefined()
     expect(obligation?.balanceMinor).toBe(13000)
     expect(obligation?.status).toBe('outstanding')
-    expect(obligation?.dueDate).toBe(addDays(sale.createdAt, 15))
+    expect(obligation?.dueDate).toBe(await previewDueDate('terms-15', sale.saleDate))
   })
 
   it('requires a customer and terms for charge sales', async () => {
@@ -81,5 +81,46 @@ describe('saleService', () => {
     const amaraToday = await listSales({ storeId: 'amara', date: todayIso() })
     expect(amaraToday.length).toBeGreaterThanOrEqual(2)
     expect(amaraToday.every((sale) => sale.storeId === 'amara')).toBe(true)
+  })
+
+  it('applies a discount and rejects one larger than the sale amount', async () => {
+    const sale = await createSale({
+      storeId: 'amara',
+      saleDate: todayIso(),
+      paymentType: 'cash',
+      paymentMethod: 'GCash',
+      discountMinor: 5000,
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 115000 }],
+      recordedByUserId: 'user-1',
+    })
+    expect(sale.totalMinor).toBe(110000)
+    expect(sale.discountMinor).toBe(5000)
+    expect(sale.paymentMethod).toBe('GCash')
+
+    await expect(
+      createSale({
+        storeId: 'amara',
+        saleDate: todayIso(),
+        paymentType: 'cash',
+        discountMinor: 120000,
+        lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 115000 }],
+        recordedByUserId: 'user-1',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+  })
+
+  it('rejects a blank payment method or an invalid sale date', async () => {
+    const base = {
+      storeId: 'amara' as const,
+      paymentType: 'cash' as const,
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100 }],
+      recordedByUserId: 'user-1',
+    }
+    await expect(createSale({ ...base, paymentMethod: '   ' })).rejects.toMatchObject({
+      code: 'validation',
+    })
+    await expect(createSale({ ...base, saleDate: 'not-a-date' })).rejects.toMatchObject({
+      code: 'validation',
+    })
   })
 })

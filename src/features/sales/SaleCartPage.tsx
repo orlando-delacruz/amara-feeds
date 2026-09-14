@@ -10,8 +10,10 @@ import {
   listVehicles,
   previewDueDate,
 } from '@/services'
+import { PAYMENT_METHOD_PRESETS } from '@/domain'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { DateText } from '@/components/ui/DateText'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MoneyText } from '@/components/ui/MoneyText'
@@ -25,6 +27,7 @@ import { useAsyncData, useMutation } from '@/features/shared'
 import { useSession } from '@/features/session/useSession'
 import { useCart } from '@/features/sales/useCart'
 import { toMinor } from '@/lib/money'
+import { todayIso } from '@/lib/dates'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import type { PaymentType } from '@/domain'
@@ -83,9 +86,13 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
   const { store } = useStore()
   const { user } = useSession()
   const cart = useCart()
+  const [saleDate, setSaleDate] = useState(todayIso())
   const [customerId, setCustomerId] = useState('')
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false)
   const [paymentType, setPaymentType] = useState<PaymentType>('cash')
+  const [paymentMethod, setPaymentMethod] = useState('Cash')
+  const [customPaymentMethod, setCustomPaymentMethod] = useState('')
+  const [discount, setDiscount] = useState('')
   const [termsId, setTermsId] = useState('')
   const [deliveryFee, setDeliveryFee] = useState('')
   const [riderId, setRiderId] = useState('')
@@ -97,8 +104,11 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
   const riders = useAsyncData(() => listRiders({ storeId: store, active: true }), store)
   const vehicles = useAsyncData(() => listVehicles({ storeId: store, active: true }), store)
   const duePreview = useAsyncData(
-    () => (paymentType === 'charge' && termsId ? previewDueDate(termsId) : Promise.resolve(null)),
-    `${paymentType}:${termsId}`,
+    () =>
+      paymentType === 'charge' && termsId
+        ? previewDueDate(termsId, saleDate)
+        : Promise.resolve(null),
+    `${paymentType}:${termsId}:${saleDate}`,
   )
   const save = useMutation(createSale)
 
@@ -108,14 +118,20 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
     (total, line) => total + line.quantity * line.unitPriceMinor,
     0,
   )
-  const totalMinor = itemsTotalMinor + (deliveryFee ? toMinor(Number(deliveryFee)) : 0)
+  const deliveryFeeMinor = deliveryFee ? toMinor(Number(deliveryFee)) : 0
+  const discountMinor = discount ? toMinor(Number(discount)) : 0
+  const totalMinor = itemsTotalMinor + deliveryFeeMinor - discountMinor
+  const resolvedPaymentMethod =
+    paymentMethod === 'Other' ? customPaymentMethod.trim() : paymentMethod
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const sale = await save.run({
       storeId: store,
+      saleDate,
       customerId: customerId || undefined,
       paymentType,
+      paymentMethod: resolvedPaymentMethod,
       lines: cart.lines.map((line) => ({
         productId: line.productId,
         quantity: line.quantity,
@@ -128,6 +144,7 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
             vehicleId: vehicleId || undefined,
           }
         : undefined,
+      discountMinor,
       termsId: paymentType === 'charge' ? termsId : undefined,
       recordedByUserId: user?.id ?? '',
     })
@@ -140,6 +157,11 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
   const customerOptions = (customers.data ?? []).map((customer) => ({
     value: customer.id,
     label: customer.name,
+  }))
+
+  const paymentMethodOptions = PAYMENT_METHOD_PRESETS.map((method) => ({
+    value: method,
+    label: method,
   }))
 
   const productNames = new Map((products.data ?? []).map((product) => [product.id, product.name]))
@@ -175,9 +197,7 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
         <EmptyState
           title="No items in the cart"
           description="Add an item to start building the sale."
-          action={
-            <Button onClick={() => navigate(`${basePath}/new`)}>New item</Button>
-          }
+          action={<Button onClick={() => navigate(`${basePath}/new`)}>New item</Button>}
         />
       </Stack>
     )
@@ -230,6 +250,27 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
             })}
           </Section>
 
+          <Section title="Sale details">
+            <DatePicker
+              id="sale-date"
+              label="Date"
+              value={saleDate}
+              onChange={setSaleDate}
+              hint="Defaults to today. Change it for a backdated sale."
+              required
+            />
+            <p>Location: {storeNames[store]}</p>
+            <TextField
+              id="sale-discount"
+              label="Discount (₱)"
+              type="number"
+              min={0}
+              step="0.01"
+              value={discount}
+              onChange={(event) => setDiscount(event.target.value)}
+            />
+          </Section>
+
           <Section title="Customer">
             <Select
               id="sale-customer"
@@ -273,6 +314,23 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
                 )}
               </>
             )}
+            <Select
+              id="sale-payment-method"
+              label="Mode of payment"
+              options={paymentMethodOptions}
+              value={paymentMethod}
+              onChange={(event) => setPaymentMethod(event.target.value)}
+              required
+            />
+            {paymentMethod === 'Other' && (
+              <TextField
+                id="sale-payment-method-custom"
+                label="Specify payment method"
+                value={customPaymentMethod}
+                onChange={(event) => setCustomPaymentMethod(event.target.value)}
+                required
+              />
+            )}
           </Section>
 
           <Section title="Delivery (optional)">
@@ -308,17 +366,34 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
               <p>
                 Items:{' '}
                 {cart.lines
-                  .map((line) => `${productNames.get(line.productId) ?? 'Not available'} × ${line.quantity}`)
+                  .map(
+                    (line) =>
+                      `${productNames.get(line.productId) ?? 'Not available'} × ${line.quantity}`,
+                  )
                   .join(', ') || 'None'}
               </p>
               <p>
+                Date: <DateText value={saleDate} />
+              </p>
+              <p>Location: {storeNames[store]}</p>
+              <p>
                 Payment: {paymentType === 'charge' ? 'Charge' : 'Cash'}
+                {` · ${resolvedPaymentMethod || 'No payment method'}`}
                 {paymentType === 'charge' &&
                   termsId &&
                   ` · ${termOptions.find((t) => t.value === termsId)?.label ?? ''}`}
               </p>
               <p>
-                Total: <MoneyText amountMinor={totalMinor} />
+                Items total: <MoneyText amountMinor={itemsTotalMinor} />
+              </p>
+              <p>
+                Delivery fee: <MoneyText amountMinor={deliveryFeeMinor} />
+              </p>
+              <p>
+                Discount: <MoneyText amountMinor={discountMinor} />
+              </p>
+              <p>
+                Net total: <MoneyText amountMinor={totalMinor} />
               </p>
             </Review>
             <Actions>

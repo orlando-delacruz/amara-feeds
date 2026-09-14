@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import { createVehicle, listUsers, listVehicles, setVehicleActive } from '@/services'
+import { createVehicle, deleteVehicle, listUsers, listVehicles, setVehicleActive } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DateText } from '@/components/ui/DateText'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -17,6 +18,8 @@ import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
+import { EditVehicleDialog } from './EditVehicleDialog'
+import type { Vehicle } from '@/domain'
 
 const Fields = styled.div`
   display: grid;
@@ -51,12 +54,15 @@ export function VehiclesPage() {
   const { user } = useSession()
   const [label, setLabel] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Vehicle | null>(null)
+  const [deleting, setDeleting] = useState<Vehicle | null>(null)
   const list = useAsyncData(() => listVehicles({ storeId: store }), store)
   const users = useAsyncData(() => listUsers())
   const add = useMutation(createVehicle)
   const toggle = useMutation((input: { id: string; active: boolean }) =>
     setVehicleActive(input.id, input.active),
   )
+  const remove = useMutation(deleteVehicle)
 
   const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
 
@@ -74,6 +80,18 @@ export function VehiclesPage() {
     const saved = await toggle.run({ id, active })
     if (saved) {
       setNotice(active ? `${saved.label} is active.` : `${saved.label} is inactive.`)
+      list.reload()
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleting) {
+      return
+    }
+    const removed = await remove.run(deleting.id)
+    if (removed) {
+      setNotice(`${removed.label} deleted.`)
+      setDeleting(null)
       list.reload()
     }
   }
@@ -126,6 +144,7 @@ export function VehiclesPage() {
         }
       >
         {toggle.error && <Alert variant="danger">{toggle.error}</Alert>}
+        {remove.error && <Alert variant="danger">{remove.error}</Alert>}
         {list.data && list.data.length > 0 && (
           <RecordList
             caption={`Vehicles at ${storeNames[store]}`}
@@ -145,6 +164,9 @@ export function VehiclesPage() {
               createdAt: <DateText value={vehicle.createdAt} />,
               actions: (
                 <RowActions>
+                  <Button size="sm" variant="secondary" onClick={() => setEditing(vehicle)}>
+                    Edit
+                  </Button>
                   <Button
                     size="sm"
                     variant={vehicle.active ? 'danger' : 'secondary'}
@@ -153,12 +175,43 @@ export function VehiclesPage() {
                   >
                     {vehicle.active ? 'Deactivate' : 'Activate'}
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={remove.pending}
+                    onClick={() => setDeleting(vehicle)}
+                  >
+                    Delete
+                  </Button>
                 </RowActions>
               ),
             }))}
           />
         )}
       </AsyncBoundary>
+      <EditVehicleDialog
+        key={editing?.id ?? 'none'}
+        vehicle={editing}
+        onClose={() => setEditing(null)}
+        onSaved={(vehicle) => {
+          setEditing(null)
+          setNotice(`${vehicle.label} updated.`)
+          list.reload()
+        }}
+      />
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete vehicle"
+        message={
+          deleting
+            ? `Delete "${deleting.label}"? This cannot be undone. Vehicles used by sales, receiving, or expenses cannot be deleted.`
+            : ''
+        }
+        confirmLabel="Delete"
+        pending={remove.pending}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </Stack>
   )
 }

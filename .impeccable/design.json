@@ -4,42 +4,241 @@
   "title": "Design System: Amara Feeds — Store Management",
   "extensions": {
     "colorMeta": {
-      "primary": { "role": "primary", "displayName": "Depot Enamel", "canonical": "#1d3a2f", "tonalRamp": ["#0d1a15", "#12261d", "#173226", "#1d3a2f", "#2a4f42", "#3c6355", "#5a7c6f", "#8ba79c"] },
-      "primary-deep": { "role": "primary", "displayName": "Depot Enamel Deep", "canonical": "#152b22", "tonalRamp": ["#0a1511", "#0f2019", "#12261d", "#152b22", "#23443a", "#33564a", "#55756b", "#86a399"] },
-      "cream": { "role": "neutral", "displayName": "Stencil Cream", "canonical": "#f7f2e6", "tonalRamp": ["#d8cbb0", "#e2d7c0", "#eae0cc", "#f0e8d8", "#f7f2e6", "#faf6ee", "#fbf9f3", "#fdfcf8"] },
-      "wall": { "role": "neutral", "displayName": "Workshop Wall", "canonical": "#f4f0e6", "tonalRamp": ["#cfc7b4", "#dbd4c4", "#e6e0d2", "#ece6d9", "#f4f0e6", "#f7f4ec", "#faf8f1", "#fcfbf7"] },
-      "paper": { "role": "neutral", "displayName": "Unpainted Paper", "canonical": "#fbf8f0", "tonalRamp": ["#d6cdb8", "#e2dbc9", "#ede7d8", "#f5f0e5", "#fbf8f0", "#fcfaf4", "#fdfcf8", "#fefefb"] },
-      "ink": { "role": "neutral", "displayName": "Warm Ink", "canonical": "#26221a", "tonalRamp": ["#100e0a", "#17140e", "#1d1a13", "#26221a", "#3a352b", "#4e483d", "#6f685c", "#9c9587"] },
-      "amara-violet": { "role": "secondary", "displayName": "Amara Enamel", "canonical": "#4a2b9e", "tonalRamp": ["#1c0f40", "#2a175f", "#38217d", "#4a2b9e", "#6a4bbd", "#8b70d1", "#ab97de", "#cfc4ee"] },
-      "zeann-rust": { "role": "secondary", "displayName": "Zeann Enamel", "canonical": "#93340e", "tonalRamp": ["#3a1405", "#55200a", "#742a0c", "#93340e", "#b6501f", "#cf7343", "#df9c79", "#efc3ab"] },
-      "healthy": { "role": "tertiary", "displayName": "Healthy Paint", "canonical": "#1c5c33", "tonalRamp": ["#0c2716", "#103a1f", "#164c2a", "#1c5c33", "#2a7a49", "#4a9a68", "#7cb890", "#bcd9c5"] },
-      "attention": { "role": "tertiary", "displayName": "Attention Paint", "canonical": "#8a4d06", "tonalRamp": ["#3a1f02", "#53300a", "#6e3f06", "#8a4d06", "#ad6810", "#cf8a38", "#e3b171", "#f2d9b0"] },
-      "critical": { "role": "tertiary", "displayName": "Critical Paint", "canonical": "#96290a", "tonalRamp": ["#3f0e03", "#5c1805", "#7c2008", "#96290a", "#b9431f", "#d66a48", "#e79b82", "#f2c6b7"] }
+      "primary": {
+        "role": "primary",
+        "displayName": "Depot Enamel",
+        "canonical": "#1d3a2f",
+        "tonalRamp": [
+          "#0d1a15",
+          "#12261d",
+          "#173226",
+          "#1d3a2f",
+          "#2a4f42",
+          "#3c6355",
+          "#5a7c6f",
+          "#8ba79c"
+        ]
+      },
+      "primary-deep": {
+        "role": "primary",
+        "displayName": "Depot Enamel Deep",
+        "canonical": "#152b22",
+        "tonalRamp": [
+          "#0a1511",
+          "#0f2019",
+          "#12261d",
+          "#152b22",
+          "#23443a",
+          "#33564a",
+          "#55756b",
+          "#86a399"
+        ]
+      },
+      "cream": {
+        "role": "neutral",
+        "displayName": "Stencil Cream",
+        "canonical": "#f7f2e6",
+        "tonalRamp": [
+          "#d8cbb0",
+          "#e2d7c0",
+          "#eae0cc",
+          "#f0e8d8",
+          "#f7f2e6",
+          "#faf6ee",
+          "#fbf9f3",
+          "#fdfcf8"
+        ]
+      },
+      "wall": {
+        "role": "neutral",
+        "displayName": "Workshop Wall",
+        "canonical": "#f4f0e6",
+        "tonalRamp": [
+          "#cfc7b4",
+          "#dbd4c4",
+          "#e6e0d2",
+          "#ece6d9",
+          "#f4f0e6",
+          "#f7f4ec",
+          "#faf8f1",
+          "#fcfbf7"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Unpainted Paper",
+        "canonical": "#fbf8f0",
+        "tonalRamp": [
+          "#d6cdb8",
+          "#e2dbc9",
+          "#ede7d8",
+          "#f5f0e5",
+          "#fbf8f0",
+          "#fcfaf4",
+          "#fdfcf8",
+          "#fefefb"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Warm Ink",
+        "canonical": "#26221a",
+        "tonalRamp": [
+          "#100e0a",
+          "#17140e",
+          "#1d1a13",
+          "#26221a",
+          "#3a352b",
+          "#4e483d",
+          "#6f685c",
+          "#9c9587"
+        ]
+      },
+      "amara-violet": {
+        "role": "secondary",
+        "displayName": "Amara Enamel",
+        "canonical": "#4a2b9e",
+        "tonalRamp": [
+          "#1c0f40",
+          "#2a175f",
+          "#38217d",
+          "#4a2b9e",
+          "#6a4bbd",
+          "#8b70d1",
+          "#ab97de",
+          "#cfc4ee"
+        ]
+      },
+      "zeann-rust": {
+        "role": "secondary",
+        "displayName": "Zeann Enamel",
+        "canonical": "#93340e",
+        "tonalRamp": [
+          "#3a1405",
+          "#55200a",
+          "#742a0c",
+          "#93340e",
+          "#b6501f",
+          "#cf7343",
+          "#df9c79",
+          "#efc3ab"
+        ]
+      },
+      "healthy": {
+        "role": "tertiary",
+        "displayName": "Healthy Paint",
+        "canonical": "#1c5c33",
+        "tonalRamp": [
+          "#0c2716",
+          "#103a1f",
+          "#164c2a",
+          "#1c5c33",
+          "#2a7a49",
+          "#4a9a68",
+          "#7cb890",
+          "#bcd9c5"
+        ]
+      },
+      "attention": {
+        "role": "tertiary",
+        "displayName": "Attention Paint",
+        "canonical": "#8a4d06",
+        "tonalRamp": [
+          "#3a1f02",
+          "#53300a",
+          "#6e3f06",
+          "#8a4d06",
+          "#ad6810",
+          "#cf8a38",
+          "#e3b171",
+          "#f2d9b0"
+        ]
+      },
+      "critical": {
+        "role": "tertiary",
+        "displayName": "Critical Paint",
+        "canonical": "#96290a",
+        "tonalRamp": [
+          "#3f0e03",
+          "#5c1805",
+          "#7c2008",
+          "#96290a",
+          "#b9431f",
+          "#d66a48",
+          "#e79b82",
+          "#f2c6b7"
+        ]
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "Route Hero", "purpose": "The single enamel figure of the day — today's sales, overall daily sales." },
-      "title": { "displayName": "Route Title", "purpose": "Page names on route boards and store column headers." },
+      "display": {
+        "displayName": "Route Hero",
+        "purpose": "The single enamel figure of the day — today's sales, overall daily sales."
+      },
+      "title": {
+        "displayName": "Route Title",
+        "purpose": "Page names on route boards and store column headers."
+      },
       "body": { "displayName": "Workshop Body", "purpose": "Prose, lists, and form labels." },
-      "label": { "displayName": "Stencil Label", "purpose": "Plate labels, zone names, and the now-mark." }
+      "label": {
+        "displayName": "Stencil Label",
+        "purpose": "Plate labels, zone names, and the now-mark."
+      }
     },
     "shadows": [
-      { "name": "paint", "value": "0 6px 16px rgba(21, 43, 34, 0.26), 0 2px 5px rgba(21, 43, 34, 0.2)", "purpose": "Enamel plates and route boards only." },
-      { "name": "sm", "value": "0 1px 2px rgba(38, 34, 26, 0.06), 0 2px 6px rgba(38, 34, 26, 0.05)", "purpose": "Elevated surfaces such as dialogs." },
-      { "name": "md", "value": "0 6px 14px rgba(38, 34, 26, 0.12), 0 2px 5px rgba(38, 34, 26, 0.06)", "purpose": "Elevated surfaces, dialogs." },
-      { "name": "lg", "value": "0 14px 30px rgba(38, 34, 26, 0.18), 0 4px 10px rgba(38, 34, 26, 0.08)", "purpose": "Prominent surfaces." },
-      { "name": "raised", "value": "0 10px 22px rgba(38, 34, 26, 0.16), 0 3px 8px rgba(38, 34, 26, 0.08)", "purpose": "Interactive hover lift." }
+      {
+        "name": "paint",
+        "value": "0 6px 16px rgba(21, 43, 34, 0.26), 0 2px 5px rgba(21, 43, 34, 0.2)",
+        "purpose": "Enamel plates and route boards only."
+      },
+      {
+        "name": "sm",
+        "value": "0 1px 2px rgba(38, 34, 26, 0.06), 0 2px 6px rgba(38, 34, 26, 0.05)",
+        "purpose": "Elevated surfaces such as dialogs."
+      },
+      {
+        "name": "md",
+        "value": "0 6px 14px rgba(38, 34, 26, 0.12), 0 2px 5px rgba(38, 34, 26, 0.06)",
+        "purpose": "Elevated surfaces, dialogs."
+      },
+      {
+        "name": "lg",
+        "value": "0 14px 30px rgba(38, 34, 26, 0.18), 0 4px 10px rgba(38, 34, 26, 0.08)",
+        "purpose": "Prominent surfaces."
+      },
+      {
+        "name": "raised",
+        "value": "0 10px 22px rgba(38, 34, 26, 0.16), 0 3px 8px rgba(38, 34, 26, 0.08)",
+        "purpose": "Interactive hover lift."
+      }
     ],
     "motion": [
-      { "name": "plate-stamp", "value": "plateIn 260ms cubic-bezier(0.16, 1, 0.3, 1) both", "purpose": "The hero plate stamps into place once on load." },
-      { "name": "now-pulse", "value": "nowPulse 2s ease-in-out infinite", "purpose": "The persistent now-mark pulses on today's date." },
+      {
+        "name": "plate-stamp",
+        "value": "plateIn 260ms cubic-bezier(0.16, 1, 0.3, 1) both",
+        "purpose": "The hero plate stamps into place once on load."
+      },
+      {
+        "name": "now-pulse",
+        "value": "nowPulse 2s ease-in-out infinite",
+        "purpose": "The persistent now-mark pulses on today's date."
+      },
       { "name": "fast", "value": "120ms ease-out", "purpose": "Feedback transitions." },
       { "name": "base", "value": "200ms ease-out", "purpose": "Standard state transitions." }
     ],
     "breakpoints": [
-      { "name": "base", "value": "< 430px", "purpose": "Single column; tab bar with up to five destinations plus More." },
+      {
+        "name": "base",
+        "value": "< 430px",
+        "purpose": "Single column; tab bar with up to five destinations plus More."
+      },
       { "name": "phoneWide", "value": "430px", "purpose": "Plate grids pair into two columns." },
       { "name": "tablet", "value": "640px", "purpose": "Lists render as data tables." },
-      { "name": "desktop", "value": "1024px", "purpose": "Side navigation replaces the tab bar; content max-width 72rem." }
+      {
+        "name": "desktop",
+        "value": "1024px",
+        "purpose": "Side navigation replaces the tab bar; content max-width 72rem."
+      }
     ]
   },
   "components": [
@@ -103,11 +302,31 @@
       "Empty data stays visible as hollow stencil plates rather than disappearing."
     ],
     "rules": [
-      { "name": "The Flat Paint Rule", "body": "Enamel plates are flat — hard edges, no gradients, no soft-fill panels. The only depth is the plate's own drop shadow and a 1px dark paint edge.", "section": "colors" },
-      { "name": "The Enamel Reserve Rule", "body": "The saturated store enamels appear only as figures on plates and column headers — never as thin accents scattered over the wall.", "section": "colors" },
-      { "name": "The Tabular Plate Rule", "body": "Every figure (money, quantity, count) uses tabular numerals so numbers on a plate align; figures are never set in proportional figures.", "section": "typography" },
-      { "name": "The Paint Edge Rule", "body": "A filled enamel plate always carries the 1px dark inner edge; without it the plate floats like a card.", "section": "elevation" },
-      { "name": "The Flush Board Rule", "body": "Unpainted paper boards rest flat on the wall — a hairline border at rest, shadow only as a state response. A 1px border under a resting shadow is the ghost card.", "section": "elevation" }
+      {
+        "name": "The Flat Paint Rule",
+        "body": "Enamel plates are flat — hard edges, no gradients, no soft-fill panels. The only depth is the plate's own drop shadow and a 1px dark paint edge.",
+        "section": "colors"
+      },
+      {
+        "name": "The Enamel Reserve Rule",
+        "body": "The saturated store enamels appear only as figures on plates and column headers — never as thin accents scattered over the wall.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Plate Rule",
+        "body": "Every figure (money, quantity, count) uses tabular numerals so numbers on a plate align; figures are never set in proportional figures.",
+        "section": "typography"
+      },
+      {
+        "name": "The Paint Edge Rule",
+        "body": "A filled enamel plate always carries the 1px dark inner edge; without it the plate floats like a card.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Flush Board Rule",
+        "body": "Unpainted paper boards rest flat on the wall — a hairline border at rest, shadow only as a state response. A 1px border under a resting shadow is the ghost card.",
+        "section": "elevation"
+      }
     ],
     "dos": [
       "Do set every figure in tabular numerals and let plates carry the day's one big number.",

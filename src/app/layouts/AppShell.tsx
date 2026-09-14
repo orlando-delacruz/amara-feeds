@@ -4,6 +4,8 @@ import { BottomNav } from '@/components/navigation/BottomNav'
 import { SideNav } from '@/components/navigation/SideNav'
 import { TopBar } from '@/components/navigation/TopBar'
 import type { NavItem } from '@/components/navigation/navItems'
+import { useSession } from '@/features/session/useSession'
+import { useHistoryUnread } from '@/features/history/useHistoryUnread'
 
 interface AppShellProps {
   sectionLabel: string
@@ -51,11 +53,13 @@ const Content = styled.main`
 `
 
 export function AppShell({ sectionLabel, navItems }: AppShellProps) {
+  const { user } = useSession()
+  const hasUnread = useHistoryUnread(user ?? undefined)
   return (
     <Shell>
       <SkipLink href="#main-content">Skip to content</SkipLink>
       <TopBar sectionLabel={sectionLabel} />
-      <SideNav items={navItems} />
+      <SideNav items={navItems} badge={hasUnread ? '•' : undefined} />
       <Content id="main-content" tabIndex={-1}>
         <Outlet />
       </Content>

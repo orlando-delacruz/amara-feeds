@@ -25,8 +25,10 @@ export async function listReceiving(
  * Products never received at the store are omitted (they have no price).
  */
 export async function listStorePrices(storeId: StoreId): Promise<Record<string, Money>> {
-  const records = getDb().receiving
-    .filter((record) => record.storeId === storeId && record.sellingPriceMinor !== undefined)
+  const records = getDb()
+    .receiving.filter(
+      (record) => record.storeId === storeId && record.sellingPriceMinor !== undefined,
+    )
     .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
   const prices: Record<string, Money> = {}
   for (const record of records) {
@@ -74,7 +76,9 @@ export async function createReceiving(input: NewReceivingInput): Promise<Receivi
     quantity: input.quantity,
     supplier: input.supplier.trim(),
     costPriceMinor: input.costPriceMinor,
-    ...(input.sellingPriceMinor !== undefined ? { sellingPriceMinor: input.sellingPriceMinor } : {}),
+    ...(input.sellingPriceMinor !== undefined
+      ? { sellingPriceMinor: input.sellingPriceMinor }
+      : {}),
     ...(input.riderId ? { riderId: input.riderId } : {}),
     ...(input.vehicleId ? { vehicleId: input.vehicleId } : {}),
     recordedByUserId: input.recordedByUserId,

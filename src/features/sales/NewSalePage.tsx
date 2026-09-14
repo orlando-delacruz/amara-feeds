@@ -2,10 +2,12 @@ import { useState } from 'react'
 import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { listProducts, listStorePrices } from '@/services'
+import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Stack } from '@/components/ui/Stack'
+import { TextField } from '@/components/ui/TextField'
 import { useAsyncData } from '@/features/shared'
 import { useCart } from '@/features/sales/useCart'
 import { BasketFab } from '@/features/sales/BasketFab'
@@ -57,23 +59,8 @@ const ProductPrice = styled.p`
   min-height: 1.5em;
 `
 
-const QtyRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space.sm};
-`
-
-const QtyButton = styled(Button)`
+const QtyField = styled(TextField)`
   min-height: ${({ theme }) => theme.touch.minTarget};
-  width: 2.5rem;
-  padding: 0;
-`
-
-const QtyValue = styled.span`
-  flex: 1;
-  text-align: center;
-  font-weight: ${({ theme }) => theme.font.weight.semibold};
-  font-variant-numeric: tabular-nums;
 `
 
 interface NewSalePageProps {
@@ -84,17 +71,19 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
   const navigate = useNavigate()
   const { store } = useStore()
   const cart = useCart()
-  const [quantities, setQuantities] = useState<Record<string, number>>({})
+  const [quantities, setQuantities] = useState<Record<string, string>>({})
+  const [quantityError, setQuantityError] = useState<string | null>(null)
 
   const products = useAsyncData(() => listProducts({ status: 'active' }))
   const prices = useAsyncData(() => listStorePrices(store), store)
 
-  function setQuantity(productId: ProductId, quantity: number) {
-    setQuantities((current) => ({ ...current, [productId]: Math.max(1, quantity) }))
-  }
-
-  function addToCart(productId: ProductId, price: Money) {
-    const quantity = quantities[productId] ?? 1
+  function addToCart(productId: ProductId, name: string, price: Money) {
+    const quantity = Number(quantities[productId] ?? '1')
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      setQuantityError(`${name}: quantity must be a whole number of at least 1.`)
+      return
+    }
+    setQuantityError(null)
     cart.addLine({ productId, quantity, unitPriceMinor: price })
   }
 
@@ -110,40 +99,37 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
         }
         size="compact"
       />
+      {quantityError && <Alert variant="danger">{quantityError}</Alert>}
       <CatalogGrid>
         {(products.data ?? []).map((product) => {
           const price = prices.data?.[product.id]
-          const quantity = quantities[product.id] ?? 1
+          const quantity = quantities[product.id] ?? '1'
           return (
             <ProductCard key={product.id}>
               <ProductName>{product.name}</ProductName>
-              <ProductPrice>{price !== undefined ? <MoneyText amountMinor={price} /> : 'No price'}</ProductPrice>
+              <ProductPrice>
+                Price per bag:{' '}
+                {price !== undefined ? <MoneyText amountMinor={price} /> : 'No price'}
+              </ProductPrice>
               {price !== undefined && (
-                <QtyRow>
-                  <QtyButton
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setQuantity(product.id, quantity - 1)}
-                    aria-label={`Decrease ${product.name} quantity`}
-                  >
-                    −
-                  </QtyButton>
-                  <QtyValue aria-label={`${product.name} quantity`}>{quantity}</QtyValue>
-                  <QtyButton
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setQuantity(product.id, quantity + 1)}
-                    aria-label={`Increase ${product.name} quantity`}
-                  >
-                    +
-                  </QtyButton>
-                </QtyRow>
+                <QtyField
+                  id={`sale-quantity-${product.id}`}
+                  label="Quantity"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={quantity}
+                  onChange={(event) =>
+                    setQuantities((current) => ({ ...current, [product.id]: event.target.value }))
+                  }
+                  required
+                />
               )}
               <Button
                 variant="primary"
                 size="sm"
                 disabled={price === undefined}
-                onClick={() => price !== undefined && addToCart(product.id, price)}
+                onClick={() => price !== undefined && addToCart(product.id, product.name, price)}
               >
                 Add to cart
               </Button>

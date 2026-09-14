@@ -52,9 +52,9 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.4 Sale — Confirmed
 
-- **Concept:** a store-specific completed sale recording customer (optional), purchased items with quantities, payment type (cash or charge), and delivery details when applicable.
-- **Source:** REQ-SALE-001–005; `docs/PROJECT.md` §4.
-- **Boundary:** editing, cancellation, and reversal behavior are Confirmation Required; no additional sale attributes defined here.
+- **Concept:** a store-specific completed sale recording customer (optional), purchased items with quantities, business sale date, payment type (cash or charge), mode of payment, an optional one-time discount, and delivery details when applicable. Net total = items + delivery fee − discount.
+- **Source:** REQ-SALE-001–007; `docs/PROJECT.md` §4.
+- **Boundary:** the business sale date defaults to today, may be backdated, and drives credit due dates (independent of creation time); exact payment-method vocabulary and discount policy are Confirmation Required; editing, cancellation, and reversal behavior are Confirmation Required; no additional sale attributes defined here.
 
 ### 4.5 Purchased items (sale lines) — Confirmed
 
@@ -107,14 +107,14 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 ### 4.13 Rider — Confirmed (user-confirmed addition)
 
 - **Concept:** a delivery rider associated with one store, selectable on a sale's delivery details.
-- **Source:** REQ-DELIV-001–003.
-- **Boundary:** per-store (never shared); exact rider fields beyond name, store, and active state are Confirmation Required.
+- **Source:** REQ-DELIV-001–004.
+- **Boundary:** per-store (never shared); exact rider fields beyond name, store, and active state are Confirmation Required. A rider referenced by sales, receiving, or expenses is retained (delete is refused) so history stays intact.
 
 ### 4.14 Vehicle type — Confirmed (user-confirmed addition)
 
 - **Concept:** a vehicle type (e.g. Motorcycle, Tricycle, Van) associated with one store, selectable on a sale's delivery details.
-- **Source:** REQ-DELIV-001–003.
-- **Boundary:** per-store (never shared); exact vehicle fields beyond label, store, and active state are Confirmation Required.
+- **Source:** REQ-DELIV-001–004.
+- **Boundary:** per-store (never shared); exact vehicle fields beyond label, store, and active state are Confirmation Required. A vehicle referenced by sales, receiving, or expenses is retained (delete is refused) so history stays intact.
 
 ### 4.15 Expense — Confirmed (user-confirmed addition)
 

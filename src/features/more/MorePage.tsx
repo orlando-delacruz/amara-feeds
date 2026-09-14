@@ -7,6 +7,7 @@ import { Stack } from '@/components/ui/Stack'
 import { navItemsForRole } from '@/components/navigation/navItems'
 import { NavIcon } from '@/components/navigation/icons'
 import { useSession } from '@/features/session/useSession'
+import { useHistoryUnread } from '@/features/history/useHistoryUnread'
 
 const Group = styled.ul`
   display: flex;
@@ -26,10 +27,25 @@ const GroupItem = styled.li`
   }
 `
 
+const TrailingBadge = styled.span`
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background-color: ${({ theme }) => theme.color.status.danger.text};
+  color: ${({ theme }) => theme.color.text.inverse};
+  font-family: ${({ theme }) => theme.font.family};
+  font-size: 11px;
+  font-weight: ${({ theme }) => theme.font.weight.bold};
+  line-height: 18px;
+  text-align: center;
+`
+
 export function MorePage() {
   const { user, signOut } = useSession()
   const navigate = useNavigate()
   const overflow = navItemsForRole(user?.role ?? 'staff').filter((item) => !item.primary)
+  const hasUnread = useHistoryUnread(user ?? undefined)
 
   function handleSignOut() {
     signOut()
@@ -47,6 +63,9 @@ export function MorePage() {
                 leading={<NavIcon name={item.icon} />}
                 title={item.label}
                 subtitle={item.description}
+                trailing={
+                  item.to === '/history' && hasUnread ? <TrailingBadge>•</TrailingBadge> : undefined
+                }
                 href={item.to}
               />
             </GroupItem>

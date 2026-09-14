@@ -115,14 +115,17 @@ describe('SaleCartPage', () => {
       { user: staffUser },
     )
 
-    const rice = (await screen.findByRole('heading', { name: 'Rice 25kg' })).closest('div') as HTMLElement
-    await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))
-    await user.click(within(rice).getByRole('button', { name: 'Increase Rice 25kg quantity' }))
+    const rice = (await screen.findByRole('heading', { name: 'Rice 25kg' })).closest(
+      'div',
+    ) as HTMLElement
+    const qtyField = within(rice).getByRole('spinbutton', { name: 'Quantity' })
+    await user.clear(qtyField)
+    await user.type(qtyField, '2')
     await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))
     await user.click(screen.getByRole('button', { name: 'Open cart' }))
 
     expect(await screen.findByText('Rice 25kg')).toBeInTheDocument()
-    expect(screen.getByText(/3 ×/)).toBeInTheDocument()
+    expect(screen.getByText(/2 ×/)).toBeInTheDocument()
     expect(screen.getAllByText('Rice 25kg')).toHaveLength(1)
   })
 

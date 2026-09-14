@@ -38,6 +38,8 @@ Core constraints: initial/core project budget of ₱10,000; target completion Se
 - REQ-SALE-003 (**Must**): Payment type MUST be either cash or charge.
 - REQ-SALE-004 (**Must**): Delivery information MUST support delivery fee, rider, and vehicle when applicable.
 - REQ-SALE-005 (**Must**): Store-specific sales MUST remain distinguishable for daily sales/remittance reporting.
+- REQ-SALE-006 (**Must**): A sale MUST record its business date (defaults to today; backdating allowed) independent of when it was created, and credit due dates MUST derive from that business date.
+- REQ-SALE-007 (**Must**): A sale MUST record the mode of payment (assumed presets: Cash, GCash, Maya, Bank Transfer, Check, or a free-text Other) and MAY record a one-time discount; the net total MUST be items + delivery fee − discount.
 
 Acceptance: given sales recorded at Amara and Zeann on the same day, daily sales/remittance can be reported separately per store.
 
@@ -75,6 +77,7 @@ Acceptance: given a sale is successfully saved, the relevant store's inventory d
 - REQ-DELIV-001 (**Must**): The system MUST maintain a list of delivery riders per store; staff manage their own store's riders and admin manages both stores.
 - REQ-DELIV-002 (**Must**): The system MUST maintain a list of vehicle types per store; staff manage their own store's vehicles and admin manages both stores.
 - REQ-DELIV-003 (**Must**): Delivery on a sale MUST be recorded by selecting from the current store's active riders and vehicle types; inactive entries MUST NOT be selectable.
+- REQ-DELIV-004 (**Must**): Riders and vehicle types MUST support full create, read, update (rename and activate/deactivate), and delete. A rider or vehicle referenced by any sale, receiving, or expense record MUST NOT be deletable; it MUST be deactivated instead so history stays intact.
 
 ## 9b. Expense Tracking Requirements
 
@@ -119,7 +122,7 @@ Acceptance: given a staff member creates a product, it remains inactive until ap
 - REQ-REP-001 (**Must**): The system MUST support Excel export of the agreed business summaries.
 - REQ-REP-002 (**Must**): The system MUST support printing of the agreed business summaries.
 - REQ-REP-003 (**Confirmation Required**): Exact report columns and formats require explicit confirmation.
-- REQ-REP-004 (**Must**): Staff reports MUST scope store-specific summaries (daily sales, current stock, received stock) to the staff member's assigned store; shared credit and payments remain visible per the shared-credit model.
+- REQ-REP-004 (**Must**): Reports MUST be admin-only; staff MUST NOT access the reports surface or see it in navigation. Reports MUST support selecting a From/To date range, and the Excel export MUST cover that range's sale lines (date, location, customer, item, quantity, price, amount, type, delivery fee, discount, net, rider, vehicle).
 
 ## 14. Responsive and Accessibility Requirements
 

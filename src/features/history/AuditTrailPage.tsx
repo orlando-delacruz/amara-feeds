@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { listUsers } from '@/services'
 import { AUDIT_ACTION_LABELS, listAuditEventsForUser } from '@/services/auditService'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
@@ -14,20 +14,31 @@ import { StoreBadge } from '@/components/ui/StoreBadge'
 import { useAsyncData } from '@/features/shared'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
+import type { StoreId } from '@/domain'
+import { setHistoryLastSeen } from './historySeen'
 
 export function AuditTrailPage() {
   const { user } = useSession()
   const [date, setDate] = useState('')
   const [filter, setFilter] = useState<'all' | 'mine' | 'admin'>('all')
+  const [storeFilter, setStoreFilter] = useState<'all' | StoreId>('all')
   const users = useAsyncData(() => listUsers())
   const trail = useAsyncData(
-    () => (user ? listAuditEventsForUser(user, date ? { date } : {}) : Promise.resolve([])),
-    `${user?.id}:${user?.role}:${date}`,
+    () =>
+      user
+        ? listAuditEventsForUser(user, {
+            ...(date ? { date } : {}),
+            ...(storeFilter !== 'all' ? { storeId: storeFilter } : {}),
+          })
+        : Promise.resolve([]),
+    `${user?.id}:${user?.role}:${date}:${storeFilter}`,
   )
 
-  const userNames = new Map(
-    (users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]),
-  )
+  useEffect(() => {
+    setHistoryLastSeen(new Date().toISOString())
+  }, [])
+
+  const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
 
   const visible = (trail.data ?? []).filter((event) => {
     if (!user || user.role === 'admin') {
@@ -68,6 +79,18 @@ export function AuditTrailPage() {
             { value: 'admin', label: user?.role === 'admin' ? 'Admins' : 'Admin replies' },
           ]}
         />
+        {user?.role === 'admin' && (
+          <SegmentedControl
+            label="Store"
+            value={storeFilter}
+            onChange={(next) => setStoreFilter(next as 'all' | StoreId)}
+            options={[
+              { value: 'all', label: 'All stores' },
+              { value: 'amara', label: 'Amara' },
+              { value: 'zeann', label: 'Zeann' },
+            ]}
+          />
+        )}
       </FilterBar>
       <AsyncBoundary
         loading={trail.loading || users.loading}

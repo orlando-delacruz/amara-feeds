@@ -1,6 +1,7 @@
 import type { CustomerId, NewSaleInput, Sale, SaleId } from '@/domain'
 import type { StoreId } from '@/domain'
-import { isSameDate } from '@/lib/dates'
+import type { Money } from '@/lib/money'
+import { todayIso } from '@/lib/dates'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
 import { applyStockDelta } from './inventoryService'
@@ -12,15 +13,27 @@ function cloneSale(sale: Sale): Sale {
   return { ...sale, lines: sale.lines.map((line) => ({ ...line })) }
 }
 
+function saleDay(sale: Sale): string {
+  return sale.saleDate
+}
+
 export async function listSales(
-  filter: { storeId?: StoreId; date?: string; customerId?: CustomerId } = {},
+  filter: {
+    storeId?: StoreId
+    date?: string
+    from?: string
+    to?: string
+    customerId?: CustomerId
+  } = {},
 ): Promise<Sale[]> {
   return getDb()
     .sales.filter(
       (sale) =>
         (!filter.storeId || sale.storeId === filter.storeId) &&
         (!filter.customerId || sale.customerId === filter.customerId) &&
-        (!filter.date || isSameDate(sale.createdAt, filter.date)),
+        (!filter.date || saleDay(sale) === filter.date) &&
+        (!filter.from || sale.saleDate >= filter.from) &&
+        (!filter.to || sale.saleDate <= filter.to),
     )
     .map(cloneSale)
 }
@@ -42,6 +55,16 @@ export async function createSale(input: NewSaleInput): Promise<Sale> {
     if (line.quantity <= 0) {
       throw new ServiceError('validation', 'Item quantity must be greater than zero.')
     }
+    if (line.unitPriceMinor < 0) {
+      throw new ServiceError('validation', 'Item price cannot be negative.')
+    }
+  }
+  if (input.paymentMethod !== undefined && input.paymentMethod.trim().length === 0) {
+    throw new ServiceError('validation', 'Payment method cannot be blank.')
+  }
+  const saleDate = input.saleDate?.trim() || todayIso()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(saleDate) || Number.isNaN(Date.parse(saleDate))) {
+    throw new ServiceError('validation', 'Sale date must be a valid date.')
   }
   if (input.paymentType === 'charge') {
     if (!input.customerId) {
@@ -54,17 +77,27 @@ export async function createSale(input: NewSaleInput): Promise<Sale> {
 
   const createdAt = new Date().toISOString()
   const lines = input.lines.map((line) => ({ ...line }))
-  const totalMinor =
-    lines.reduce((total, line) => total + line.quantity * line.unitPriceMinor, 0) +
-    (input.delivery?.feeMinor ?? 0)
+  const itemsMinor = lines.reduce((total, line) => total + line.quantity * line.unitPriceMinor, 0)
+  const deliveryFeeMinor = input.delivery?.feeMinor ?? 0
+  const discountMinor: Money = input.discountMinor ?? 0
+  if (discountMinor < 0) {
+    throw new ServiceError('validation', 'Discount cannot be negative.')
+  }
+  if (discountMinor > itemsMinor + deliveryFeeMinor) {
+    throw new ServiceError('validation', 'Discount cannot be more than the sale amount.')
+  }
+  const totalMinor = itemsMinor + deliveryFeeMinor - discountMinor
 
   const sale: Sale = {
     id: nextId('sale'),
     storeId: input.storeId,
+    saleDate,
     customerId: input.customerId,
     paymentType: input.paymentType,
+    paymentMethod: input.paymentMethod?.trim() || undefined,
     lines,
     delivery: input.delivery,
+    discountMinor,
     totalMinor,
     recordedByUserId: input.recordedByUserId,
     createdAt,
@@ -81,6 +114,7 @@ export async function createSale(input: NewSaleInput): Promise<Sale> {
       saleId: sale.id,
       termsId: input.termsId,
       amountMinor: totalMinor,
+      saleDate,
       createdAt,
     })
   }

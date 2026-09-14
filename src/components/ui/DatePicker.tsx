@@ -384,12 +384,7 @@ export function DatePicker({
           <FieldValue>{value ? formatDate(`${value}T12:00:00`) : 'Select a date'}</FieldValue>
         </FieldButton>
         {open && (
-          <Calendar
-            id={dialogId}
-            role="dialog"
-            aria-modal="false"
-            aria-label={`${label} calendar`}
-          >
+          <Calendar id={dialogId} role="dialog" aria-modal="false" aria-label={`${label} calendar`}>
             <CalendarHead>
               <NavButton type="button" aria-label="Previous month" onClick={() => shiftMonth(-1)}>
                 ‹

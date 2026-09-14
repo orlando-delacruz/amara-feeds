@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -63,5 +63,54 @@ describe('RidersPage', () => {
     await actor.click(screen.getByRole('radio', { name: 'Zeann' }))
     expect(await screen.findByText('Paolo Lim')).toBeInTheDocument()
     expect(screen.queryByText('Jojo Ramos')).not.toBeInTheDocument()
+  })
+
+  it('renames a rider from its row', async () => {
+    const actor = userEvent.setup()
+    renderRiders()
+    const row = (await screen.findByText('Jojo Ramos')).closest('tr') as HTMLElement
+
+    await actor.click(within(row).getByRole('button', { name: 'Edit' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Edit rider' })
+    const nameInput = within(dialog).getByLabelText(/^Rider name/)
+    await actor.clear(nameInput)
+    await actor.type(nameInput, 'Jojo Dela Cruz')
+    await actor.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+    expect(await screen.findByText('Jojo Dela Cruz updated.')).toBeInTheDocument()
+    expect(screen.getByText('Jojo Dela Cruz')).toBeInTheDocument()
+  })
+
+  it('deletes a rider that is not referenced by records', async () => {
+    const actor = userEvent.setup()
+    renderRiders()
+    await screen.findByText('Jojo Ramos')
+
+    await actor.type(screen.getByLabelText(/^Rider name/), 'Standby Rider')
+    await actor.click(screen.getByRole('button', { name: 'Add rider' }))
+    await screen.findByText('Standby Rider added.')
+
+    const row = screen.getByText('Standby Rider').closest('tr') as HTMLElement
+    await actor.click(within(row).getByRole('button', { name: 'Delete' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete rider' })
+    await actor.click(within(dialog).getByRole('button', { name: 'Delete' }))
+
+    expect(await screen.findByText('Standby Rider deleted.')).toBeInTheDocument()
+    expect(screen.queryByText('Standby Rider')).not.toBeInTheDocument()
+  })
+
+  it('refuses to delete a rider referenced by records', async () => {
+    const actor = userEvent.setup()
+    renderRiders()
+    const row = (await screen.findByText('Jojo Ramos')).closest('tr') as HTMLElement
+
+    await actor.click(within(row).getByRole('button', { name: 'Delete' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete rider' })
+    await actor.click(within(dialog).getByRole('button', { name: 'Delete' }))
+
+    expect(
+      await screen.findByText(/used by existing sales, receiving, or expenses/),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Jojo Ramos')).toBeInTheDocument()
   })
 })

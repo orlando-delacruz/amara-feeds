@@ -38,13 +38,6 @@ export const staffNavItems: NavItem[] = [
     description: 'Your actions and admin replies',
   },
   {
-    to: '/reports',
-    label: 'Reports',
-    icon: 'reports',
-    primary: false,
-    description: 'Daily summaries and printing',
-  },
-  {
     to: '/riders',
     label: 'Riders',
     icon: 'rider',

@@ -108,9 +108,9 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.1 Sales
 
-- **Sequence.** Browse the product catalog (all active products) on the entry page → pick a quantity per product and confirm with "Add to cart", staying on the catalog while the floating basket badge counts the total → open the floating basket to reach the Cart page → the Cart page lists the accumulated items (duplicate products merge quantities) with a "New item" action back to the catalog → optional customer selection or creation → payment type (cash or charge; terms selection and automatic due date for charge) → delivery details when applicable → review → save → success or failure feedback.
-- **Requirements.** Customer selection stays optional (REQ-CUST-002); payment type is cash or charge (REQ-SALE-003); delivery supports fee, rider, and vehicle (REQ-SALE-004); store-specific sales stay distinguishable (REQ-SALE-005).
-- **Constraints.** The unit price is automatic per store (the selling price of the product's most recent receiving record); no manual price entry. Products never received at the store show "No price" and cannot be added. A successful save triggers the confirmed stock deduction behavior (REQ-INV-002). No additional sale fields and no editing or cancellation rules are defined here.
+- **Sequence.** Browse the product catalog (all active products) on the entry page → type a quantity per product and confirm with "Add to cart", staying on the catalog while the floating basket badge counts the total → open the floating basket to reach the Cart page → the Cart page lists the accumulated items (duplicate products merge quantities) with a "New item" action back to the catalog → optional customer selection or creation → sale date (defaults to today, backdatable) → payment type (cash or charge; terms selection and automatic due date for charge) → mode of payment (Cash, GCash, Maya, Bank Transfer, Check, or Other with a free-text value) → optional discount → delivery details when applicable → review (items, delivery fee, discount, net) → save → success or failure feedback.
+- **Requirements.** Customer selection stays optional (REQ-CUST-002); payment type is cash or charge (REQ-SALE-003); delivery supports fee, rider, and vehicle (REQ-SALE-004); store-specific sales stay distinguishable (REQ-SALE-005); business date, mode of payment, and discount are captured with the net total as items + fee − discount (REQ-SALE-006, REQ-SALE-007).
+- **Constraints.** The unit price is automatic per store (the selling price of the product's most recent receiving record); no manual price entry. Products never received at the store show "No price" and cannot be added. A successful save triggers the confirmed stock deduction behavior (REQ-INV-002). No editing or cancellation rules are defined here.
 
 ### 7.2 Customers
 
@@ -142,8 +142,8 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.7 Dashboard / Reports
 
-- **Behavior.** Admin users consume daily sales by store, overall daily sales, outstanding credit, payments, current stock, and received stock (REQ-DASH-001 through REQ-DASH-006); Excel export and printing are available from the summaries (REQ-REP-001, REQ-REP-002).
-- **Constraints.** "Other useful summaries" stay flexible within agreed scope (REQ-DASH-007); exact report columns and formats are Confirmation Required and are never defined here.
+- **Behavior.** Admin users consume sales by store, overall sales, outstanding credit, payments, current stock, and received stock over a selected **From/To** date range (REQ-DASH-001 through REQ-DASH-006); the Excel export covers the same range (REQ-REP-001). Staff dashboards show today's sales, stock, outstanding credit, and weekly sales. The History destination shows an unread indicator until it is opened, and admins can filter History by store (All stores / Amara / Zeann), with business-wide events shown only under All stores. Reports are admin-only: staff never see the Reports route or navigation entry (REQ-REP-004).
+- **Constraints.** "Other useful summaries" stay flexible within agreed scope (REQ-DASH-007); exact report columns and formats are Confirmation Required and are never defined here beyond the implemented sale-line columns.
 
 ### 7.8 Users / Staff
 
@@ -157,7 +157,7 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.10 Riders and Vehicles
 
-- **Behavior.** Staff manage their own store's delivery riders and vehicle types; admin manage both stores via the store control. Each page lists, adds, and activates/deactivates entries, with the store context always visible. A sale's delivery details select from the current store's active riders and vehicle types.
+- **Behavior.** Staff manage their own store's delivery riders and vehicle types; admin manage both stores via the store control. Each page lists, adds, edits (rename), activates/deactivates, and deletes entries, with the store context always visible. Deletion asks for confirmation; entries used by existing sales, receiving, or expenses are refused with an explanation and must be deactivated instead. A sale's delivery details select from the current store's active riders and vehicle types.
 - **Constraints.** Exact rider/vehicle fields are Confirmation Required.
 
 ### 7.11 Expenses

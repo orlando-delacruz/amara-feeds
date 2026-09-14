@@ -6,9 +6,11 @@ import {
   getOutstandingCreditTotal,
   getOverallDailySales,
   getOverallMonthlySales,
+  getOverallSalesInRange,
   getOverallWeeklySales,
   getPaymentsSummary,
   getReceivedStock,
+  getSalesByStoreInRange,
   getWeeklySalesByStore,
 } from './dashboardService'
 import { recordPayment } from './paymentService'
@@ -28,6 +30,22 @@ describe('dashboardService', () => {
     const overall = await getOverallDailySales(todayIso())
     expect(overall.saleCount).toBe(3)
     expect(overall.totalMinor).toBe((amara?.totalMinor ?? 0) + (zeann?.totalMinor ?? 0))
+  })
+
+  it('aggregates sales, payments, and received stock over a date range', async () => {
+    const today = todayIso()
+    const perStore = await getSalesByStoreInRange(today, today)
+    const overall = await getOverallSalesInRange(today, today)
+    expect(overall.saleCount).toBe(3)
+    expect(perStore.reduce((sum, row) => sum + row.saleCount, 0)).toBe(3)
+
+    const paymentsByRange = await getPaymentsSummary({ from: today, to: today })
+    const paymentsByDate = await getPaymentsSummary({ date: today })
+    expect(paymentsByRange).toEqual(paymentsByDate)
+
+    const receivedByRange = await getReceivedStock({ from: today, to: today })
+    const receivedByDate = await getReceivedStock({ date: today })
+    expect(receivedByRange).toEqual(receivedByDate)
   })
 
   it('reports weekly sales as the trailing 7 days including yesterday', async () => {

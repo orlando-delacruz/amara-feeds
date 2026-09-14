@@ -200,8 +200,6 @@ describe('ReceivingPage', () => {
     const rejectDialog = await screen.findByRole('dialog', { name: 'Reject item' })
     await user.click(within(rejectDialog).getByRole('button', { name: 'Reject' }))
 
-    expect(
-      await screen.findByText('Cooking Oil 1L was rejected and removed.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Cooking Oil 1L was rejected and removed.')).toBeInTheDocument()
   })
 })

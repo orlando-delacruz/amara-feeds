@@ -109,9 +109,10 @@ export function ReceivingPage() {
   const [tab, setTab] = useState<'pending' | 'received'>('pending')
   const [notice, setNotice] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const [decision, setDecision] = useState<{ product: Product; action: 'approve' | 'reject' } | null>(
-    null,
-  )
+  const [decision, setDecision] = useState<{
+    product: Product
+    action: 'approve' | 'reject'
+  } | null>(null)
   const list = useAsyncData(() => listReceiving({ storeId: store }), store)
   const products = useAsyncData(() => listProducts())
   const users = useAsyncData(() => listUsers())
@@ -179,7 +180,9 @@ export function ReceivingPage() {
       quantity: Number(form.quantity),
       supplier: form.supplier,
       costPriceMinor: toMinor(Number(form.costPrice)),
-      ...(form.sellingPrice.trim() ? { sellingPriceMinor: toMinor(Number(form.sellingPrice)) } : {}),
+      ...(form.sellingPrice.trim()
+        ? { sellingPriceMinor: toMinor(Number(form.sellingPrice)) }
+        : {}),
       recordedByUserId: user?.id ?? '',
     })
     if (record) {

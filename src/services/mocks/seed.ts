@@ -1,4 +1,4 @@
-import { addDays } from '@/lib/dates'
+import { addDays, toDateOnly } from '@/lib/dates'
 import type {
   CreditObligation,
   Customer,
@@ -177,8 +177,10 @@ export function createSeedData(): MockDatabase {
     {
       id: 'sale-1',
       storeId: 'amara',
+      saleDate: toDateOnly(new Date(today)),
       customerId: 'cust-1',
       paymentType: 'cash',
+      paymentMethod: 'Cash',
       lines: [{ productId: 'prod-1', quantity: 2, unitPriceMinor: 115000 }],
       totalMinor: 230000,
       recordedByUserId: 'user-1',
@@ -187,8 +189,10 @@ export function createSeedData(): MockDatabase {
     {
       id: 'sale-2',
       storeId: 'zeann',
+      saleDate: toDateOnly(new Date(today)),
       customerId: 'cust-2',
       paymentType: 'charge',
+      paymentMethod: 'GCash',
       lines: [{ productId: 'prod-2', quantity: 3, unitPriceMinor: 6500 }],
       totalMinor: 19500,
       recordedByUserId: 'user-2',
@@ -197,7 +201,9 @@ export function createSeedData(): MockDatabase {
     {
       id: 'sale-3',
       storeId: 'amara',
+      saleDate: toDateOnly(new Date(today)),
       paymentType: 'cash',
+      paymentMethod: 'Cash',
       lines: [{ productId: 'prod-4', quantity: 1, unitPriceMinor: 9500 }],
       totalMinor: 9500,
       recordedByUserId: 'user-1',
@@ -206,8 +212,10 @@ export function createSeedData(): MockDatabase {
     {
       id: 'sale-4',
       storeId: 'zeann',
+      saleDate: toDateOnly(new Date(yesterday)),
       customerId: 'cust-1',
       paymentType: 'cash',
+      paymentMethod: 'Maya',
       lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 120000 }],
       totalMinor: 120000,
       recordedByUserId: 'user-2',

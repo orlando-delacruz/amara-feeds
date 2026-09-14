@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createVehicle, listVehicles, setVehicleActive } from './vehicleService'
+import {
+  createVehicle,
+  deleteVehicle,
+  listVehicles,
+  setVehicleActive,
+  updateVehicle,
+} from './vehicleService'
 import { resetDb } from './mocks/db'
 
 describe('vehicleService', () => {
@@ -37,5 +43,34 @@ describe('vehicleService', () => {
     expect(
       (await listVehicles({ storeId: 'amara', active: true })).map((vehicle) => vehicle.id),
     ).not.toContain(created.id)
+  })
+
+  it('renames a vehicle and toggles its active state', async () => {
+    const created = await createVehicle({ label: 'E-bike', storeId: 'amara' })
+    const renamed = await updateVehicle(created.id, { label: 'E-Trike' })
+    expect(renamed.label).toBe('E-Trike')
+    const deactivated = await updateVehicle(created.id, { active: false })
+    expect(deactivated.active).toBe(false)
+  })
+
+  it('rejects a blank vehicle type on update', async () => {
+    const created = await createVehicle({ label: 'E-bike', storeId: 'amara' })
+    await expect(updateVehicle(created.id, { label: '   ' })).rejects.toMatchObject({
+      code: 'validation',
+    })
+  })
+
+  it('deletes a vehicle that is not referenced by any record', async () => {
+    const created = await createVehicle({ label: 'Pedicab', storeId: 'amara' })
+    const removed = await deleteVehicle(created.id)
+    expect(removed.label).toBe('Pedicab')
+    expect(
+      (await listVehicles({ storeId: 'amara' })).some((vehicle) => vehicle.id === created.id),
+    ).toBe(false)
+  })
+
+  it('refuses to delete a vehicle referenced by expenses', async () => {
+    await expect(deleteVehicle('vehicle-2')).rejects.toMatchObject({ code: 'conflict' })
+    expect((await listVehicles()).some((vehicle) => vehicle.id === 'vehicle-2')).toBe(true)
   })
 })

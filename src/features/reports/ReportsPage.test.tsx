@@ -34,28 +34,35 @@ function renderReports(path = '/admin/reports', user: User = adminUser) {
 describe('ReportsPage', () => {
   beforeEach(() => resetDb())
 
-  it('shows the agreed summaries for the selected date', async () => {
+  it('shows the agreed summaries for the selected range', async () => {
     renderReports()
 
-    expect((await screen.findAllByText(/Daily sales by store/)).length).toBeGreaterThan(0)
-    expect(screen.getByText(/Overall daily sales/)).toBeInTheDocument()
+    expect((await screen.findAllByText(/Sales by store/)).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Overall sales/)).toBeInTheDocument()
     expect(screen.getByText(/Outstanding credit/)).toBeInTheDocument()
     expect(screen.getByText(/Payments/)).toBeInTheDocument()
     expect(screen.getAllByText(/Current stock/).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Received stock/).length).toBeGreaterThan(0)
   })
 
-  it('provides an Export PDF action', async () => {
+  it('offers From and To date pickers for the report range', async () => {
     renderReports()
-    await screen.findAllByText(/Daily sales by store/)
-    expect(screen.getByRole('button', { name: 'Export PDF' })).toBeInTheDocument()
+    await screen.findAllByText(/Sales by store/)
+
+    expect(screen.getByRole('button', { name: 'From' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'To' })).toBeInTheDocument()
   })
 
-  it('scopes staff reports to the assigned store only', async () => {
-    renderReports('/reports', staffUser)
-    await screen.findAllByText(/Daily sales by store/)
+  it('provides an Export Excel action', async () => {
+    renderReports()
+    await screen.findAllByText(/Sales by store/)
+    expect(screen.getByRole('button', { name: 'Export Excel' })).toBeInTheDocument()
+  })
 
-    expect(screen.getAllByText('Amara').length).toBeGreaterThan(0)
-    expect(screen.queryByText('Zeann')).not.toBeInTheDocument()
+  it('redirects staff away from admin reports', async () => {
+    renderReports('/admin/reports', staffUser)
+    expect(
+      await screen.findByRole('heading', { name: 'Dashboard' }, { timeout: 5000 }),
+    ).toBeInTheDocument()
   })
 })

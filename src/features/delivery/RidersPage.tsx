@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import { createRider, listRiders, listUsers, setRiderActive } from '@/services'
+import { createRider, deleteRider, listRiders, listUsers, setRiderActive } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DateText } from '@/components/ui/DateText'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -17,6 +18,8 @@ import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
+import { EditRiderDialog } from './EditRiderDialog'
+import type { Rider } from '@/domain'
 
 const Fields = styled.div`
   display: grid;
@@ -51,12 +54,15 @@ export function RidersPage() {
   const { user } = useSession()
   const [name, setName] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Rider | null>(null)
+  const [deleting, setDeleting] = useState<Rider | null>(null)
   const list = useAsyncData(() => listRiders({ storeId: store }), store)
   const users = useAsyncData(() => listUsers())
   const add = useMutation(createRider)
   const toggle = useMutation((input: { id: string; active: boolean }) =>
     setRiderActive(input.id, input.active),
   )
+  const remove = useMutation(deleteRider)
 
   const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
 
@@ -74,6 +80,18 @@ export function RidersPage() {
     const saved = await toggle.run({ id, active })
     if (saved) {
       setNotice(active ? `${saved.name} is active.` : `${saved.name} is inactive.`)
+      list.reload()
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleting) {
+      return
+    }
+    const removed = await remove.run(deleting.id)
+    if (removed) {
+      setNotice(`${removed.name} deleted.`)
+      setDeleting(null)
       list.reload()
     }
   }
@@ -125,6 +143,7 @@ export function RidersPage() {
         }
       >
         {toggle.error && <Alert variant="danger">{toggle.error}</Alert>}
+        {remove.error && <Alert variant="danger">{remove.error}</Alert>}
         {list.data && list.data.length > 0 && (
           <RecordList
             caption={`Riders at ${storeNames[store]}`}
@@ -144,6 +163,9 @@ export function RidersPage() {
               createdAt: <DateText value={rider.createdAt} />,
               actions: (
                 <RowActions>
+                  <Button size="sm" variant="secondary" onClick={() => setEditing(rider)}>
+                    Edit
+                  </Button>
                   <Button
                     size="sm"
                     variant={rider.active ? 'danger' : 'secondary'}
@@ -152,12 +174,43 @@ export function RidersPage() {
                   >
                     {rider.active ? 'Deactivate' : 'Activate'}
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={remove.pending}
+                    onClick={() => setDeleting(rider)}
+                  >
+                    Delete
+                  </Button>
                 </RowActions>
               ),
             }))}
           />
         )}
       </AsyncBoundary>
+      <EditRiderDialog
+        key={editing?.id ?? 'none'}
+        rider={editing}
+        onClose={() => setEditing(null)}
+        onSaved={(rider) => {
+          setEditing(null)
+          setNotice(`${rider.name} updated.`)
+          list.reload()
+        }}
+      />
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete rider"
+        message={
+          deleting
+            ? `Delete "${deleting.name}"? This cannot be undone. Riders used by sales, receiving, or expenses cannot be deleted.`
+            : ''
+        }
+        confirmLabel="Delete"
+        pending={remove.pending}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleting(null)}
+      />
     </Stack>
   )
 }

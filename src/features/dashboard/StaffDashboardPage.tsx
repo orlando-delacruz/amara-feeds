@@ -2,7 +2,6 @@ import styled from 'styled-components'
 import {
   getCurrentStock,
   getDailySalesByStore,
-  getMonthlySalesByStore,
   getOutstandingCreditTotal,
   getWeeklySalesByStore,
 } from '@/services'
@@ -63,19 +62,17 @@ export function StaffDashboardPage() {
   const { store } = useStore()
   const date = todayIso()
   const data = useAsyncData(async () => {
-    const [sales, outstanding, stock, weekly, monthly] = await Promise.all([
+    const [sales, outstanding, stock, weekly] = await Promise.all([
       getDailySalesByStore(date),
       getOutstandingCreditTotal(),
       getCurrentStock(),
       getWeeklySalesByStore(date),
-      getMonthlySalesByStore(date),
     ])
     return {
       storeSales: sales.find((row) => row.storeId === store),
       outstanding,
       stockCount: stock.filter((row) => row.storeId === store).length,
       weeklySales: weekly.find((row) => row.storeId === store),
-      monthlySales: monthly.find((row) => row.storeId === store),
     }
   }, `${store}:${date}`)
 
@@ -96,7 +93,7 @@ export function StaffDashboardPage() {
           <Stack>
             <StatsSkeleton count={1} />
             <StatsSkeleton count={2} />
-            <StatsSkeleton count={2} />
+            <StatsSkeleton count={1} />
           </Stack>
         }
       >
@@ -137,19 +134,12 @@ export function StaffDashboardPage() {
                 outline
               />
             </Plates>
-            <Section title="Weekly & monthly sales" variant="flush">
+            <Section title="Weekly sales" variant="flush">
               <Plates>
                 <StatCard
                   label="Weekly sales"
                   value={<MoneyText amountMinor={data.data.weeklySales?.totalMinor ?? 0} />}
                   caption={`${data.data.weeklySales?.saleCount ?? 0} sales · last 7 days`}
-                  tone={store}
-                  icon={<Icon name="calendar" />}
-                />
-                <StatCard
-                  label="Monthly sales"
-                  value={<MoneyText amountMinor={data.data.monthlySales?.totalMinor ?? 0} />}
-                  caption={`${data.data.monthlySales?.saleCount ?? 0} sales · this month`}
                   tone={store}
                   icon={<Icon name="calendar" />}
                 />

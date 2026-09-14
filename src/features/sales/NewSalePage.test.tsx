@@ -66,7 +66,9 @@ describe('NewSalePage', () => {
     const rice = await productCard('Rice 25kg')
     await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))
 
-    expect(within(screen.getByRole('button', { name: 'Open cart' })).getByText('1')).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('button', { name: 'Open cart' })).getByText('1'),
+    ).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'New sale' })).toBeInTheDocument()
   })
 
@@ -75,11 +77,14 @@ describe('NewSalePage', () => {
     renderNewSale()
 
     const rice = await productCard('Rice 25kg')
-    await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))
-    await user.click(within(rice).getByRole('button', { name: 'Increase Rice 25kg quantity' }))
+    const qtyField = within(rice).getByRole('spinbutton', { name: 'Quantity' })
+    await user.clear(qtyField)
+    await user.type(qtyField, '2')
     await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))
 
-    expect(within(screen.getByRole('button', { name: 'Open cart' })).getByText('3')).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('button', { name: 'Open cart' })).getByText('2'),
+    ).toBeInTheDocument()
   })
 
   it('opens the cart page when the basket is clicked', async () => {
@@ -100,7 +105,7 @@ describe('NewSalePage', () => {
     renderNewSale()
     const card = await screen.findByRole('heading', { name: 'Unpriced Item' })
     const container = card.closest('div') as HTMLElement
-    expect(await screen.findByText('No price')).toBeInTheDocument()
+    expect(await screen.findByText(/No price/)).toBeInTheDocument()
     expect(within(container).getByRole('button', { name: 'Add to cart' })).toBeDisabled()
   })
 

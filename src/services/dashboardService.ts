@@ -6,15 +6,20 @@ import type {
   PaymentsSummary,
   PeriodSalesByStore,
   ReceivedStockSummaryRow,
+  Sale,
   StockSummaryRow,
 } from '@/domain'
 import { storeIds } from '@/domain/store'
-import { isDateOnlyInRange, isSameDate, startOfMonthOnly, startOfWeekWindowOnly } from '@/lib/dates'
+import { isSameDate, startOfMonthOnly, startOfWeekWindowOnly, toDateOnly } from '@/lib/dates'
 import { sumMinor } from '@/lib/money'
 import { getDb } from './mocks/db'
 
+function saleDayInRange(sale: Sale, startDate: string, endDate: string): boolean {
+  return sale.saleDate >= startDate && sale.saleDate <= endDate
+}
+
 export async function getDailySalesByStore(date: string): Promise<DailySalesByStore[]> {
-  const sales = getDb().sales.filter((sale) => isSameDate(sale.createdAt, date))
+  const sales = getDb().sales.filter((sale) => sale.saleDate === date)
   return storeIds.map((storeId) => {
     const storeSales = sales.filter((sale) => sale.storeId === storeId)
     return {
@@ -27,7 +32,7 @@ export async function getDailySalesByStore(date: string): Promise<DailySalesBySt
 }
 
 export async function getOverallDailySales(date: string): Promise<OverallDailySales> {
-  const sales = getDb().sales.filter((sale) => isSameDate(sale.createdAt, date))
+  const sales = getDb().sales.filter((sale) => sale.saleDate === date)
   return {
     date,
     totalMinor: sumMinor(sales.map((sale) => sale.totalMinor)),
@@ -35,9 +40,39 @@ export async function getOverallDailySales(date: string): Promise<OverallDailySa
   }
 }
 
+export async function getSalesByStoreInRange(
+  from: string,
+  to: string,
+): Promise<PeriodSalesByStore[]> {
+  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, from, to))
+  return storeIds.map((storeId) => {
+    const storeSales = sales.filter((sale) => sale.storeId === storeId)
+    return {
+      storeId,
+      startDate: from,
+      endDate: to,
+      totalMinor: sumMinor(storeSales.map((sale) => sale.totalMinor)),
+      saleCount: storeSales.length,
+    }
+  })
+}
+
+export async function getOverallSalesInRange(
+  from: string,
+  to: string,
+): Promise<OverallPeriodSales> {
+  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, from, to))
+  return {
+    startDate: from,
+    endDate: to,
+    totalMinor: sumMinor(sales.map((sale) => sale.totalMinor)),
+    saleCount: sales.length,
+  }
+}
+
 export async function getWeeklySalesByStore(date: string): Promise<PeriodSalesByStore[]> {
   const startDate = startOfWeekWindowOnly(date)
-  const sales = getDb().sales.filter((sale) => isDateOnlyInRange(sale.createdAt, startDate, date))
+  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, startDate, date))
   return storeIds.map((storeId) => {
     const storeSales = sales.filter((sale) => sale.storeId === storeId)
     return {
@@ -52,7 +87,7 @@ export async function getWeeklySalesByStore(date: string): Promise<PeriodSalesBy
 
 export async function getOverallWeeklySales(date: string): Promise<OverallPeriodSales> {
   const startDate = startOfWeekWindowOnly(date)
-  const sales = getDb().sales.filter((sale) => isDateOnlyInRange(sale.createdAt, startDate, date))
+  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, startDate, date))
   return {
     startDate,
     endDate: date,
@@ -63,7 +98,7 @@ export async function getOverallWeeklySales(date: string): Promise<OverallPeriod
 
 export async function getMonthlySalesByStore(date: string): Promise<PeriodSalesByStore[]> {
   const startDate = startOfMonthOnly(date)
-  const sales = getDb().sales.filter((sale) => isDateOnlyInRange(sale.createdAt, startDate, date))
+  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, startDate, date))
   return storeIds.map((storeId) => {
     const storeSales = sales.filter((sale) => sale.storeId === storeId)
     return {
@@ -78,7 +113,7 @@ export async function getMonthlySalesByStore(date: string): Promise<PeriodSalesB
 
 export async function getOverallMonthlySales(date: string): Promise<OverallPeriodSales> {
   const startDate = startOfMonthOnly(date)
-  const sales = getDb().sales.filter((sale) => isDateOnlyInRange(sale.createdAt, startDate, date))
+  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, startDate, date))
   return {
     startDate,
     endDate: date,
@@ -95,9 +130,14 @@ export async function getOutstandingCreditTotal(): Promise<OutstandingCreditTota
   }
 }
 
-export async function getPaymentsSummary(filter: { date?: string } = {}): Promise<PaymentsSummary> {
+export async function getPaymentsSummary(
+  filter: { date?: string; from?: string; to?: string } = {},
+): Promise<PaymentsSummary> {
   const payments = getDb().payments.filter(
-    (payment) => !filter.date || isSameDate(payment.paidAt, filter.date),
+    (payment) =>
+      (!filter.date || isSameDate(payment.paidAt, filter.date)) &&
+      (!filter.from || toDateOnly(new Date(payment.paidAt)) >= filter.from) &&
+      (!filter.to || toDateOnly(new Date(payment.paidAt)) <= filter.to),
   )
   return {
     totalMinor: sumMinor(payments.map((payment) => payment.amountMinor)),
@@ -116,11 +156,16 @@ export async function getCurrentStock(): Promise<StockSummaryRow[]> {
 }
 
 export async function getReceivedStock(
-  filter: { date?: string } = {},
+  filter: { date?: string; from?: string; to?: string } = {},
 ): Promise<ReceivedStockSummaryRow[]> {
   const db = getDb()
   return db.receiving
-    .filter((record) => !filter.date || isSameDate(record.receivedAt, filter.date))
+    .filter(
+      (record) =>
+        (!filter.date || isSameDate(record.receivedAt, filter.date)) &&
+        (!filter.from || toDateOnly(new Date(record.receivedAt)) >= filter.from) &&
+        (!filter.to || toDateOnly(new Date(record.receivedAt)) <= filter.to),
+    )
     .map((record) => ({
       storeId: record.storeId,
       productId: record.productId,

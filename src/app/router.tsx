@@ -45,7 +45,6 @@ export function AppRoutes() {
           <Route path="inventory" element={<InventoryPage />} />
           <Route path="receiving" element={<ReceivingPage />} />
           <Route path="history" element={<AuditTrailPage />} />
-          <Route path="reports" element={<ReportsPage />} />
           <Route path="riders" element={<RidersPage />} />
           <Route path="vehicles" element={<VehiclesPage />} />
           <Route path="expenses" element={<ExpensesPage />} />
@@ -57,7 +56,7 @@ export function AppRoutes() {
       <Route element={<RequireRole role="admin" />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboardPage />} />
-          <Route path="customers" element={<CustomerListPage canAdd={false} />} />
+          <Route path="customers" element={<CustomerListPage />} />
           <Route path="sales" element={<SaleListPage basePath="/admin/sales" />} />
           <Route path="sales/new" element={<NewSalePage basePath="/admin/sales" />} />
           <Route path="sales/cart" element={<SaleCartPage basePath="/admin/sales" />} />

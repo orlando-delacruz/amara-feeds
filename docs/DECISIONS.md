@@ -105,9 +105,14 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-016 | Required rider/vehicle on receiving | Accepted | 2026-09-13 |
 | DEC-017 | Per rider/vehicle expense tracking with net | Accepted | 2026-09-13 |
 | DEC-019 | Identity redesign: painted delivery-vehicle signage | Accepted | 2026-09-13 |
-| DEC-020 | Report PDF export with jsPDF | Accepted | 2026-09-14 |
+| DEC-020 | Report PDF export with jsPDF | Superseded by DEC-024 | 2026-09-14 |
 | DEC-021 | Add-to-cart split of the sale entry flow | Accepted | 2026-09-14 |
 | DEC-022 | Shopee-style catalog, automatic pricing, floating basket | Accepted | 2026-09-14 |
+| DEC-023 | Sale checkout additions and manual quantity input | Accepted | 2026-09-14 |
+| DEC-024 | Admin-only reports with Excel export | Accepted | 2026-09-14 |
+| DEC-025 | Staff dashboard trim, history unread badge, admin customer add | Accepted | 2026-09-14 |
+| DEC-026 | Report date range and History store filter | Accepted | 2026-09-14 |
+| DEC-027 | Rider and vehicle full CRUD with reference guard | Accepted | 2026-09-14 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -439,6 +444,81 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Related documents:** `docs/UI-UX.md` §7.1, `docs/DATA-MODEL.md` §4.9, `docs/REQUIREMENTS.md` §5, `src/features/sales/`, `src/services/receivingService.ts`.
 - **Supersedes / Superseded by:** none.
 - **Open questions or follow-up:** Catalog search/filter is not included; quantity is not capped by stock (insufficient-stock behavior remains Confirmation Required).
+
+### DEC-023 — Sale checkout additions and manual quantity input
+
+- **ID:** DEC-023
+- **Title:** Sale checkout additions and manual quantity input
+- **Status:** Accepted
+- **Date:** 2026-09-14
+- **Context:** The cart/checkout page (`/sales/cart`) captured customer, payment type, terms, delivery, and rider/vehicle but not the business sale date, the mode of payment, or a discount — all of which the business records on paper sales. The catalog page's quantity stepper was replaced by a manual quantity field so staff can type exact quantities instead of tapping +/− repeatedly.
+- **Decision:** The sale carries an explicit `saleDate` (defaults to today, backdateable via the checkout Date picker; credit due dates derive from it instead of `createdAt`) plus an assumed `paymentMethod` selected from `PAYMENT_METHOD_PRESETS` (Cash, GCash, Maya, Bank Transfer, Check, Other with a free-text field) and an assumed `discountMinor` applied once to the whole sale (`total = items + delivery fee − discount`). The service validates the date format, rejects blank payment methods and discounts above the sale amount, and stays the single mutation point. The catalog quantity stepper becomes a number input (`TextField`) with per-product string state validated before add-to-cart.
+- **Alternatives considered:** Reusing `createdAt` as the sale date — rejected; backdated sales must not shift audit timestamps. A fixed payment-method list only — rejected; the business uses ad-hoc channels, so "Other" keeps the list extensible. Keeping the stepper — rejected; typing exact quantities is faster for bag-count sales.
+- **Rationale:** These fields match the paper flow the staff already follow, keep the service seam as the only writer, and keep derived credit due dates business-date driven.
+- **Consequences:** `Sale`/`NewSaleInput` gain `saleDate`, `paymentMethod`, `discountMinor`; `saleService` validates and computes the new totals; `creditService` due-date helpers accept an optional `fromDate`; `dashboardService` filters switch from `createdAt` to `saleDate`; seed sales carry the new fields; checkout and catalog pages and tests updated.
+- **Related documents:** `docs/DATA-MODEL.md` §4.9, `docs/UI-UX.md` §7.1, `docs/REQUIREMENTS.md` §5, `src/domain/sale.ts`, `src/services/saleService.ts`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Exact payment-method vocabulary and discount policy remain Confirmation Required.
+
+### DEC-024 — Admin-only reports with Excel export
+
+- **ID:** DEC-024
+- **Title:** Admin-only reports with Excel export
+- **Status:** Accepted
+- **Date:** 2026-09-14
+- **Context:** The user asked to (1) restrict the Reports page to admins, (2) replace the PDF export (DEC-020) with an Excel export, and (3) remove the staff Reports route and nav entry. Excel export was previously deferred (DEC-006) pending confirmed formats.
+- **Decision:** Reports is admin-only: the staff route, nav item, and the reports test that scoped staff are removed (staff reaching `/admin/reports` is redirected by the role guard). The Reports page exports an `.xlsx` of the day's sale lines with columns Date, Location, Customer, Item, Quantity, Price, Amount, Type, Delivery Fee, Discount, Net, Rider, Vehicle via `write-excel-file/browser`. `src/lib/exportReportExcel.ts` is a pure builder plus a lazy-imported writer; `src/features/reports/reportRows.ts` expands each sale into one row per line (per-sale delivery fee, discount, and net on the first line only). `jspdf` and `jspdf-autotable` are removed from `package.json`.
+- **Alternatives considered:** Keeping staff reports — rejected; the user wants reports admin-only. Client-side CSV export — rejected; the user asked for Excel, and `write-excel-file` is already the agreed direction in `docs/TECH-STACK.md` §7.
+- **Rationale:** Reports are a management/administrative surface, and a real `.xlsx` is directly usable in the business's spreadsheet workflow; the lazy import keeps the library out of the initial bundle.
+- **Consequences:** `DEC-020` marked Superseded; `write-excel-file@4` replaces the PDF libraries; staff Reports removed from `navItems.ts` and `router.tsx`; `ReportsPage` exports sale-line detail rather than summary tables; `exportReportPdf.*` deleted; tests updated (`reportsRows` covered, `ReportsPage` export button and staff-redirect covered).
+- **Related documents:** `docs/TECH-STACK.md` §7, `docs/REQUIREMENTS.md` §13, `docs/DECISIONS.md` DEC-006, DEC-020, `src/features/reports/`.
+- **Supersedes / Superseded by:** Supersedes DEC-020.
+- **Open questions or follow-up:** Report columns/formats remain Confirmation Required; the export intentionally mirrors the implemented sale-line data.
+
+### DEC-025 — Staff dashboard trim, history unread badge, admin customer add
+
+- **ID:** DEC-025
+- **Title:** Staff dashboard trim, history unread badge, admin customer add
+- **Status:** Accepted
+- **Date:** 2026-09-14
+- **Context:** The user asked to (1) remove the monthly sales card from the staff dashboard, (2) show an unread indicator on the History destination, and (3) let admins add customers from the customer list.
+- **Decision:** The staff dashboard keeps its Today, stock, outstanding credit, and weekly sales cards and drops the monthly card. History gets an unread badge driven by `src/features/history/historySeen.ts` (localStorage last-seen timestamp) and `useHistoryUnread.ts` (polls `listAuditEventsForUser`), rendered on the desktop side-nav History link and the mobile More-page History row; opening History marks events seen. The customer list is a shared page where admins (previously `canAdd={false}`) now see the add-customer action.
+- **Alternatives considered:** Server-side read receipts — rejected; the mock data layer is frontend-only, so localStorage is the honest equivalent. Badge on the mobile tab bar too — rejected; History is not a primary tab, so the More page carries the indicator there.
+- **Rationale:** These are small, confirmed UX refinements that reuse the existing nav, session, and audit seams without new infrastructure.
+- **Consequences:** `StaffDashboardPage` drops the monthly card and its `getMonthlySalesByStore` dependency; `useHistoryUnread` runs on the app shell (30s poll); `AuditTrailPage` writes the last-seen timestamp on mount; `MorePage`/`SideNav` render the badge; the customer list admin add action is restored; tests updated.
+- **Related documents:** `docs/UI-UX.md` §7.7, `docs/ARCHITECTURE.md` §6, `src/features/history/`, `src/features/dashboard/`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** None.
+
+### DEC-026 — Report date range and History store filter
+
+- **ID:** DEC-026
+- **Title:** Report date range and History store filter
+- **Status:** Accepted
+- **Date:** 2026-09-14
+- **Context:** The Reports page filtered on a single date, but the business reviews sales over a span (for example a week or a remittance cut-off). The History page listed actions across both stores without a way to narrow to one store. The Excel export's header cells were also rendering black text on the green fill because the cell style used the wrong key.
+- **Decision:** The Reports page selects a **From/To** date range (both default to today; the pickers cross-constrain so From ≤ To) and all summaries, the sale-line export, and the export filename cover that range. New range queries back this (`getSalesByStoreInRange`, `getOverallSalesInRange`, plus range-aware `getPaymentsSummary`/`getReceivedStock`), surfaced through a Reports-only `useReportSummaries` seam so the dashboard's single-date `useBusinessSummaries` is untouched. `listSales` gains an additive `{ from?, to? }` filter alongside the existing exact `date` filter. The History page adds an **admin-only** Store filter (All stores / Amara / Zeann); when a specific store is selected, only events carrying that `storeId` are shown, so business-wide events (product submissions/approvals) appear under All stores. The Excel header text color is corrected to `textColor` (the `write-excel-file` cell style key; `color` is ignored).
+- **Alternatives considered:** Extending the range to the dashboards — deferred; the dashboards keep their Today/Weekly/Monthly views (user-confirmed scope: Reports only). Replacing the single-date `getDailySalesByStore`/`getOverallDailySales` with range versions — rejected; it would ripple into the dashboards and their tests for no benefit, so range queries were added alongside. Showing the store filter to staff — rejected; staff history is already scoped to their own actions and connected decisions, and store-less approval events would make a store filter misleading.
+- **Rationale:** A range matches how the business actually reviews sales; the additive service functions and Reports-only seam keep the change isolated from the dashboards; the admin-only store filter is meaningful only where both stores are visible.
+- **Consequences:** `ReportsPage`/`SummarySections` take `from`/`to`; new `useReportSummaries`; `reportRows`/`exportReportExcel` take `from`/`to` with a range filename; `listSales` accepts `from`/`to`; `auditService` filters accept `storeId`; `AuditTrailPage` renders the admin store control; tests extended, and the pre-existing AuditTrailPage duplicate-text test bug was fixed.
+- **Related documents:** `docs/UI-UX.md` §7.7, `docs/REQUIREMENTS.md` §13, `docs/DECISIONS.md` DEC-024, DEC-025, `src/features/reports/`, `src/features/history/`, `src/lib/exportReportExcel.ts`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Report columns/formats remain Confirmation Required.
+
+### DEC-027 — Rider and vehicle full CRUD with reference guard
+
+- **ID:** DEC-027
+- **Title:** Rider and vehicle full CRUD with reference guard
+- **Status:** Accepted
+- **Date:** 2026-09-14
+- **Context:** The riders and vehicles pages supported create, list, and activate/deactivate, but not rename or delete. The user asked for full CRUD (frontend-only for now).
+- **Decision:** Add `updateRider`/`updateVehicle` (rename + active toggle; `setRiderActive`/`setVehicleActive` delegate to them) and `deleteRider`/`deleteVehicle`. Deletion hard-removes the record only when it is unreferenced; a rider/vehicle referenced by any sale (`delivery.riderId/vehicleId`), receiving, or expense is refused with a `conflict` error telling the user to deactivate it instead, so historical attribution stays intact. The pages gain an Edit dialog (rename) and a confirmed Delete action alongside the existing status toggle; success and failure notices reuse the page Alert pattern.
+- **Alternatives considered:** Soft-delete only — rejected; the user asked for delete, and deactivation already covers the soft path. Unconditional hard delete — rejected; it would orphan sale/receiving/expense references and corrupt history attribution, which data integrity rules forbid. Cascade-delete references — rejected; deleting business history is not implied by managing the rider/vehicle list.
+- **Rationale:** Real CRUD as requested, with the smallest guard that keeps historical records valid and surfaces the reason to the user.
+- **Consequences:** `UpdateRiderInput`/`UpdateVehicleInput` added to the domain; `deleteRider`/`deleteVehicle` return the removed record; new `EditRiderDialog`/`EditVehicleDialog`; riders/vehicles pages gain Edit/Delete actions and a confirm dialog; service and page tests extended.
+- **Related documents:** `docs/UI-UX.md` §7.10, `docs/REQUIREMENTS.md` §9a (REQ-DELIV-004), `docs/DATA-MODEL.md` §4.13–4.14, `src/features/delivery/`, `src/services/riderService.ts`, `src/services/vehicleService.ts`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Exact rider/vehicle fields remain Confirmation Required.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

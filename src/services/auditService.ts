@@ -1,4 +1,4 @@
-import type { AuditEvent, NewAuditEventInput, User, UserId } from '@/domain'
+import type { AuditEvent, NewAuditEventInput, StoreId, User, UserId } from '@/domain'
 import { isSameDate } from '@/lib/dates'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
@@ -34,92 +34,84 @@ function roleOf(users: User[], userId: UserId): User['role'] {
  * Builds the business-wide trail from stored records plus the session log.
  * Frontend-only: derives history from the mock database, no backend involved.
  */
-export async function listAuditEvents(filter: { date?: string } = {}): Promise<AuditEvent[]> {
+export async function listAuditEvents(
+  filter: { date?: string; storeId?: StoreId } = {},
+): Promise<AuditEvent[]> {
   const db = getDb()
   const productNames = new Map(db.products.map((product) => [product.id, product.name]))
 
   const derived: AuditEvent[] = [
-    ...db.sales.map(
-      (sale): AuditEvent => ({
-        id: `audit-${sale.id}`,
-        action: 'sale.recorded',
-        actorUserId: sale.recordedByUserId,
-        actorRole: roleOf(db.users, sale.recordedByUserId),
-        storeId: sale.storeId,
-        subject: `Sale at ${sale.storeId === 'amara' ? 'Amara' : 'Zeann'}`,
-        detail: `${sale.lines.length} item${sale.lines.length === 1 ? '' : 's'} · ${sale.paymentType === 'charge' ? 'charge' : 'cash'}`,
-        createdAt: sale.createdAt,
-      }),
-    ),
-    ...db.payments.map(
-      (payment): AuditEvent => ({
-        id: `audit-${payment.id}`,
-        action: 'payment.recorded',
-        actorUserId: payment.recordedByUserId,
-        actorRole: roleOf(db.users, payment.recordedByUserId),
-        storeId: payment.storeId,
-        subject: `Payment at ${payment.storeId === 'amara' ? 'Amara' : 'Zeann'}`,
-        detail: `Via ${payment.method}`,
-        createdAt: payment.paidAt,
-      }),
-    ),
-    ...db.receiving.map(
-      (record): AuditEvent => ({
-        id: `audit-${record.id}`,
-        action: 'receiving.recorded',
-        actorUserId: record.recordedByUserId,
-        actorRole: roleOf(db.users, record.recordedByUserId),
-        storeId: record.storeId,
-        subject: productNames.get(record.productId) ?? 'Item',
-        detail: `${record.quantity} pcs from ${record.supplier}`,
-        createdAt: record.receivedAt,
-      }),
-    ),
+    ...db.sales.map((sale): AuditEvent => ({
+      id: `audit-${sale.id}`,
+      action: 'sale.recorded',
+      actorUserId: sale.recordedByUserId,
+      actorRole: roleOf(db.users, sale.recordedByUserId),
+      storeId: sale.storeId,
+      subject: `Sale at ${sale.storeId === 'amara' ? 'Amara' : 'Zeann'}`,
+      detail: `${sale.lines.length} item${sale.lines.length === 1 ? '' : 's'} · ${sale.paymentType === 'charge' ? 'charge' : 'cash'}`,
+      createdAt: sale.createdAt,
+    })),
+    ...db.payments.map((payment): AuditEvent => ({
+      id: `audit-${payment.id}`,
+      action: 'payment.recorded',
+      actorUserId: payment.recordedByUserId,
+      actorRole: roleOf(db.users, payment.recordedByUserId),
+      storeId: payment.storeId,
+      subject: `Payment at ${payment.storeId === 'amara' ? 'Amara' : 'Zeann'}`,
+      detail: `Via ${payment.method}`,
+      createdAt: payment.paidAt,
+    })),
+    ...db.receiving.map((record): AuditEvent => ({
+      id: `audit-${record.id}`,
+      action: 'receiving.recorded',
+      actorUserId: record.recordedByUserId,
+      actorRole: roleOf(db.users, record.recordedByUserId),
+      storeId: record.storeId,
+      subject: productNames.get(record.productId) ?? 'Item',
+      detail: `${record.quantity} pcs from ${record.supplier}`,
+      createdAt: record.receivedAt,
+    })),
     ...db.products
       .filter((product) => product.createdByUserId)
-      .map(
-        (product): AuditEvent => ({
-          id: `audit-${product.id}-submitted`,
-          action: 'product.submitted',
-          actorUserId: product.createdByUserId ?? '',
-          actorRole: roleOf(db.users, product.createdByUserId ?? ''),
-          subject: product.name,
-          detail:
-            product.status === 'pending' ? 'Awaiting admin approval' : 'Approved and active',
-          createdAt: product.createdAt,
-        }),
-      ),
+      .map((product): AuditEvent => ({
+        id: `audit-${product.id}-submitted`,
+        action: 'product.submitted',
+        actorUserId: product.createdByUserId ?? '',
+        actorRole: roleOf(db.users, product.createdByUserId ?? ''),
+        subject: product.name,
+        detail: product.status === 'pending' ? 'Awaiting admin approval' : 'Approved and active',
+        createdAt: product.createdAt,
+      })),
     ...db.riders
       .filter((rider) => rider.createdByUserId)
-      .map(
-        (rider): AuditEvent => ({
-          id: `audit-${rider.id}`,
-          action: 'rider.added',
-          actorUserId: rider.createdByUserId ?? '',
-          actorRole: roleOf(db.users, rider.createdByUserId ?? ''),
-          storeId: rider.storeId,
-          subject: rider.name,
-          detail: rider.active ? 'Active rider' : 'Inactive rider',
-          createdAt: rider.createdAt,
-        }),
-      ),
-    ...db.expenses.map(
-      (expense): AuditEvent => ({
-        id: `audit-${expense.id}`,
-        action: 'expense.recorded',
-        actorUserId: expense.recordedByUserId,
-        actorRole: roleOf(db.users, expense.recordedByUserId),
-        storeId: expense.storeId,
-        subject: `${expense.type === 'fuel' ? 'Fuel' : 'Repair'} expense`,
-        detail: expense.note ?? undefined,
-        createdAt: expense.createdAt,
-      }),
-    ),
+      .map((rider): AuditEvent => ({
+        id: `audit-${rider.id}`,
+        action: 'rider.added',
+        actorUserId: rider.createdByUserId ?? '',
+        actorRole: roleOf(db.users, rider.createdByUserId ?? ''),
+        storeId: rider.storeId,
+        subject: rider.name,
+        detail: rider.active ? 'Active rider' : 'Inactive rider',
+        createdAt: rider.createdAt,
+      })),
+    ...db.expenses.map((expense): AuditEvent => ({
+      id: `audit-${expense.id}`,
+      action: 'expense.recorded',
+      actorUserId: expense.recordedByUserId,
+      actorRole: roleOf(db.users, expense.recordedByUserId),
+      storeId: expense.storeId,
+      subject: `${expense.type === 'fuel' ? 'Fuel' : 'Repair'} expense`,
+      detail: expense.note ?? undefined,
+      createdAt: expense.createdAt,
+    })),
     ...db.auditLog.map((event) => ({ ...event })),
   ]
 
-  const { date } = filter
-  const scoped = date ? derived.filter((event) => isSameDate(event.createdAt, date)) : derived
+  const { date, storeId } = filter
+  const scoped = derived.filter(
+    (event) =>
+      (!date || isSameDate(event.createdAt, date)) && (!storeId || event.storeId === storeId),
+  )
   return scoped.sort((a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0))
 }
 
@@ -129,13 +121,11 @@ export async function listAuditEvents(filter: { date?: string } = {}): Promise<A
  */
 export async function listAuditEventsForUser(
   user: User,
-  filter: { date?: string } = {},
+  filter: { date?: string; storeId?: StoreId } = {},
 ): Promise<AuditEvent[]> {
   const events = await listAuditEvents(filter)
   if (user.role === 'admin') {
     return events
   }
-  return events.filter(
-    (event) => event.actorUserId === user.id || event.relatedUserId === user.id,
-  )
+  return events.filter((event) => event.actorUserId === user.id || event.relatedUserId === user.id)
 }

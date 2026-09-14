@@ -21,3 +21,9 @@ export interface NewVehicleInput {
   storeId: StoreId
   createdByUserId?: UserId
 }
+
+/** Fields an existing vehicle may have changed. Omitted fields are left as-is. */
+export interface UpdateVehicleInput {
+  label?: string
+  active?: boolean
+}

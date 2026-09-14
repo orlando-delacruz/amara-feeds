@@ -4,6 +4,7 @@ import type { NavItem } from './navItems'
 
 interface SideNavProps {
   items: NavItem[]
+  badge?: string
 }
 
 const Aside = styled.nav`
@@ -65,7 +66,21 @@ const Marker = styled.span`
   background-color: ${({ theme }) => theme.color.neutral[300]};
 `
 
-export function SideNav({ items }: SideNavProps) {
+const Badge = styled.span`
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background-color: ${({ theme }) => theme.color.status.danger.text};
+  color: ${({ theme }) => theme.color.text.inverse};
+  font-family: ${({ theme }) => theme.font.family};
+  font-size: 11px;
+  font-weight: ${({ theme }) => theme.font.weight.bold};
+  line-height: 18px;
+  text-align: center;
+`
+
+export function SideNav({ items, badge }: SideNavProps) {
   return (
     <Aside aria-label="Primary">
       <List>
@@ -76,6 +91,7 @@ export function SideNav({ items }: SideNavProps) {
                 <>
                   {!isActive && <Marker aria-hidden="true" />}
                   {item.label}
+                  {badge && item.to === '/history' && <Badge aria-label="Unread">{badge}</Badge>}
                 </>
               )}
             </StyledNavLink>

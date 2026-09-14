@@ -34,8 +34,11 @@ export async function listPaymentTerms(): Promise<PaymentTerms[]> {
   return getDb().terms.map((term) => ({ ...term }))
 }
 
-export async function previewDueDate(termsId: PaymentTermsId): Promise<string> {
-  return resolveDueDate(termsId, new Date().toISOString())
+export async function previewDueDate(termsId: PaymentTermsId, fromDate?: string): Promise<string> {
+  const fromIso = fromDate
+    ? new Date(`${fromDate}T00:00:00`).toISOString()
+    : new Date().toISOString()
+  return resolveDueDate(termsId, fromIso)
 }
 
 export async function listCredits(
@@ -73,6 +76,7 @@ export interface CreateObligationInput {
   saleId?: SaleId
   termsId: PaymentTermsId
   amountMinor: Money
+  saleDate?: string
   createdAt: string
 }
 
@@ -83,7 +87,10 @@ export function createObligationFromSale(input: CreateObligationInput): CreditOb
     originStoreId: input.originStoreId,
     saleId: input.saleId,
     termsId: input.termsId,
-    dueDate: resolveDueDate(input.termsId, input.createdAt),
+    dueDate: resolveDueDate(
+      input.termsId,
+      input.saleDate ? new Date(`${input.saleDate}T00:00:00`).toISOString() : input.createdAt,
+    ),
     originalAmountMinor: input.amountMinor,
     balanceMinor: input.amountMinor,
     status: 'outstanding',
