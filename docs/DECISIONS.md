@@ -105,6 +105,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-016 | Required rider/vehicle on receiving | Accepted | 2026-09-13 |
 | DEC-017 | Per rider/vehicle expense tracking with net | Accepted | 2026-09-13 |
 | DEC-019 | Identity redesign: painted delivery-vehicle signage | Accepted | 2026-09-13 |
+| DEC-020 | Report PDF export with jsPDF | Accepted | 2026-09-14 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -391,6 +392,21 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Supersedes:** DEC-018 (visual refinement: evergreen brand, warm neutrals, Plus Jakarta Sans).
 - **Superseded by:** none.
 - **Open questions or follow-up:** Brand artwork and a logo remain Confirmation Required; stock balance-state thresholds remain assumed; app-wide surface rollout of the new primitives is follow-up.
+
+### DEC-020 — Report PDF export with jsPDF
+
+- **ID:** DEC-020
+- **Title:** Report PDF export with jsPDF
+- **Status:** Accepted
+- **Date:** 2026-09-14
+- **Context:** The Reports page shipped a "Print" button using `window.print()` (DEC-006) because report formats were unconfirmed and no export library was selected. The user asked to replace Print with an **Export PDF** button that downloads a real PDF, which requires selecting a PDF library (a technology addition). The agreed report summaries (REQ-REP-001) and their columns are already implemented in the summaries seam (`useBusinessSummaries`).
+- **Decision:** Add `jspdf` and `jspdf-autotable` as runtime dependencies and build the PDF **data-driven** from the same summaries the page shows (`src/lib/exportReportPdf.ts`): a pure `buildReportPdf` builder (A4, brand/document header, per-store daily sales table, summary figures, current stock, received stock) plus an `exportReportPdf` that downloads `amara-feeds-report-<date>-<scope>.pdf`. The Reports page lifts `useBusinessSummaries` so the button has the data; staff reports stay scoped to their store.
+- **Alternatives considered:** `html2canvas` + `jsPDF` DOM capture — rejected; rasterizes text (blurry, large files) and captures viewport-dependent layout, so `RecordList`'s mobile cards vs. desktop tables would make the PDF inconsistent. Browser print renamed to "Export PDF" — rejected by the user, who wanted a direct `.pdf` download. `pdfmake` — rejected; heavier setup (embedded fonts) and more than needed for tabular summaries.
+- **Rationale:** A data-driven vector PDF is deterministic and identical on mobile and desktop, keeps text crisp, reuses the existing summary data and `formatPeso`/`formatDate` helpers, and is unit-testable without a DOM canvas.
+- **Consequences:** Two runtime dependencies added (`jspdf`, `jspdf-autotable`); the Reports page no longer uses `window.print()` (the global `@media print` rules remain but are now unused by this page); `print` icon replaced by a `download` icon; summary layout for staff drops the redundant store column on stock/received tables; unit tests cover the builder and filename. Report columns/formats remain Confirmation Required; Excel export stays deferred per DEC-006.
+- **Related documents:** `docs/TECH-STACK.md` §7, `docs/REQUIREMENTS.md` REQ-REP-001, `docs/DECISIONS.md` DEC-006, `src/features/reports/`, `src/lib/exportReportPdf.ts`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Exact report columns and formats remain Confirmation Required; the export library choice is revisited if formats change materially.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

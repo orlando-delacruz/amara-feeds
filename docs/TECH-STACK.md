@@ -34,6 +34,7 @@ Status labels (see `TEMPLATE-GUIDE.md`): **Selected** — confirmed direction. *
 | Component / unit testing | Vitest + React Testing Library | Selected | Verification of workflows and UI behavior |
 | Critical end-to-end testing | Playwright | Conditional | Critical-path E2E (sale, payment, approval) only if budget and schedule permit |
 | Excel export library | Undecided | Requires Confirmation | Selected only after report columns and formats are confirmed |
+| PDF export library | jsPDF + jspdf-autotable | Selected (DEC-020) | Data-driven A4 PDF of the agreed report summaries |
 | Analytics | None | Not Selected | No confirmed requirement |
 | Notifications / email | None | Not Selected | No confirmed requirement |
 
@@ -160,7 +161,7 @@ Status labels (see `TEMPLATE-GUIDE.md`): **Selected** — confirmed direction. *
 ## 7. Conditional / Future Technology Decisions
 
 1. Playwright E2E — adopted for critical paths only if budget and schedule permit; scoped and recorded in `docs/DECISIONS.md` when triggered.
-2. Excel export library — selected only after report columns and formats are confirmed (REQ-REP-003); printing uses browser print with no additional technology.
+2. Excel export library — selected only after report columns and formats are confirmed (REQ-REP-003); the Reports PDF export already uses `jspdf` + `jspdf-autotable` (DEC-020).
 3. Any integration, notification, analytics, or third-party service — adopted only if a confirmed requirement needs it; none authorizes scope expansion on its own, and each change is recorded in `docs/DECISIONS.md` when made.
 
 ## 8. Related Documentation

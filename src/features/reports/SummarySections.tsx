@@ -10,22 +10,63 @@ import { Icon } from '@/components/ui/icons'
 import { ListSkeleton, StatsSkeleton } from '@/components/ui/Skeletons'
 import { storeNames } from '@/store/stores'
 import { useBusinessSummaries } from '@/features/dashboard/useBusinessSummaries'
+import type { DataTableRow } from '@/components/ui/DataTable'
 import type { StoreId } from '@/domain'
 
 interface SummarySectionsProps {
   date: string
   /** When given, store-specific summaries are scoped to this store. */
   storeId?: StoreId
+  summaries: ReturnType<typeof useBusinessSummaries>
 }
 
 const Stats = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   gap: ${({ theme }) => theme.space.md};
 `
 
-export function SummarySections({ date, storeId }: SummarySectionsProps) {
-  const summaries = useBusinessSummaries(date, storeId)
+const CardTitle = styled.span`
+  font-weight: ${({ theme }) => theme.font.weight.semibold};
+  overflow-wrap: break-word;
+`
+
+const MetaRow = styled.span`
+  display: flex;
+  justify-content: space-between;
+  gap: ${({ theme }) => theme.space.md};
+  font-size: ${({ theme }) => theme.font.size.sm};
+`
+
+const MetaLabel = styled.span`
+  color: ${({ theme }) => theme.color.text.muted};
+`
+
+const MetaValue = styled.span`
+  text-align: right;
+  overflow-wrap: break-word;
+  font-variant-numeric: tabular-nums;
+`
+
+function productCard(
+  productKey: string,
+  rows: Array<[string, React.ReactNode]>,
+): (row: DataTableRow) => React.ReactNode {
+  return (row) => (
+    <>
+      <CardTitle>{row[productKey]}</CardTitle>
+      {rows.map(([label, key]) => (
+        <MetaRow key={String(key)}>
+          <MetaLabel>{label}</MetaLabel>
+          <MetaValue>{row[key as string]}</MetaValue>
+        </MetaRow>
+      ))}
+    </>
+  )
+}
+
+export function SummarySections({ date, storeId, summaries }: SummarySectionsProps) {
+  const stockWide = !storeId
 
   return (
     <AsyncBoundary
@@ -92,16 +133,32 @@ export function SummarySections({ date, storeId }: SummarySectionsProps) {
             <RecordList
               caption="Current stock"
               variant="grouped"
-              columns={[
-                { key: 'store', header: 'Store' },
-                { key: 'product', header: 'Product' },
-                { key: 'quantity', header: 'Quantity' },
-              ]}
+              columns={
+                stockWide
+                  ? [
+                      { key: 'store', header: 'Store' },
+                      { key: 'product', header: 'Product' },
+                      { key: 'quantity', header: 'Quantity' },
+                    ]
+                  : [
+                      { key: 'product', header: 'Product' },
+                      { key: 'quantity', header: 'Quantity' },
+                    ]
+              }
               rows={summaries.data.stock.map((row) => ({
                 store: storeNames[row.storeId],
                 product: row.productName,
                 quantity: String(row.quantity),
               }))}
+              renderCard={productCard(
+                'product',
+                stockWide
+                  ? [
+                      ['Store', 'store'],
+                      ['Quantity', 'quantity'],
+                    ]
+                  : [['Quantity', 'quantity']],
+              )}
             />
           </Section>
 
@@ -116,18 +173,39 @@ export function SummarySections({ date, storeId }: SummarySectionsProps) {
             <RecordList
               caption="Received stock"
               variant="grouped"
-              columns={[
-                { key: 'store', header: 'Store' },
-                { key: 'product', header: 'Product' },
-                { key: 'quantity', header: 'Quantity' },
-                { key: 'cost', header: 'Cost price' },
-              ]}
+              columns={
+                stockWide
+                  ? [
+                      { key: 'store', header: 'Store' },
+                      { key: 'product', header: 'Product' },
+                      { key: 'quantity', header: 'Quantity' },
+                      { key: 'cost', header: 'Cost price' },
+                    ]
+                  : [
+                      { key: 'product', header: 'Product' },
+                      { key: 'quantity', header: 'Quantity' },
+                      { key: 'cost', header: 'Cost price' },
+                    ]
+              }
               rows={summaries.data.received.map((row) => ({
                 store: storeNames[row.storeId],
                 product: row.productName,
                 quantity: String(row.quantity),
                 cost: <MoneyText amountMinor={row.costPriceMinor} />,
               }))}
+              renderCard={productCard(
+                'product',
+                stockWide
+                  ? [
+                      ['Store', 'store'],
+                      ['Quantity', 'quantity'],
+                      ['Cost price', 'cost'],
+                    ]
+                  : [
+                      ['Quantity', 'quantity'],
+                      ['Cost price', 'cost'],
+                    ],
+              )}
             />
           </Section>
         </Stack>

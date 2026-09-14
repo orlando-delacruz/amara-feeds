@@ -45,10 +45,10 @@ describe('ReportsPage', () => {
     expect(screen.getAllByText(/Received stock/).length).toBeGreaterThan(0)
   })
 
-  it('provides a print action', async () => {
+  it('provides an Export PDF action', async () => {
     renderReports()
     await screen.findAllByText(/Daily sales by store/)
-    expect(screen.getByRole('button', { name: 'Print' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Export PDF' })).toBeInTheDocument()
   })
 
   it('scopes staff reports to the assigned store only', async () => {

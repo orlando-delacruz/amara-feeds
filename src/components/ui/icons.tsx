@@ -4,7 +4,7 @@ export type IconName =
   | 'chevron-right'
   | 'calendar'
   | 'plus'
-  | 'print'
+  | 'download'
   | 'alert'
   | 'box'
   | 'card'
@@ -41,11 +41,11 @@ const paths: Record<IconName, ReactNode> = {
     </>
   ),
   plus: <path d="M12 5v14M5 12h14" />,
-  print: (
+  download: (
     <>
-      <path d="M7 8V3h10v5" />
-      <rect x="4" y="8" width="16" height="9" rx="2" />
-      <path d="M7 14h10v7H7z" />
+      <path d="M12 3v12" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M4 19h16" />
     </>
   ),
   alert: (
