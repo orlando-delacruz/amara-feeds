@@ -8,6 +8,7 @@ export type IconName =
   | 'alert'
   | 'box'
   | 'card'
+  | 'cart'
   | 'search'
   | 'check'
   | 'x'
@@ -67,6 +68,13 @@ const paths: Record<IconName, ReactNode> = {
       <rect x="3" y="6" width="18" height="13" rx="2" />
       <path d="M3 10h18" />
       <path d="M7 15h4" />
+    </>
+  ),
+  cart: (
+    <>
+      <path d="M3 4h2.2l2 11h11.2l1.8-7H7.5" />
+      <circle cx="9.5" cy="20" r="1.4" />
+      <circle cx="17" cy="20" r="1.4" />
     </>
   ),
   search: (

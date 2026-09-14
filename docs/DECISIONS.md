@@ -106,6 +106,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-017 | Per rider/vehicle expense tracking with net | Accepted | 2026-09-13 |
 | DEC-019 | Identity redesign: painted delivery-vehicle signage | Accepted | 2026-09-13 |
 | DEC-020 | Report PDF export with jsPDF | Accepted | 2026-09-14 |
+| DEC-021 | Add-to-cart split of the sale entry flow | Accepted | 2026-09-14 |
+| DEC-022 | Shopee-style catalog, automatic pricing, floating basket | Accepted | 2026-09-14 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -407,6 +409,36 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Related documents:** `docs/TECH-STACK.md` §7, `docs/REQUIREMENTS.md` REQ-REP-001, `docs/DECISIONS.md` DEC-006, `src/features/reports/`, `src/lib/exportReportPdf.ts`.
 - **Supersedes / Superseded by:** none.
 - **Open questions or follow-up:** Exact report columns and formats remain Confirmation Required; the export library choice is revisited if formats change materially.
+
+### DEC-021 — Add-to-cart split of the sale entry flow
+
+- **ID:** DEC-021
+- **Title:** Add-to-cart split of the sale entry flow
+- **Status:** Accepted
+- **Date:** 2026-09-14
+- **Context:** The sale entry form (`/sales/new`) collected multiple item cards plus customer, payment, delivery, and review on one page. The user asked for an "Add to Cart" workflow: enter one item, press "Add to Cart" (renamed from "Add Item"), land on a Cart page, and be able to add another new item from there.
+- **Decision:** Split sale entry into two pages. `/sales/new` becomes a single-item form (item, quantity, unit price) whose "Add to Cart" button validates the line, adds it to an in-memory cart, and navigates to a new Cart page (`/sales/cart`, `/admin/sales/cart`). The Cart page lists the accumulated items (duplicate products merge quantities; the most-recent unit price wins), offers a "New item" button back to `/sales/new`, and hosts the checkout (customer, payment with due-date preview, delivery, review, "Save sale"). The cart lives in a `CartProvider` React context added to `AppProviders` (in-memory, cleared on successful save); the sale saves at the store active on the Cart page, matching the prior behavior of reading the store at save time.
+- **Alternatives considered:** Keeping the single-page multi-line form — rejected; the user explicitly asked for the cart flow. Router state passed between the two pages — rejected; lost on refresh and awkward to pass back and forth. localStorage-persisted cart — rejected; session-only in-memory state is consistent with the mock data layer.
+- **Rationale:** One-item-at-a-time entry matches how staff actually compose a sale, the two-page split keeps each step small on phones, and a context provider follows the existing `SessionProvider`/`StoreProvider` pattern so `renderWithProviders` covers it in tests.
+- **Consequences:** New `CartProvider`/`useCart`/`CartContext` (seedable via `initialLines` for tests); `NewSalePage` rewritten to single-item entry; new `SaleCartPage` for cart + checkout; two new routes; `NewSalePage.test.tsx` rewritten and `SaleCartPage.test.tsx` added. The cart is not store-bound; cancel from the Cart page returns to the sales list without clearing.
+- **Related documents:** `docs/UI-UX.md` §7.1, `docs/REQUIREMENTS.md` §5, `src/features/sales/`, `src/app/router.tsx`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Editing a line's quantity directly on the Cart page is not included; cart content is cleared only on a successful save.
+
+### DEC-022 — Shopee-style catalog, automatic pricing, floating basket
+
+- **ID:** DEC-022
+- **Title:** Shopee-style catalog, automatic pricing, floating basket
+- **Status:** Accepted
+- **Date:** 2026-09-14
+- **Context:** DEC-021's sale entry was a single-item form with a manually entered unit price. The user asked to make sale entry a Shopee-like product catalog (all products, one "Add to cart" button per item with quantity selection), a floating basket in the bottom-right that opens the cart/checkout page (which also holds customer details, delivery, and the rest of the checkout), and an automatic unit price with no manual price input. Products previously had no price anywhere; seed sales showed per-store prices (Rice 25kg ₱1,150 Amara vs ₱1,200 Zeann), so a single global price would be wrong.
+- **Decision:** `/sales/new` becomes a responsive catalog grid of all active products, each card showing its automatic price, a quantity stepper (default 1), and an "Add to cart" button. Adding to the cart keeps the user on the catalog and increments a floating basket badge. The floating basket (`BasketFab`) is a fixed bottom-right button (above the mobile tab bar) shown only on the catalog page; clicking it opens the existing cart/checkout page (`/sales/cart`). The automatic unit price is derived per store from the selling price of that product's **most recent receiving record** at the current store (`listStorePrices` in `receivingService`); products never received at the store render "No price" with a disabled button. The receiving selling-price field — previously reference-only — now feeds sale pricing.
+- **Alternatives considered:** Single product-level price — rejected; seed data shows per-store pricing. Per-store price stored on stock — rejected; stock has no management UI and receiving already captures the selling price. Navigating to the cart after each add — rejected; the floating basket makes stay-on-catalog the natural flow.
+- **Rationale:** Staff compose a sale by picking items from what is in their store, and the receiving "Add stock" flow already records the selling price, so pricing automatically follows the most recent stock-in record. A catalog grid plus a persistent basket matches the mobile shopping pattern staff already know.
+- **Consequences:** `NewSalePage` rewritten as the catalog; new `BasketFab` and a `cart` icon; new `listStorePrices` service; seed receiving records now carry selling prices plus minimal records so every active product has a price at both stores; `NewSalePage`/`SaleCartPage` tests rewritten; `receivingService` tests extended. Prices resolve at the store active on the catalog page and are captured on the cart line at add time.
+- **Related documents:** `docs/UI-UX.md` §7.1, `docs/DATA-MODEL.md` §4.9, `docs/REQUIREMENTS.md` §5, `src/features/sales/`, `src/services/receivingService.ts`.
+- **Supersedes / Superseded by:** none.
+- **Open questions or follow-up:** Catalog search/filter is not included; quantity is not capped by stock (insufficient-stock behavior remains Confirmation Required).
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

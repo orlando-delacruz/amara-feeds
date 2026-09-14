@@ -14,6 +14,7 @@ import { MorePage } from '@/features/more/MorePage'
 import { ReceivingPage } from '@/features/receiving/ReceivingPage'
 import { ReportsPage } from '@/features/reports/ReportsPage'
 import { NewSalePage } from '@/features/sales/NewSalePage'
+import { SaleCartPage } from '@/features/sales/SaleCartPage'
 import { SaleListPage } from '@/features/sales/SaleListPage'
 import { RequireRole } from '@/features/session/guards'
 import { SignInPage } from '@/features/session/SignInPage'
@@ -37,6 +38,7 @@ export function AppRoutes() {
           <Route path="dashboard" element={<StaffDashboardPage />} />
           <Route path="sales" element={<SaleListPage />} />
           <Route path="sales/new" element={<NewSalePage />} />
+          <Route path="sales/cart" element={<SaleCartPage />} />
           <Route path="customers" element={<CustomerListPage />} />
           <Route path="credit" element={<CreditListPage />} />
           <Route path="credit/:creditId" element={<CreditDetailPage />} />
@@ -58,6 +60,7 @@ export function AppRoutes() {
           <Route path="customers" element={<CustomerListPage canAdd={false} />} />
           <Route path="sales" element={<SaleListPage basePath="/admin/sales" />} />
           <Route path="sales/new" element={<NewSalePage basePath="/admin/sales" />} />
+          <Route path="sales/cart" element={<SaleCartPage basePath="/admin/sales" />} />
           <Route path="credit" element={<CreditListPage basePath="/admin/credit" />} />
           <Route path="credit/:creditId" element={<CreditDetailPage basePath="/admin/credit" />} />
           <Route path="inventory" element={<InventoryPage />} />

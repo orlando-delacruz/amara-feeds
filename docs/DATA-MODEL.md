@@ -84,7 +84,7 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 - **Concept:** a store-specific stock receipt recording store, item, quantity, supplier, purchase/cost price, and the delivery rider and vehicle that brought the stock to the store.
 - **Source:** REQ-RCV-001, REQ-RCV-002; `docs/PROJECT.md` §4.
-- **Boundary:** the rider and vehicle references link to the per-store rider/vehicle managed lists (§4.13, §4.14); both are required on every receiving record.
+- **Boundary:** the rider and vehicle references link to the per-store rider/vehicle managed lists (§4.13, §4.14); both are required on every receiving record. The selling price captured on a receipt is the assumed per-store price source for the sale catalog: the most recent receipt's selling price at a store is that product's automatic sale price there (DEC-022; per-store pricing confirmed in seed behavior, field-level rules Confirmation Required).
 
 ### 4.10 Supplier — Confirmed
 

@@ -1,4 +1,5 @@
 import type { NewReceivingInput, ProductId, ReceivingRecord } from '@/domain'
+import type { Money } from '@/lib/money'
 import type { StoreId } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
@@ -16,6 +17,24 @@ export async function listReceiving(
         (!filter.productId || record.productId === filter.productId),
     )
     .map((record) => ({ ...record }))
+}
+
+/**
+ * Returns the automatic selling price per product for a store, taken from the
+ * selling price of that product's most recent receiving record at the store.
+ * Products never received at the store are omitted (they have no price).
+ */
+export async function listStorePrices(storeId: StoreId): Promise<Record<string, Money>> {
+  const records = getDb().receiving
+    .filter((record) => record.storeId === storeId && record.sellingPriceMinor !== undefined)
+    .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
+  const prices: Record<string, Money> = {}
+  for (const record of records) {
+    if (prices[record.productId] === undefined) {
+      prices[record.productId] = record.sellingPriceMinor as Money
+    }
+  }
+  return prices
 }
 
 export async function createReceiving(input: NewReceivingInput): Promise<ReceivingRecord> {

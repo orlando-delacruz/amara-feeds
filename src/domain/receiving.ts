@@ -10,9 +10,10 @@ export interface ReceivingRecord {
   supplier: string
   costPriceMinor: Money
   /**
-   * user-requested: selling price captured when stock is added. Reference
-   * info on the receipt only; it does not change sale pricing, which is
-   * entered per sale. Exact fields are Confirmation Required for the schema.
+   * assumed per-store price source: the selling price captured when stock is
+   * added feeds the catalog's automatic sale pricing (the latest receiving's
+   * selling price at a store is that product's price there). Exact fields are
+   * Confirmation Required for the schema.
    */
   sellingPriceMinor?: Money
   /**
@@ -34,7 +35,7 @@ export interface NewReceivingInput {
   quantity: number
   supplier: string
   costPriceMinor: Money
-  /** user-requested selling-price reference; see ReceivingRecord. */
+  /** assumed per-store price source; see ReceivingRecord. */
   sellingPriceMinor?: Money
   /** legacy: optional rider reference; no longer collected on the form. */
   riderId?: RiderId

@@ -1,9 +1,10 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
+import { approveProduct, createProduct } from '@/services/productService'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 
@@ -32,83 +33,85 @@ function renderNewSale(path = '/sales/new', user: User = staffUser) {
   )
 }
 
+async function productCard(name: string) {
+  const heading = await screen.findByRole('heading', { name })
+  return heading.closest('div') as HTMLElement
+}
+
 describe('NewSalePage', () => {
   beforeEach(() => resetDb())
 
-  it('records a cash sale and returns to the sales list', async () => {
+  it('shows active products with their store prices', async () => {
+    renderNewSale()
+
+    expect(await screen.findByText('Rice 25kg')).toBeInTheDocument()
+    expect(screen.getByText('Sugar 1kg')).toBeInTheDocument()
+    expect(screen.getByText('Instant Coffee')).toBeInTheDocument()
+    expect(screen.getByText('₱1,150.00')).toBeInTheDocument()
+    expect(screen.getByText('₱65.00')).toBeInTheDocument()
+    expect(screen.getByText('₱95.00')).toBeInTheDocument()
+  })
+
+  it('does not show pending products', async () => {
+    renderNewSale()
+
+    await screen.findByText('Rice 25kg')
+    expect(screen.queryByText('Cooking Oil 1L')).not.toBeInTheDocument()
+  })
+
+  it('adds to the cart and updates the basket badge without leaving the page', async () => {
     const user = userEvent.setup()
     renderNewSale()
 
-    await user.selectOptions(await screen.findByLabelText(/^Item/), 'prod-1')
-    await user.type(screen.getByLabelText(/^Qty/), '2')
-    await user.type(screen.getByLabelText(/^Unit price/), '1150')
-    await user.click(screen.getByRole('button', { name: 'Save sale' }))
+    const rice = await productCard('Rice 25kg')
+    await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))
 
-    expect(
-      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
-    ).toBeInTheDocument()
+    expect(within(screen.getByRole('button', { name: 'Open cart' })).getByText('1')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New sale' })).toBeInTheDocument()
   })
 
-  it('records a charge sale with a due date preview', async () => {
+  it('merges quantities when the same product is added again', async () => {
     const user = userEvent.setup()
     renderNewSale()
 
-    await user.selectOptions(await screen.findByLabelText('Payment type'), 'charge')
-    await user.selectOptions(screen.getByLabelText(/Customer \(optional\)/), 'cust-1')
-    await user.selectOptions(await screen.findByLabelText(/^Item/), 'prod-2')
-    await user.type(screen.getByLabelText(/^Qty/), '3')
-    await user.type(screen.getByLabelText(/^Unit price/), '65')
-    await user.selectOptions(screen.getByLabelText(/^Payment terms/), 'terms-15')
+    const rice = await productCard('Rice 25kg')
+    await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))
+    await user.click(within(rice).getByRole('button', { name: 'Increase Rice 25kg quantity' }))
+    await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))
 
-    expect(await screen.findByText(/Due date:/)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: 'Save sale' }))
-    expect(
-      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
-    ).toBeInTheDocument()
+    expect(within(screen.getByRole('button', { name: 'Open cart' })).getByText('3')).toBeInTheDocument()
   })
 
-  it('surfaces the charge-without-customer validation', async () => {
+  it('opens the cart page when the basket is clicked', async () => {
     const user = userEvent.setup()
     renderNewSale()
 
-    await user.selectOptions(await screen.findByLabelText('Payment type'), 'charge')
-    await user.selectOptions(await screen.findByLabelText(/^Item/), 'prod-1')
-    await user.type(screen.getByLabelText(/^Qty/), '1')
-    await user.type(screen.getByLabelText(/^Unit price/), '50')
-    await user.selectOptions(screen.getByLabelText(/^Payment terms/), 'terms-7')
-    await user.click(screen.getByRole('button', { name: 'Save sale' }))
+    const rice = await productCard('Rice 25kg')
+    await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))
+    await user.click(screen.getByRole('button', { name: 'Open cart' }))
 
-    expect(await screen.findByText('A charge sale requires a customer.')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Save sale' })).toBeInTheDocument()
   })
 
-  it('records a sale with a rider and vehicle from the store lists', async () => {
-    const user = userEvent.setup()
+  it('shows a disabled add button for products without a store receipt', async () => {
+    const product = await createProduct({ name: 'Unpriced Item', createdByUserId: 'user-1' })
+    await approveProduct(product.id)
+
     renderNewSale()
-
-    await user.selectOptions(await screen.findByLabelText(/^Item/), 'prod-1')
-    await user.type(screen.getByLabelText(/^Qty/), '1')
-    await user.type(screen.getByLabelText(/^Unit price/), '1150')
-    await user.selectOptions(screen.getByLabelText(/Rider/), 'rider-1')
-    await user.selectOptions(screen.getByLabelText(/Vehicle/), 'vehicle-1')
-    await user.click(screen.getByRole('button', { name: 'Save sale' }))
-
-    expect(
-      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
-    ).toBeInTheDocument()
+    const card = await screen.findByRole('heading', { name: 'Unpriced Item' })
+    const container = card.closest('div') as HTMLElement
+    expect(await screen.findByText('No price')).toBeInTheDocument()
+    expect(within(container).getByRole('button', { name: 'Add to cart' })).toBeDisabled()
   })
 
-  it('records a sale as admin and returns to the admin sales list', async () => {
+  it('lets an admin add to the cart and open it in the admin area', async () => {
     const user = userEvent.setup()
     renderNewSale('/admin/sales/new', adminUser)
 
-    await user.selectOptions(await screen.findByLabelText(/^Item/), 'prod-1')
-    await user.type(screen.getByLabelText(/^Qty/), '2')
-    await user.type(screen.getByLabelText(/^Unit price/), '1150')
-    await user.click(screen.getByRole('button', { name: 'Save sale' }))
+    const rice = await productCard('Rice 25kg')
+    await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))
+    await user.click(screen.getByRole('button', { name: 'Open cart' }))
 
-    expect(
-      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Save sale' })).toBeInTheDocument()
   })
 })

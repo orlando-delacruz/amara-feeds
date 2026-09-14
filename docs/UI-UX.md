@@ -108,9 +108,9 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.1 Sales
 
-- **Sequence.** Optional customer selection or creation → item selection and quantity → payment type (cash or charge; terms selection and automatic due date for charge) → delivery details when applicable → review → save → success or failure feedback.
+- **Sequence.** Browse the product catalog (all active products) on the entry page → pick a quantity per product and confirm with "Add to cart", staying on the catalog while the floating basket badge counts the total → open the floating basket to reach the Cart page → the Cart page lists the accumulated items (duplicate products merge quantities) with a "New item" action back to the catalog → optional customer selection or creation → payment type (cash or charge; terms selection and automatic due date for charge) → delivery details when applicable → review → save → success or failure feedback.
 - **Requirements.** Customer selection stays optional (REQ-CUST-002); payment type is cash or charge (REQ-SALE-003); delivery supports fee, rider, and vehicle (REQ-SALE-004); store-specific sales stay distinguishable (REQ-SALE-005).
-- **Constraints.** A successful save triggers the confirmed stock deduction behavior (REQ-INV-002). No additional sale fields and no editing or cancellation rules are defined here.
+- **Constraints.** The unit price is automatic per store (the selling price of the product's most recent receiving record); no manual price entry. Products never received at the store show "No price" and cannot be added. A successful save triggers the confirmed stock deduction behavior (REQ-INV-002). No additional sale fields and no editing or cancellation rules are defined here.
 
 ### 7.2 Customers
 
