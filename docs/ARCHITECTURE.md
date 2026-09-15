@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — Architecture
+# ZAF ONE — Architecture
 
 Source context: `docs/PROJECT.md` (business context), `docs/REQUIREMENTS.md` (requirements), `docs/UI-UX.md` (experience behavior), `docs/TECH-STACK.md` (selected technologies), `AGENTS.md` (rules).
 

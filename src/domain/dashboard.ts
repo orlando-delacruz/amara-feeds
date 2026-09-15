@@ -40,6 +40,13 @@ export interface PaymentsSummary {
   count: number
 }
 
+export interface PaymentMethodSalesRow {
+  /** Sale payment method (Cash, GCash, Maya, Bank Transfer, Check, or a custom value). */
+  method: string
+  saleCount: number
+  totalMinor: Money
+}
+
 export interface StockSummaryRow {
   storeId: StoreId
   productId: ProductId

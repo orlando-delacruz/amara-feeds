@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — Testing and Verification Strategy
+# ZAF ONE — Testing and Verification Strategy
 
 ## 1. Purpose and Scope
 

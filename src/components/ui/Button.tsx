@@ -35,8 +35,8 @@ const variantStyles: Record<ButtonVariant, ReturnType<typeof css>> = {
     &:hover:not(:disabled) {
       background-color: ${({ theme }) => theme.color.brand[700]};
       box-shadow:
-        0 3px 8px rgba(21, 60, 110, 0.3),
-        0 8px 20px rgba(30, 78, 140, 0.22);
+        0 3px 8px rgba(1, 60, 104, 0.3),
+        0 8px 20px rgba(1, 60, 104, 0.22);
     }
 
     &:active:not(:disabled) {
@@ -48,12 +48,12 @@ const variantStyles: Record<ButtonVariant, ReturnType<typeof css>> = {
     background-color: ${({ theme }) => theme.color.surface.card};
     color: ${({ theme }) => theme.color.text.primary};
     border: 2px solid ${({ theme }) => theme.color.border.strong};
-    box-shadow: 0 1px 2px rgba(33, 31, 24, 0.05);
+    box-shadow: 0 1px 2px rgba(13, 32, 52, 0.05);
 
     &:hover:not(:disabled) {
       border-color: ${({ theme }) => theme.color.brand[600]};
       color: ${({ theme }) => theme.color.brand[700]};
-      box-shadow: 0 2px 6px rgba(33, 31, 24, 0.07);
+      box-shadow: 0 2px 6px rgba(13, 32, 52, 0.07);
     }
 
     &:active:not(:disabled) {

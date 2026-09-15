@@ -71,6 +71,17 @@ describe('SaleCartPage', () => {
     ).toBeInTheDocument()
   })
 
+  it('auto-shows the address of an existing selected customer', async () => {
+    const user = userEvent.setup()
+    renderCart()
+
+    await user.selectOptions(await screen.findByLabelText(/Customer \(optional\)/), 'cust-1')
+
+    expect(await screen.findByLabelText('Address')).toHaveValue(
+      '123 Mabini Street, Barangay Poblacion',
+    )
+  })
+
   it('surfaces the charge-without-customer validation', async () => {
     const user = userEvent.setup()
     renderCart()
@@ -127,6 +138,20 @@ describe('SaleCartPage', () => {
     expect(await screen.findByText('Rice 25kg')).toBeInTheDocument()
     expect(screen.getByText(/2 ×/)).toBeInTheDocument()
     expect(screen.getAllByText('Rice 25kg')).toHaveLength(1)
+  })
+
+  it('shows the selected customer address from the add-customer flow', async () => {
+    const user = userEvent.setup()
+    renderCart()
+
+    await user.click(await screen.findByRole('button', { name: 'Add new customer' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Add customer' })
+    await user.type(within(dialog).getByLabelText(/^Name/), 'Rosa Abad')
+    await user.type(within(dialog).getByLabelText(/^Address/), '45 Rizal Ave.')
+    await user.click(within(dialog).getByRole('button', { name: 'Add customer' }))
+
+    expect(await screen.findByText('Rosa Abad')).toBeInTheDocument()
+    expect(screen.getByLabelText('Address')).toHaveValue('45 Rizal Ave.')
   })
 
   it('removes an item from the cart', async () => {

@@ -1,5 +1,6 @@
 import styled from 'styled-components'
 import { Link, useNavigate } from 'react-router-dom'
+import logoMark from '@/assets/logo-mark.svg'
 import { StoreBadge } from '@/components/ui/StoreBadge'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
@@ -62,21 +63,10 @@ const BrandName = styled.span`
   text-overflow: ellipsis;
 `
 
-const BrandMark = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
+const LogoMark = styled.img`
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
-`
-
-const BrandChip = styled.span<{ $color: string }>`
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  flex-shrink: 0;
-  border-radius: ${({ theme }) => theme.radius.sm};
-  background-color: ${({ $color }) => $color};
-  border: 1px solid rgba(255, 255, 255, 0.55);
 `
 
 const SectionTag = styled.span`
@@ -155,11 +145,8 @@ export function TopBar({ sectionLabel }: TopBarProps) {
     <Header>
       <Inner>
         <Brand to="/" translate="no">
-          <BrandMark aria-hidden="true">
-            <BrandChip $color="#5a3fa6" />
-            <BrandChip $color="#b6450f" />
-          </BrandMark>
-          <BrandName>Amara Feeds</BrandName>
+          <LogoMark src={logoMark} alt="" aria-hidden="true" />
+          <BrandName>ZAF ONE</BrandName>
         </Brand>
         <SectionTag>{sectionLabel}</SectionTag>
         <Spacer />

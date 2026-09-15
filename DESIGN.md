@@ -1,17 +1,19 @@
 ---
-name: Amara Feeds — Store Management
+name: ZAF ONE — Store Management
 description: Two-store business management rendered as painted delivery-vehicle signage.
 colors:
-  primary: "#1d3a2f"
-  primary-deep: "#152b22"
-  cream: "#f7f2e6"
-  wall: "#f4f0e6"
-  paper: "#fbf8f0"
-  ink: "#26221a"
-  ink-soft: "#57503f"
-  line: "#ddd5c4"
-  amara-violet: "#4a2b9e"
-  zeann-rust: "#93340e"
+  primary: "#013c68"
+  primary-deep: "#002b4c"
+  accent: "#0184b2"
+  aqua: "#4ed1f9"
+  cream: "#ffffff"
+  wall: "#f4f7fa"
+  paper: "#ffffff"
+  ink: "#013c68"
+  ink-soft: "#515b74"
+  line: "#cdcdcd"
+  amara-blue: "#016a91"
+  zeann-slate: "#515b74"
   healthy: "#1c5c33"
   attention: "#8a4d06"
   critical: "#96290a"
@@ -21,13 +23,13 @@ colors:
   attention-line: "#ecd29f"
   critical-wash: "#fbe7e0"
   critical-line: "#efc3b4"
-  info-paint: "#174a38"
-  info-wash: "#e8f0ec"
-  info-line: "#c8dcd1"
-  amara-wash: "#efe9fb"
-  amara-line: "#cdc0ee"
-  zeann-wash: "#fdefe2"
-  zeann-line: "#f3cfae"
+  info-paint: "#013c68"
+  info-wash: "#e6f2fa"
+  info-line: "#b9dcf0"
+  amara-wash: "#e6f3fa"
+  amara-line: "#b9dcf0"
+  zeann-wash: "#eceff4"
+  zeann-line: "#c3cad8"
   paint-edge: "rgba(0, 0, 0, 0.28)"
   paint-edge-strong: "rgba(0, 0, 0, 0.3)"
 typography:
@@ -85,16 +87,16 @@ components:
     padding: "2px 8px"
 ---
 
-# Design System: Amara Feeds — Store Management
+# Design System: ZAF ONE — Store Management
 
 ## Overview
 
 **Creative North Star: "The Depot Route Board"**
 
-Amara Feeds runs on painted vehicle signage. The interface is drawn the way a Philippine delivery fleet is painted: flat enamel plates on a warm workshop wall, stencil caps on the route board, and hard-edged color that tells you which store a number belongs to. A store's day reads the way a route board does — one big figure, two store columns, a persistent now. The staff dashboard is the driver's own route plate; the admin dashboard is the depot board both stores are pinned to.
+ZAF ONE runs on painted vehicle signage. The interface is drawn the way a Philippine delivery fleet is painted: flat enamel plates on a warm workshop wall, stencil caps on the route board, and hard-edged color that tells you which store a number belongs to. A store's day reads the way a route board does — one big figure, two store columns, a persistent now. The staff dashboard is the driver's own route plate; the admin dashboard is the depot board both stores are pinned to.
 
 **Key Characteristics:**
-- Saturated enamel panels with hard edges and no gradients, on a warm wall ground.
+- Saturated enamel panels with hard edges and no gradients, on a cool wall ground.
 - Route-board capitals (Barlow Condensed) for plates and headers; clean grotesque (Barlow) for body; tabular numerals for every figure.
 - A persistent now-mark pulses on today's date; plates stamp in once on load.
 - Every zone is labeled by its literal name; named balance states (healthy / attention / critical) carry credit and stock.
@@ -104,24 +106,26 @@ The world refuses the neutral card grid and the hero-metric template: figures li
 
 ## Colors
 
-The palette is paint on a wall: one deep depot enamel carries chrome and the brand figure, the two stores are the saturated identity enamels, and statuses are enamel chips with words.
+The palette is paint on a wall, drawn from the official logo (`logo-clear.png`, "Aquatic Feeds / Zeann Feeds Supply"): one deep marine enamel carries chrome and the brand figure, the two stores are the identity enamels, and statuses are enamel chips with words.
 
 ### Primary
-- **Depot Enamel** (`#1d3a2f`): the brand figure and chrome. Route-board headers, the overall daily sales plate, primary actions, focus ring. Reads as deep green-black paint (feeds/agriculture truth kept in the enamel register).
+- **Marine Enamel** (`#013c68`): the brand figure and chrome. Route-board headers, the overall daily sales plate, primary actions, focus ring. Reads as the logo's deep navy water.
+- **Marine Accent** (`#0184b2`): the logo's mid blue — focus rings, selected states, hover edges.
+- **Aqua** (`#4ed1f9`): the logo's light cyan — light accent and the simplified small mark.
 
 ### Secondary
-- **Amara Violet** (`#4a2b9e`): Amara's enamel. The store's hero plate on the staff dashboard, store column headers, store identity accents.
-- **Zeann Rust** (`#93340e`): Zeann's enamel. Zeann's hero plate, store column headers, store identity accents.
+- **Amara Blue** (`#016a91`): Amara's enamel (the logo's mid blue darkened for AA). The store's hero plate on the staff dashboard, store column headers, store identity accents.
+- **Zeann Slate** (`#515b74`): Zeann's enamel (the logo's slate). Zeann's hero plate, store column headers, store identity accents.
 
 ### Tertiary
-- **Cream** (`#f7f2e6`): the stencil ink on every painted plate. White text on brand/store solids meets AA.
+- **White** (`#ffffff`): the stencil ink on every painted plate. White text on brand/store solids meets AA.
 
 ### Neutral
-- **Workshop Wall** (`#f4f0e6`): the page ground; the wall the plates are mounted on.
-- **Unpainted Paper** (`#fbf8f0`): cards, boards, and list groups between the plates.
-- **Ink** (`#26221a`): primary body text.
-- **Ink Soft** (`#57503f`): secondary text.
-- **Line** (`#ddd5c4`): hairline dividers and board edges.
+- **Cool Wall** (`#f4f7fa`): the page ground; the wall the plates are mounted on.
+- **Unpainted Paper** (`#ffffff`): cards, boards, and list groups between the plates.
+- **Ink** (`#013c68`): primary body text.
+- **Ink Soft** (`#515b74`): secondary text.
+- **Line** (`#cdcdcd`): hairline dividers and board edges.
 
 ### Named Rules
 **The Flat Paint Rule.** Enamel plates are flat — hard edges, no gradients, no soft-fill panels. The only depth is the plate's own drop shadow and a 1px dark paint edge.
@@ -151,7 +155,7 @@ Base is mobile-first from 320px. The dashboard is a vertical board: route header
 
 ## Elevation & Depth
 
-Depth is the plate-on-wall: enamel plates carry a warm dark drop shadow (`shadow.paint`) plus a 1px inner dark paint edge and a faint top highlight, so they read as mounted painted metal. Unpainted paper boards sit flush on the wall with a hairline edge and no resting shadow; the layered warm shadows (`sm`/`md`/`lg`/`raised`) appear only as a response to state (hover, dialog, focus). Stencil plates cast no shadow — they are painted on the wall.
+Depth is the plate-on-wall: enamel plates carry a cool dark drop shadow (`shadow.paint`) plus a 1px inner dark paint edge and a faint top highlight, so they read as mounted painted metal. Unpainted paper boards sit flush on the wall with a hairline edge and no resting shadow; the layered cool shadows (`sm`/`md`/`lg`/`raised`) appear only as a response to state (hover, dialog, focus). Stencil plates cast no shadow — they are painted on the wall.
 
 ### Shadow Vocabulary
 - **paint** (`0 6px 16px rgba(21,43,34,0.26), 0 2px 5px rgba(21,43,34,0.2)`): enamel plates and route boards only.

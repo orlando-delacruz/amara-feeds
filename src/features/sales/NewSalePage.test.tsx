@@ -59,6 +59,38 @@ describe('NewSalePage', () => {
     expect(screen.queryByText('Cooking Oil 1L')).not.toBeInTheDocument()
   })
 
+  it('sorts active products alphabetically', async () => {
+    renderNewSale()
+    await screen.findByText('Instant Coffee')
+
+    const headings = screen
+      .getAllByRole('heading', { level: 3 })
+      .map((heading) => heading.textContent)
+    expect(headings).toEqual(['Instant Coffee', 'Rice 25kg', 'Sugar 1kg'])
+  })
+
+  it('filters products by search term', async () => {
+    const user = userEvent.setup()
+    renderNewSale()
+    await screen.findByText('Rice 25kg')
+
+    await user.type(screen.getByLabelText('Search items'), 'rice')
+
+    expect(screen.getByText('Rice 25kg')).toBeInTheDocument()
+    expect(screen.queryByText('Sugar 1kg')).not.toBeInTheDocument()
+    expect(screen.queryByText('Instant Coffee')).not.toBeInTheDocument()
+  })
+
+  it('shows an empty state when the search matches nothing', async () => {
+    const user = userEvent.setup()
+    renderNewSale()
+    await screen.findByText('Rice 25kg')
+
+    await user.type(screen.getByLabelText('Search items'), 'zzz')
+
+    expect(await screen.findByText('No items match your search')).toBeInTheDocument()
+  })
+
   it('adds to the cart and updates the basket badge without leaving the page', async () => {
     const user = userEvent.setup()
     renderNewSale()

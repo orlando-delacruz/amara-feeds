@@ -34,6 +34,7 @@ export async function createCustomer(input: NewCustomerInput): Promise<Customer>
     id: nextId('cust'),
     name,
     contact: input.contact?.trim() || undefined,
+    address: input.address?.trim() || undefined,
     createdByUserId: input.createdByUserId,
     createdAt: new Date().toISOString(),
   }

@@ -1,8 +1,8 @@
-# AGENTS.md — AI Agent Operating Rules for Amara + Zeann Store Management System
+# AGENTS.md — AI Agent Operating Rules for ZAF ONE
 
 ## 1. Project Context
 
-- **Project:** Amara + Zeann Store Management System
+- **Project:** ZAF ONE
 - **Business:** Amara and Zeann — a two-store business.
 - **Project type:** business management web application, mobile-primary.
 - **Primary purpose:** support day-to-day operations across shared customers, per-store sales and inventory, and shared credit/collection.

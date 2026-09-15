@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — API and Integration Contracts
+# ZAF ONE — API and Integration Contracts
 
 ## 1. Purpose and Scope
 

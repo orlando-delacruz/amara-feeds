@@ -17,7 +17,7 @@ const Bar = styled.div`
   margin: 0 calc(-1 * ${({ theme }) => theme.space.lg});
   background-color: ${({ theme }) => theme.color.surface.page};
   border-bottom: 1px solid ${({ theme }) => theme.color.border.default};
-  box-shadow: 0 2px 8px rgba(33, 31, 24, 0.04);
+  box-shadow: 0 2px 8px rgba(13, 32, 52, 0.04);
 `
 
 export function FilterBar({ children }: FilterBarProps) {

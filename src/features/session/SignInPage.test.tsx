@@ -71,7 +71,7 @@ describe('SignInPage', () => {
     renderSignIn()
 
     expect(screen.getByRole('main')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1, name: 'Amara Feeds' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'ZAF ONE' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Sign in' })).toBeInTheDocument()
   })
 })

@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — Requirements
+# ZAF ONE — Requirements
 
 ## 1. Requirements Overview
 
@@ -30,6 +30,7 @@ Core constraints: initial/core project budget of ₱10,000; target completion Se
 - REQ-CUST-001 (**Must**): The system MUST maintain one shared customer record per customer, accessible across Amara and Zeann according to the user's permissions.
 - REQ-CUST-002 (**Must**): Customer selection MUST be optional for every sale.
 - REQ-CUST-003 (**Must**): During a sale, staff MUST be able to select an existing customer or add a new customer.
+- REQ-CUST-004 (**Must**): Adding a customer MUST record their name and MAY record a contact and an address; the customer list and the sale's selected customer display the address.
 
 ## 5. Sales Requirements
 
@@ -122,7 +123,7 @@ Acceptance: given a staff member creates a product, it remains inactive until ap
 - REQ-REP-001 (**Must**): The system MUST support Excel export of the agreed business summaries.
 - REQ-REP-002 (**Must**): The system MUST support printing of the agreed business summaries.
 - REQ-REP-003 (**Confirmation Required**): Exact report columns and formats require explicit confirmation.
-- REQ-REP-004 (**Must**): Reports MUST be admin-only; staff MUST NOT access the reports surface or see it in navigation. Reports MUST support selecting a From/To date range, and the Excel export MUST cover that range's sale lines (date, location, customer, item, quantity, price, amount, type, delivery fee, discount, net, rider, vehicle).
+- REQ-REP-004 (**Must**): Reports MUST be admin-only; staff MUST NOT access the reports surface or see it in navigation. Reports MUST support selecting a From/To date range, MUST show a "Sales by mode of payment" breakdown, and the Excel export MUST cover that range's sale lines (date, location, customer, item, quantity, price, amount, type, mode of payment, delivery fee, discount, net, rider, vehicle).
 
 ## 14. Responsive and Accessibility Requirements
 

@@ -18,7 +18,7 @@ const Bar = styled.nav`
   padding-right: max(${({ theme }) => theme.space.md}, env(safe-area-inset-right, 0px));
   background-color: ${({ theme }) => theme.color.surface.card};
   border-top: 1px solid ${({ theme }) => theme.color.border.default};
-  box-shadow: 0 -2px 10px rgba(33, 31, 24, 0.06);
+  box-shadow: 0 -2px 10px rgba(13, 32, 52, 0.06);
 
   @media (min-width: ${({ theme }) => theme.breakpoint.desktop}) {
     display: none;

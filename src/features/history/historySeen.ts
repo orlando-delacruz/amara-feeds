@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'amara-feeds:history:last-seen'
+const STORAGE_KEY = 'zaf-one:history:last-seen'
 
 export function getHistoryLastSeen(): string | null {
   try {

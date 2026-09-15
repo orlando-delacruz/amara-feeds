@@ -44,6 +44,7 @@ export async function buildSalesReportRows(
         unitPriceMinor: line.unitPriceMinor,
         lineTotalMinor: line.quantity * line.unitPriceMinor,
         paymentType: sale.paymentType === 'charge' ? 'Charge' : 'Cash',
+        paymentMethod: sale.paymentMethod?.trim() || '—',
         deliveryFeeMinor: first ? (sale.delivery?.feeMinor ?? 0) : 0,
         discountMinor: first ? (sale.discountMinor ?? 0) : 0,
         netTotalMinor: first ? sale.totalMinor : 0,

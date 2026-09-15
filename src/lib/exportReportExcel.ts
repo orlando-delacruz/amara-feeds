@@ -17,6 +17,7 @@ export interface ReportExcelRow {
   unitPriceMinor: number
   lineTotalMinor: number
   paymentType: string
+  paymentMethod: string
   deliveryFeeMinor: number
   discountMinor: number
   netTotalMinor: number
@@ -38,7 +39,7 @@ function downloadBlob(blob: Blob, filename: string) {
 export function reportExcelFilename(from: string, to: string, storeId?: StoreId): string {
   const scope = storeId ? storeNames[storeId] : 'both-stores'
   const range = from === to ? from : `${from}-to-${to}`
-  return `amara-feeds-report-${range}-${scope}.xlsx`
+  return `zaf-one-report-${range}-${scope}.xlsx`
 }
 
 export async function exportReportExcel(input: ReportExcelInput): Promise<void> {
@@ -46,7 +47,7 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
 
   const headerStyle = {
     fontWeight: 'bold' as const,
-    backgroundColor: '#1d3a2f',
+    backgroundColor: '#013c68',
     textColor: '#ffffff',
   }
 
@@ -59,6 +60,7 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     { header: headerStyle, label: 'Price', width: 12 },
     { header: headerStyle, label: 'Amount', width: 12 },
     { header: headerStyle, label: 'Type', width: 10 },
+    { header: headerStyle, label: 'Mode of Payment', width: 16 },
     { header: headerStyle, label: 'Delivery Fee', width: 14 },
     { header: headerStyle, label: 'Discount', width: 12 },
     { header: headerStyle, label: 'Net', width: 12 },
@@ -77,6 +79,7 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
       { value: row.unitPriceMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.lineTotalMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.paymentType, type: String },
+      { value: row.paymentMethod, type: String },
       { value: row.deliveryFeeMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.discountMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.netTotalMinor / 100, type: Number, format: '#,##0.00' },

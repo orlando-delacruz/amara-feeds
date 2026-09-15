@@ -41,6 +41,8 @@ describe('ReportsPage', () => {
     expect(screen.getByText(/Overall sales/)).toBeInTheDocument()
     expect(screen.getByText(/Outstanding credit/)).toBeInTheDocument()
     expect(screen.getByText(/Payments/)).toBeInTheDocument()
+    expect(screen.getAllByText('Sales by mode of payment').length).toBeGreaterThan(0)
+    expect(screen.getByText('Cash')).toBeInTheDocument()
     expect(screen.getAllByText(/Current stock/).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Received stock/).length).toBeGreaterThan(0)
   })

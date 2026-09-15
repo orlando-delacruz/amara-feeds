@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — Design System
+# ZAF ONE — Design System
 
 ## 1. Purpose and Status
 
@@ -9,8 +9,10 @@ these values express that behavior visually. The implementation is `src/theme/` 
 in `DESIGN.md`, and in `src/theme/tokens.ts` must stay in sync.
 
 Status labels follow `TEMPLATE-GUIDE.md`. All values below are **Confirmed** for the
-implemented system; brand artwork, a logo, or a marketing palette remain **Confirmation
-Required** and must not be invented.
+implemented system. The official logo (`logo-clear.png`, a circular badge reading "Aquatic
+Feeds / Zeann Feeds Supply") is provided by the business and its palette is the source for
+the brand colors in §3; the simplified small mark used at header/favicon sizes is a derived
+placeholder and may be replaced by the business at any time.
 
 ## 2. Principles
 
@@ -24,52 +26,54 @@ Required** and must not be invented.
 4. **Accessible contrast.** Text/background pairs target WCAG AA (4.5:1 for body text);
    cream stencil ink on enamel plates meets AA.
 5. **Painted delivery-vehicle signage.** The interface reads like a painted fleet: flat
-   enamel plates with hard edges and no gradients on a warm workshop-wall ground; stencil
-   route-board caps; a persistent now-mark; named balance states.
+   enamel plates with hard edges and no gradients on a cool workshop-wall ground; stencil
+   route-board caps; a persistent now-mark; named balance states. The palette is the logo's
+   marine blues and slates.
 6. **Calm motion.** Motion is feedback plus one authored moment (plate stamp-in, now-pulse);
    `prefers-reduced-motion` disables it.
 7. **Touch-first targets.** Interactive elements are at least 44px in the touch dimension.
 
 ## 3. Color
 
-### 3.1 Ground and neutrals (warm workshop wall)
+### 3.1 Ground and neutrals (cool workshop wall)
 
-| Token             | Value                   | Use                                        |
-| ----------------- | ----------------------- | ------------------------------------------ |
-| `neutral.50`      | `#f6f3ec`               | Warm wall highlight                        |
-| `neutral.100`     | `#efe9de`               | Subtle fills                               |
-| `neutral.200`     | `#e0d8c7`               | Recessed fills                             |
-| `neutral.300`     | `#c8bea9`               | —                                          |
-| `neutral.400`     | `#7d7463`               | Placeholder-adjacent, decorative dots      |
-| `neutral.500`     | `#5c5647`               | —                                          |
-| `neutral.600`     | `#4c473b`               | —                                          |
-| `neutral.700`     | `#3a362d`               | —                                          |
-| `neutral.800`     | `#2a271f`               | Stencil outline paint, dark tag ink        |
-| `neutral.900`     | `#201d17`               | —                                          |
-| `surface.page`    | `#f4f0e6`               | Page ground (workshop wall)                |
-| `surface.subtle`  | `#ece6d9`               | Filter bars, icon chips, skeleton base     |
-| `surface.card`    | `#fbf8f0`               | Unpainted paper boards, cards, list groups |
-| `surface.overlay` | `rgba(32, 29, 23, 0.5)` | Dialog backdrop                            |
-| `text.primary`    | `#26221a`               | Body text                                  |
-| `text.secondary`  | `#57503f`               | Secondary text                             |
-| `text.muted`      | `#6f6755`               | Muted text                                 |
-| `text.inverse`    | `#f7f2e6`               | Stencil cream ink on painted plates        |
-| `border.default`  | `#ddd5c4`               | Default hairline borders                   |
-| `border.strong`   | `#c6bca6`               | Strong borders                             |
+| Token             | Value                  | Use                                        |
+| ----------------- | ---------------------- | ------------------------------------------ |
+| `neutral.50`      | `#f7f9fb`              | Cool wall highlight                        |
+| `neutral.100`     | `#eef2f5`              | Subtle fills                               |
+| `neutral.200`     | `#dae0e6`              | Recessed fills                             |
+| `neutral.300`     | `#cdcdcd`              | —                                          |
+| `neutral.400`     | `#929eb6`              | Placeholder-adjacent, decorative dots      |
+| `neutral.500`     | `#515b74`              | Slate ink                                  |
+| `neutral.600`     | `#3a4256`              | —                                          |
+| `neutral.700`     | `#2a3040`              | —                                          |
+| `neutral.800`     | `#1a1f2b`              | Stencil outline paint, dark tag ink        |
+| `neutral.900`     | `#0f131b`              | —                                          |
+| `surface.page`    | `#f4f7fa`              | Page ground (cool workshop wall)           |
+| `surface.subtle`  | `#eef2f5`              | Filter bars, icon chips, skeleton base     |
+| `surface.card`    | `#ffffff`              | Unpainted paper boards, cards, list groups |
+| `surface.overlay` | `rgba(1, 20, 40, 0.5)` | Dialog backdrop                            |
+| `text.primary`    | `#013c68`              | Body text                                  |
+| `text.secondary`  | `#515b74`              | Secondary text                             |
+| `text.muted`      | `#6b7590`              | Muted text (AA on white)                   |
+| `text.inverse`    | `#ffffff`              | Stencil white ink on painted plates        |
+| `border.default`  | `#cdcdcd`              | Default hairline borders                   |
+| `border.strong`   | `#929eb6`              | Strong borders                             |
 
-### 3.2 Brand (depot enamel — chrome, primary figure, focus)
+### 3.2 Brand (marine enamel — navy, accent, focus)
 
 | Token        | Value     |
 | ------------ | --------- |
-| `brand.50`   | `#eef2ec` |
-| `brand.100`  | `#dbe3da` |
-| `brand.600`  | `#1d3a2f` |
-| `brand.700`  | `#152b22` |
-| `brand.tint` | `#c7d8c9` |
+| `brand.50`   | `#eaf7fd` |
+| `brand.100`  | `#d6effa` |
+| `brand.600`  | `#013c68` |
+| `brand.700`  | `#002b4c` |
+| `brand.tint` | `#bee7f7` |
 
-Cream stencil ink (`#f7f2e6`) on `brand.600`/`brand.700` meets AA. The depot enamel is the
-deep green-black of a feeds delivery lorry; it carries route-board headers, the overall
-daily sales plate, primary actions, and the focus ring. **No gradients** — paint is flat.
+White stencil ink (`#ffffff`) on `brand.600`/`brand.700` meets AA. The marine enamel is the
+deep navy of the logo's water; it carries route-board headers, the overall daily sales plate,
+primary actions, and the focus ring. The logo's mid blue `#0184b2` and light cyan `#4ed1f9`
+are the accent/focus tones. **No gradients** — paint is flat.
 
 ### 3.3 Status paints (chips — always used with words)
 
@@ -78,28 +82,30 @@ daily sales plate, primary actions, and the focus ring. **No gradients** — pai
 | Healthy   | `#1c5c33`         | `#e6efe3`       | `#c2d7bc` |
 | Attention | `#8a4d06`         | `#fcf0dc`       | `#ecd29f` |
 | Critical  | `#96290a`         | `#fbe7e0`       | `#efc3b4` |
-| Info      | `#174a38`         | `#e8f0ec`       | `#c8dcd1` |
+| Info      | `#013c68`         | `#e6f2fa`       | `#b9dcf0` |
 
-Named balance states (healthy / attention / critical) are the vocabulary for credit and
-stock on the dashboards (`src/features/dashboard/BalanceState.tsx`).
+Semantic statuses stay out of the logo palette so success/warning/danger remain meaningful
+and WCAG-contrast safe. Named balance states (healthy / attention / critical) are the
+vocabulary for credit and stock on the dashboards (`src/features/dashboard/BalanceState.tsx`).
 
 ### 3.4 Store identity enamels
 
 | Store | Background | Border    | Text      | Solid enamel |
 | ----- | ---------- | --------- | --------- | ------------ |
-| Amara | `#efe9fb`  | `#cdc0ee` | `#3b2470` | `#4a2b9e`    |
-| Zeann | `#fdefe2`  | `#f3cfae` | `#6b2606` | `#93340e`    |
+| Amara | `#e6f3fa`  | `#b9dcf0` | `#013c68` | `#016a91`    |
+| Zeann | `#eceff4`  | `#c3cad8` | `#3a4256` | `#515b74`    |
 
 The solid enamel paints the store's hero plate (staff dashboard), store column headers
-(admin depot board), badges, and active-nav markers. The store name is always shown as text
-next to it.
+(admin depot board), badges, and active-nav markers. Amara uses the logo's mid blue darkened
+to `#016a91` so white badge text meets AA; Zeann uses the logo's slate `#515b74`. The store
+name is always shown as text next to it.
 
 ### 3.5 Focus treatment
 
 | Token              | Value                                          |
 | ------------------ | ---------------------------------------------- |
-| `focus.ring`       | `#1d3a2f` (2px outline, 2px offset, soft glow) |
-| `focus.glow`       | `rgba(29, 58, 47, 0.18)`                       |
+| `focus.ring`       | `#0184b2` (2px outline, 2px offset, soft glow) |
+| `focus.glow`       | `rgba(1, 132, 178, 0.18)`                      |
 | `focus.dangerGlow` | `rgba(150, 41, 10, 0.16)`                      |
 
 ## 4. Typography
@@ -117,8 +123,8 @@ next to it.
 
 - **Spacing (4px base):** `0` 0 · `xs` 4px · `sm` 8px · `md` 12px · `lg` 16px · `xl` 24px · `xxl` 32px · `xxxl` 48px.
 - **Radii (hard edges):** `sm` 2px · `md` 4px · `lg` 6px (plates, route boards, store columns) · `xl` 10px · `full` 9999px (now-dot, rivets). Radii stay small so plates read as cut metal, not softened cards.
-- **Shadows (warm, layered):**
-  - `paint` — enamel plates and route boards only (warm dark drop + 1px inner paint edge + faint top highlight).
+- **Shadows (cool, layered):**
+  - `paint` — enamel plates and route boards only (cool dark drop + 1px inner paint edge + faint top highlight).
   - `sm` (elevated surfaces such as dialogs) · `md` (dialogs, elevated surfaces) · `lg` (prominent surfaces) · `raised` (interactive hover lift).
   - **Unpainted paper boards sit flush on the wall** — a hairline border at rest, shadow only as a state response (the Flush Board Rule; no ghost cards).
 - **Layout:** `layout.headerHeight` 60px · `layout.tabBarHeight` 64px · `layout.contentMaxWidth` 72rem. Chrome dimensions are tokens, never hardcoded offsets.

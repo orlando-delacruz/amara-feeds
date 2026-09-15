@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — Data Model
+# ZAF ONE — Data Model
 
 ## 1. Purpose and Scope
 
@@ -40,9 +40,9 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.2 Customer — Confirmed
 
-- **Concept:** one shared customer identity usable across both stores, never duplicated per store.
+- **Concept:** one shared customer identity usable across both stores, never duplicated per store. The implemented record carries name, an optional contact, and an optional address.
 - **Source:** REQ-CUST-001, REQ-STORE-003; `docs/PROJECT.md` §2.
-- **Boundary:** exact identity fields are Confirmation Required; no per-store customer copies exist in this model.
+- **Boundary:** exact identity fields are Confirmation Required beyond the implemented name, contact, and address; no per-store customer copies exist in this model.
 
 ### 4.3 Product / Item — Confirmed
 

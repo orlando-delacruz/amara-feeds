@@ -29,14 +29,21 @@ export function AddCustomerDialog({
 }: AddCustomerDialogProps) {
   const [name, setName] = useState('')
   const [contact, setContact] = useState('')
+  const [address, setAddress] = useState('')
   const { run, pending, error } = useMutation(createCustomer)
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const created = await run({ name, contact: contact.trim() || undefined, createdByUserId })
+    const created = await run({
+      name,
+      contact: contact.trim() || undefined,
+      address: address.trim() || undefined,
+      createdByUserId,
+    })
     if (created) {
       setName('')
       setContact('')
+      setAddress('')
       onCreated(created)
     }
   }
@@ -57,6 +64,12 @@ export function AddCustomerDialog({
           label="Contact (optional)"
           value={contact}
           onChange={(event) => setContact(event.target.value)}
+        />
+        <TextField
+          id="new-customer-address"
+          label="Address (optional)"
+          value={address}
+          onChange={(event) => setAddress(event.target.value)}
         />
         <Button type="submit" disabled={pending}>
           {pending ? 'Saving…' : 'Add customer'}

@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — Development Workflow
+# ZAF ONE — Development Workflow
 
 ## 1. Purpose and Scope
 

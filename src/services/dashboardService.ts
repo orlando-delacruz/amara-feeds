@@ -3,6 +3,7 @@ import type {
   OverallDailySales,
   OverallPeriodSales,
   OutstandingCreditTotal,
+  PaymentMethodSalesRow,
   PaymentsSummary,
   PeriodSalesByStore,
   ReceivedStockSummaryRow,
@@ -143,6 +144,24 @@ export async function getPaymentsSummary(
     totalMinor: sumMinor(payments.map((payment) => payment.amountMinor)),
     count: payments.length,
   }
+}
+
+export async function getSalesByPaymentMethodInRange(
+  from: string,
+  to: string,
+): Promise<PaymentMethodSalesRow[]> {
+  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, from, to))
+  const byMethod = new Map<string, { saleCount: number; totalMinor: number }>()
+  for (const sale of sales) {
+    const method = sale.paymentMethod?.trim() || 'Unspecified'
+    const entry = byMethod.get(method) ?? { saleCount: 0, totalMinor: 0 }
+    entry.saleCount += 1
+    entry.totalMinor += sale.totalMinor
+    byMethod.set(method, entry)
+  }
+  return [...byMethod.entries()]
+    .map(([method, row]) => ({ method, saleCount: row.saleCount, totalMinor: row.totalMinor }))
+    .sort((a, b) => a.method.localeCompare(b.method, 'en'))
 }
 
 export async function getCurrentStock(): Promise<StockSummaryRow[]> {

@@ -1,8 +1,8 @@
-# Amara + Zeann Store Management System — Decision Records
+# ZAF ONE — Decision Records
 
 ## 1. Purpose and Scope
 
-This file preserves important architectural, technical, and implementation decisions for the Amara + Zeann Store Management System: what was decided, why, alternatives, consequences, related documents, and lifecycle status. It supports scope discipline, simplicity, maintainability, and avoidance of unnecessary infrastructure appropriate to the ₱10,000 core-first project. Each record explains the choice, rationale, trade-offs, alternatives, consequences, related documents, and lifecycle status. This file is never a requirements document, implementation guide, or business-content source.
+This file preserves important architectural, technical, and implementation decisions for ZAF ONE: what was decided, why, alternatives, consequences, related documents, and lifecycle status. It supports scope discipline, simplicity, maintainability, and avoidance of unnecessary infrastructure appropriate to the ₱10,000 core-first project. Each record explains the choice, rationale, trade-offs, alternatives, consequences, related documents, and lifecycle status. This file is never a requirements document, implementation guide, or business-content source.
 
 ## 2. Documented Choice vs Recorded Decision vs Implemented Behavior
 
@@ -93,8 +93,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-004 | Mock service seam, in-memory datastore, and money representation | Accepted | 2026-09-10 |
 | DEC-005 | Mock session, role gating, and shared async data hooks | Accepted | 2026-09-10 |
 | DEC-006 | Report summaries with browser print; Excel export deferred | Accepted | 2026-09-10 |
-| DEC-007 | Sign-in entry brand and two-store treatment | Accepted | 2026-09-10 |
-| DEC-008 | App-like shell, shared UI primitives, and responsive record lists | Accepted | 2026-09-10 |
+| DEC-007 | Sign-in entry brand and two-store treatment | Superseded by DEC-028 | 2026-09-10 |
+| DEC-008 | App-like shell, shared UI primitives, and responsive record lists | Superseded by DEC-028 | 2026-09-10 |
 | DEC-009 | Operations-board dashboard and app-wide visual rhythm | Accepted | 2026-09-10 |
 | DEC-010 | Tight responsive scale and flat grouped dashboard | Accepted | 2026-09-10 |
 | DEC-011 | More page, centered tabs, dashboard value hierarchy | Accepted | 2026-09-10 |
@@ -104,7 +104,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-015 | Per-store riders and vehicles management | Accepted | 2026-09-13 |
 | DEC-016 | Required rider/vehicle on receiving | Accepted | 2026-09-13 |
 | DEC-017 | Per rider/vehicle expense tracking with net | Accepted | 2026-09-13 |
-| DEC-019 | Identity redesign: painted delivery-vehicle signage | Accepted | 2026-09-13 |
+| DEC-019 | Identity redesign: painted delivery-vehicle signage | Superseded by DEC-029 (palette only) | 2026-09-13 |
 | DEC-020 | Report PDF export with jsPDF | Superseded by DEC-024 | 2026-09-14 |
 | DEC-021 | Add-to-cart split of the sale entry flow | Accepted | 2026-09-14 |
 | DEC-022 | Shopee-style catalog, automatic pricing, floating basket | Accepted | 2026-09-14 |
@@ -113,6 +113,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-025 | Staff dashboard trim, history unread badge, admin customer add | Accepted | 2026-09-14 |
 | DEC-026 | Report date range and History store filter | Accepted | 2026-09-14 |
 | DEC-027 | Rider and vehicle full CRUD with reference guard | Accepted | 2026-09-14 |
+| DEC-028 | Rename brand and project to ZAF ONE | Accepted | 2026-09-14 |
+| DEC-029 | Adopt official logo and recolor theme to the logo palette | Accepted | 2026-09-14 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -216,7 +218,7 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Rationale:** Makes the entry screen recognizably the product's front door and makes store context obvious at account choice (UI-UX §2.10), while staying inside the confirmed visual language and the sign-in-only scope.
 - **Consequences:** The `TopBar` wordmark ("Amara + Zeann") and the document title are intentionally unchanged; aligning them to "Amara Feeds" app-wide is a follow-up, not part of this change.
 - **Related documents:** `docs/PROJECT.md` §10, `docs/DESIGN-SYSTEM.md` §§3.4, 8, `docs/UI-UX.md` §§2, 14.
-- **Supersedes / Superseded by:** none.
+- **Supersedes / Superseded by:** Superseded by DEC-028.
 - **Open questions or follow-up:** App-wide brand alignment (TopBar, document title) remains open.
 
 ### DEC-008 — App-like shell, shared UI primitives, and responsive record lists
@@ -231,7 +233,7 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Rationale:** One shared visual system gives the premium app feel and makes future changes local: fix once in the primitive, fixed on every page. The More sheet keeps all confirmed destinations reachable without overloading the tab bar, consistent with `docs/UI-UX.md` §6.
 - **Consequences:** `docs/DESIGN-SYSTEM.md` §§4–6 record the new tokens and tab-bar rules; `src/theme/tokens.ts` implements them. Page tests asserting old copy or table-only structure were updated with the reskin.
 - **Related documents:** `docs/DESIGN-SYSTEM.md` §§4–6, `docs/UI-UX.md` §§6, 9–10, 12, `docs/ARCHITECTURE.md` §6.
-- **Supersedes / Superseded by:** none.
+- **Supersedes / Superseded by:** Superseded by DEC-028.
 - **Open questions or follow-up:** None; dark mode and webfonts stay deferred.
 
 ### DEC-009 — Operations-board dashboard and app-wide visual rhythm
@@ -397,7 +399,7 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Consequences:** `src/theme/tokens.ts`, `index.html` (Barlow + Barlow Condensed fonts), `src/components/ui/StatCard.tsx` (enamel plate / stencil plate / paper tag), the two dashboard pages and their new `RouteBoard`/`BalanceState` primitives updated; `DESIGN.md` and `.impeccable/design.json` written from the built world; `docs/DESIGN-SYSTEM.md` rewritten to match. DEC-018 is superseded. Rest of app surfaces inherit the world through the shared tokens/primitives; a full per-surface pass (sign-in, lists, forms, nav chrome) is follow-up, not part of this record. Balance-state thresholds for stock (0 empty / 1–2 low / ≥3 stocked) and credit (0 healthy / >0 attention) are assumed UI choices, not confirmed business rules.
 - **Related documents:** `DESIGN.md`, `.impeccable/design.json`, `docs/DESIGN-SYSTEM.md`, `.impeccable/surfaces/dashboard.md`, `src/theme/tokens.ts`, `src/components/ui/StatCard.tsx`, `src/features/dashboard/`.
 - **Supersedes:** DEC-018 (visual refinement: evergreen brand, warm neutrals, Plus Jakarta Sans).
-- **Superseded by:** none.
+- **Superseded by:** DEC-029 (color palette only — the painted-signage motif, typography, and structure remain).
 - **Open questions or follow-up:** Brand artwork and a logo remain Confirmation Required; stock balance-state thresholds remain assumed; app-wide surface rollout of the new primitives is follow-up.
 
 ### DEC-020 — Report PDF export with jsPDF
@@ -519,6 +521,36 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Related documents:** `docs/UI-UX.md` §7.10, `docs/REQUIREMENTS.md` §9a (REQ-DELIV-004), `docs/DATA-MODEL.md` §4.13–4.14, `src/features/delivery/`, `src/services/riderService.ts`, `src/services/vehicleService.ts`.
 - **Supersedes / Superseded by:** none.
 - **Open questions or follow-up:** Exact rider/vehicle fields remain Confirmation Required.
+
+### DEC-028 — Rename brand and project to ZAF ONE
+
+- **ID:** DEC-028
+- **Title:** Rename brand and project to ZAF ONE
+- **Status:** Accepted
+- **Date:** 2026-09-14
+- **Context:** The on-screen product brand was "Amara Feeds" (DEC-007, confirmed 2026-09-10) and the project name was "Amara + Zeann Store Management System". The user asked to rename the project and system to **ZAF ONE**; the two operating stores remain Amara and Zeann.
+- **Decision:** The brand and project are renamed to **ZAF ONE**. On-screen brand text (`TopBar` wordmark, sign-in title, document `<title>`) becomes "ZAF ONE". The npm package name becomes `zaf-one`; the Excel export filename prefix becomes `zaf-one-report-*`; the localStorage keys become `zaf-one.session.v1` and `zaf-one:history:last-seen`. Project/product/brand references in `docs/PROJECT.md`, `README.md`, `AGENTS.md`, all doc titles, `PRODUCT.md`, `DESIGN.md`, and `.impeccable/design.json` are updated. Store names **Amara** and **Zeann**, the `amara-feeds` folder name, and the historical DEC bodies are left intact.
+- **Alternatives considered:** Keeping "Amara Feeds" — rejected; the user explicitly renamed the product. Renaming the repository folder too — out of scope for code changes and would break tooling paths without benefit.
+- **Rationale:** Matches the user's requested product identity while keeping the two-store operating model unchanged and avoiding churn to non-identifying internals.
+- **Consequences:** DEC-007 and DEC-008 (which established and aligned "Amara Feeds" app-wide) are marked Superseded by DEC-028. Existing localStorage session/history keys are invalidated (acceptable for the frontend-only mock). Brand-asserting tests updated.
+- **Related documents:** `docs/PROJECT.md` §10, `docs/DECISIONS.md` DEC-007, DEC-008, `README.md`, `AGENTS.md`, `src/components/navigation/TopBar.tsx`, `src/features/session/SignInPage.tsx`, `package.json`.
+- **Supersedes / Superseded by:** Supersedes DEC-007 and DEC-008.
+- **Open questions or follow-up:** Logo artwork remains Confirmation Required; the `amara-feeds` repository folder name is unchanged.
+
+### DEC-029 — Adopt official logo and recolor theme to the logo palette
+
+- **ID:** DEC-029
+- **Title:** Adopt official logo and recolor theme to the logo palette
+- **Status:** Accepted
+- **Date:** 2026-09-14
+- **Context:** The business provided the official logo (`logo-clear.png`, a circular badge reading "Aquatic Feeds / Zeann Feeds Supply" with three fish, a net, and bubbles). Its palette — cyan `#4ed1f9`, mid blue `#0184b2`, navy `#013c68`, slate `#515b74`, light slate `#929eb6`, pale green `#dae4c2`, light gray `#cdcdcd`, white `#ffffff` — is to become the system color theme. The incumbent theme (DEC-019) was warm depot-enamel green with Amara violet and Zeann rust.
+- **Decision:** Use the logo as the visual mark — the full badge on the sign-in page, and a derived simplified mark (`logo-mark.svg`, navy circle + cyan fish) at the 28px header and as the favicon. Recolor the token theme to the logo palette: brand navy `#013c68`/`#002b4c`, cyan tints, cool neutrals/surfaces, `text.muted` darkened to `#6b7590` and `store.amara.solid` darkened to `#016a91` for WCAG AA. Semantic status colors are kept (the palette has no red/amber). The painted-signage motif, typography, and structure from DEC-019 remain; only the palette changes.
+- **Alternatives considered:** Using the full badge at every size — rejected; its small arc text is illegible at the 60px header and 32px favicon, so a derived simplified mark covers those sizes. Recoloring statuses into the palette — rejected; no red/amber exists, and semantic status colors keep errors and states meaningful and contrast-safe.
+- **Rationale:** The logo is now the confirmed identity; its palette makes the app visually consistent with the brand while the design-system structure and accessibility requirements stay intact.
+- **Consequences:** `src/theme/tokens.ts` recolored (colors + cool shadows); hardcoded warm shadows in `BottomNav`, `Button`, `FilterBar` updated; `TopBar`/`SignInPage` render the logo marks; `index.html` theme-color updated; `public/favicon.svg` replaced; `exportReportExcel` header fill becomes the navy; `docs/DESIGN-SYSTEM.md`, `DESIGN.md`, `.impeccable/design.json`, `docs/PROJECT.md` §10, `PRODUCT.md`, and `README.md` synced; DEC-019 marked Superseded (palette only). The derived `logo-mark.svg` is a placeholder simplification and may be replaced by the business.
+- **Related documents:** `docs/DESIGN-SYSTEM.md` §§1, 2, 3, 5, `docs/PROJECT.md` §10, `DESIGN.md`, `.impeccable/design.json`, `docs/DECISIONS.md` DEC-019, `src/theme/tokens.ts`, `src/assets/`, `public/favicon.svg`.
+- **Supersedes / Superseded by:** Supersedes DEC-019's color palette (motif, typography, and structure remain).
+- **Open questions or follow-up:** The simplified small mark is derived and replaceable; the full badge's "Aquatic Feeds / Zeann Feeds Supply" text and the product name ZAF ONE remain reconciled in `docs/PROJECT.md` §10.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

@@ -41,9 +41,10 @@ One shared record for customers and credit across two physically separate stores
 
 ## Brand Commitments
 
-- Product/brand name: **Amara Feeds** (confirmed on-screen brand).
+- Product/brand name: **ZAF ONE** (renamed from "Amara Feeds" 2026-09-14).
+- Official logo: provided by the business (`logo-clear.png`, a circular badge reading "Aquatic Feeds / Zeann Feeds Supply"); its palette drives the app theme. The product name remains ZAF ONE.
 - Operating store names: **Amara** and **Zeann**.
-- Visual identity was explicitly reopened for redesign by the owner (2026-09-13); the previous evergreen-green/warm-sand identity is no longer binding. No logo artwork exists.
+- Visual identity was explicitly reopened for redesign by the owner (2026-09-13); the previous evergreen-green/warm-sand identity is no longer binding. The official logo is now provided (2026-09-14) and its palette drives the app theme.
 
 ## Evidence on Hand
 

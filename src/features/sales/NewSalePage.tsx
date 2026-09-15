@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { listProducts, listStorePrices } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Stack } from '@/components/ui/Stack'
@@ -14,7 +15,7 @@ import { BasketFab } from '@/features/sales/BasketFab'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import type { Money } from '@/lib/money'
-import type { ProductId } from '@/domain'
+import type { Product, ProductId } from '@/domain'
 
 const CatalogGrid = styled.div`
   display: grid;
@@ -73,9 +74,16 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
   const cart = useCart()
   const [quantities, setQuantities] = useState<Record<string, string>>({})
   const [quantityError, setQuantityError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const products = useAsyncData(() => listProducts({ status: 'active' }))
   const prices = useAsyncData(() => listStorePrices(store), store)
+
+  const visibleProducts = (products.data ?? [])
+    .filter((product) =>
+      search.trim() ? product.name.toLowerCase().includes(search.trim().toLowerCase()) : true,
+    )
+    .sort((a, b) => a.name.localeCompare(b.name, 'en'))
 
   function addToCart(productId: ProductId, name: string, price: Money) {
     const quantity = Number(quantities[productId] ?? '1')
@@ -100,8 +108,24 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
         size="compact"
       />
       {quantityError && <Alert variant="danger">{quantityError}</Alert>}
+      <TextField
+        id="product-search"
+        label="Search items"
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+      />
+      {visibleProducts.length === 0 && (
+        <EmptyState
+          title={search.trim() ? 'No items match your search' : 'No items available'}
+          description={
+            search.trim()
+              ? 'Try a different search term.'
+              : 'Add items at your store to start selling.'
+          }
+        />
+      )}
       <CatalogGrid>
-        {(products.data ?? []).map((product) => {
+        {visibleProducts.map((product: Product) => {
           const price = prices.data?.[product.id]
           const quantity = quantities[product.id] ?? '1'
           return (

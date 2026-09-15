@@ -10,6 +10,7 @@ import {
   getOverallWeeklySales,
   getPaymentsSummary,
   getReceivedStock,
+  getSalesByPaymentMethodInRange,
   getSalesByStoreInRange,
   getWeeklySalesByStore,
 } from './dashboardService'
@@ -46,6 +47,16 @@ describe('dashboardService', () => {
     const receivedByRange = await getReceivedStock({ from: today, to: today })
     const receivedByDate = await getReceivedStock({ date: today })
     expect(receivedByRange).toEqual(receivedByDate)
+  })
+
+  it('groups sales by mode of payment over a range', async () => {
+    const today = todayIso()
+    const rows = await getSalesByPaymentMethodInRange(today, today)
+    const methods = rows.map((row) => row.method)
+    expect(methods).toContain('Cash')
+    expect(methods).toContain('GCash')
+    expect(rows.reduce((sum, row) => sum + row.saleCount, 0)).toBe(3)
+    expect(rows.every((row) => row.totalMinor > 0)).toBe(true)
   })
 
   it('reports weekly sales as the trailing 7 days including yesterday', async () => {

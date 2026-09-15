@@ -159,6 +159,10 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
     label: customer.name,
   }))
 
+  const selectedCustomer = customerId
+    ? (customers.data ?? []).find((customer) => customer.id === customerId)
+    : undefined
+
   const paymentMethodOptions = PAYMENT_METHOD_PRESETS.map((method) => ({
     value: method,
     label: method,
@@ -279,6 +283,13 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
               placeholder="No customer"
               value={customerId}
               onChange={(event) => setCustomerId(event.target.value)}
+            />
+            <TextField
+              id="sale-customer-address"
+              label="Address"
+              value={selectedCustomer?.address ?? ''}
+              readOnly
+              placeholder="Select a customer to show their address"
             />
             <Button variant="subtle" onClick={() => setCustomerDialogOpen(true)}>
               Add new customer

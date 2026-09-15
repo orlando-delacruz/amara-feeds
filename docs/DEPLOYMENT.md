@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — Deployment Guide
+# ZAF ONE — Deployment Guide
 
 ## 1. Purpose
 

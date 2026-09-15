@@ -78,11 +78,13 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
             columns={[
               { key: 'name', header: 'Name' },
               { key: 'contact', header: 'Contact' },
+              { key: 'address', header: 'Address' },
               { key: 'addedBy', header: 'Added by' },
             ]}
             rows={data.map((customer) => ({
               name: customer.name,
               contact: customer.contact ?? 'Not listed',
+              address: customer.address ?? 'Not listed',
               addedBy: customer.createdByUserId
                 ? (userNames.get(customer.createdByUserId) ?? 'Not available')
                 : 'Not available',

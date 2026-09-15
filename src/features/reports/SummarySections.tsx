@@ -131,6 +131,22 @@ export function SummarySections({ from, to, storeId, summaries }: SummarySection
             />
           </Stats>
 
+          <Section title="Sales by mode of payment" variant="flush">
+            <RecordList
+              caption="Sales by mode of payment"
+              columns={[
+                { key: 'method', header: 'Mode of payment' },
+                { key: 'sales', header: 'Sales' },
+                { key: 'total', header: 'Total' },
+              ]}
+              rows={summaries.data.byPaymentMethod.map((row) => ({
+                method: row.method,
+                sales: String(row.saleCount),
+                total: <MoneyText amountMinor={row.totalMinor} />,
+              }))}
+            />
+          </Section>
+
           <Section title="Current stock" variant="flush">
             <RecordList
               caption="Current stock"

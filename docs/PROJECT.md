@@ -1,8 +1,8 @@
-# Amara + Zeann Store Management System — Project Context
+# ZAF ONE — Project Context
 
 ## 1. Project Overview
 
-- **Project name:** Amara + Zeann Store Management System
+- **Project name:** ZAF ONE
 - **Project type:** business management web application
 - **Business type:** Amara and Zeann — a two-store business
 - **Primary purpose:** help the business manage shared customers, per-store sales and inventory, and shared credit/collection
@@ -118,9 +118,10 @@ The system uses accurate, operationally useful labels and information for sales,
 
 ## 10. Brand Context
 
-- Product/brand name: **Amara Feeds** (confirmed 2026-09-10 as the on-screen product brand; the two operating stores remain Amara and Zeann).
+- Product/brand name: **ZAF ONE** (renamed from "Amara Feeds" 2026-09-14; the two operating stores remain Amara and Zeann).
+- Official logo: provided by the business (`src/assets/logo-clear.png`); the badge reads "Aquatic Feeds / Zeann Feeds Supply" and its palette drives the app theme. The product name remains ZAF ONE.
 - Confirmed store/business names: **Amara** and **Zeann**.
-- No previous brand, logo artwork, brand history, or other identity information is confirmed.
+- No previous brand, logo artwork, brand history, or other identity information is confirmed beyond the provided logo.
 
 ## 11. Legal and Privacy Context
 

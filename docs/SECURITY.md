@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — Security Requirements and Constraints
+# ZAF ONE — Security Requirements and Constraints
 
 ## 1. Purpose, Principles, and Status Labels
 

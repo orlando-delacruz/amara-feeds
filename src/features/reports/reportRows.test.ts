@@ -38,6 +38,7 @@ describe('buildSalesReportRows', () => {
       unitPriceMinor: 115000,
       lineTotalMinor: 230000,
       paymentType: 'Cash',
+      paymentMethod: 'GCash',
       deliveryFeeMinor: 5000,
       discountMinor: 1000,
       netTotalMinor: sale.totalMinor,

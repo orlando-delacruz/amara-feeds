@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — Implementation Roadmap
+# ZAF ONE — Implementation Roadmap
 
 ## 1. Purpose
 

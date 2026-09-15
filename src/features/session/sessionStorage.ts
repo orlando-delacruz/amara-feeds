@@ -2,7 +2,7 @@ import type { User } from '@/domain'
 
 // Mock-session persistence only. Keeps the signed-in mock account across page
 // reloads; real authentication (Supabase Auth) replaces this in a later phase.
-export const SESSION_STORAGE_KEY = 'amara-feeds.session.v1'
+export const SESSION_STORAGE_KEY = 'zaf-one.session.v1'
 
 function isStoredUser(value: unknown): value is User {
   if (typeof value !== 'object' || value === null) {

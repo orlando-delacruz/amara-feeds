@@ -21,6 +21,7 @@ describe('CustomerListPage', () => {
   it('lists shared customers', async () => {
     renderWithProviders(<CustomerListPage />, { user: staffUser })
     expect(await screen.findByText('Maria Santos')).toBeInTheDocument()
+    expect(screen.getByText('123 Mabini Street, Barangay Poblacion')).toBeInTheDocument()
   })
 
   it('filters customers by search term', async () => {
@@ -46,6 +47,21 @@ describe('CustomerListPage', () => {
 
     expect(await screen.findByText('Pedro Penduko')).toBeInTheDocument()
     expect(await screen.findByText('Customer added.')).toBeInTheDocument()
+  })
+
+  it('captures an address when adding a customer', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<CustomerListPage />, { user: staffUser })
+    await screen.findByText('Maria Santos')
+
+    await user.click(screen.getByRole('button', { name: 'Add customer' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Add customer' })
+    await user.type(within(dialog).getByLabelText(/^Name/), 'Pedro Penduko')
+    await user.type(within(dialog).getByLabelText(/^Address/), '123 Mabini St.')
+    await user.click(within(dialog).getByRole('button', { name: 'Add customer' }))
+
+    expect(await screen.findByText('Pedro Penduko')).toBeInTheDocument()
+    expect(screen.getByText('123 Mabini St.')).toBeInTheDocument()
   })
 
   it('hides the add action for read-only review', async () => {

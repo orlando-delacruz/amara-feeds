@@ -24,13 +24,20 @@ export function createSeedData(): MockDatabase {
       id: 'cust-1',
       name: 'Maria Santos',
       contact: '0917 000 0001',
+      address: '123 Mabini Street, Barangay Poblacion',
       createdAt: addDays(today, -30),
     },
-    { id: 'cust-2', name: 'Juan Dela Cruz', createdAt: addDays(today, -20) },
+    {
+      id: 'cust-2',
+      name: 'Juan Dela Cruz',
+      address: '45 Rizal Avenue, Barangay San Isidro',
+      createdAt: addDays(today, -20),
+    },
     {
       id: 'cust-3',
       name: 'Ana Reyes',
       contact: '0917 000 0003',
+      address: '78 Quezon Boulevard, Barangay Bagong Silang',
       createdAt: addDays(today, -10),
     },
   ]

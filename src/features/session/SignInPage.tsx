@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
+import logo from '@/assets/logo-clear.png'
 import { signIn } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -75,20 +76,17 @@ const Subtitle = styled.p`
 `
 
 const BrandMark = styled.span`
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: ${({ theme }) => theme.space.sm};
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: ${({ theme }) => theme.space.md};
 `
 
-const BrandDot = styled.span<{ $color: string }>`
-  display: inline-block;
-  width: 12px;
-  height: 12px;
+const LogoImg = styled.img`
+  width: 144px;
+  height: auto;
+  object-fit: contain;
   flex-shrink: 0;
-  border-radius: ${({ theme }) => theme.radius.sm};
-  background-color: ${({ $color }) => $color};
-  border: 1px solid rgba(255, 255, 255, 0.5);
 `
 
 const StoreStrip = styled.div`
@@ -167,11 +165,10 @@ export function SignInPage() {
       <Shell>
         <BrandPanel>
           <div>
-            <BrandMark>
-              <BrandDot $color="#5a3fa6" />
-              <BrandDot $color="#b6450f" />
+            <BrandMark aria-hidden="true">
+              <LogoImg src={logo} alt="" />
             </BrandMark>
-            <Title>Amara Feeds</Title>
+            <Title>ZAF ONE</Title>
             <Subtitle>Store management for Amara and Zeann.</Subtitle>
           </div>
           <div>

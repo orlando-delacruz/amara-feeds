@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — Technology Stack
+# ZAF ONE — Technology Stack
 
 Source context (authoritative for their concerns): `docs/PROJECT.md` (business context), `docs/REQUIREMENTS.md` (what the system must do), `docs/UI-UX.md` (experience behavior), `AGENTS.md` (rules and scope control).
 

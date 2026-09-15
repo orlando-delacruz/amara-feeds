@@ -1,4 +1,4 @@
-# Amara + Zeann Store Management System — UI/UX Specification
+# ZAF ONE — UI/UX Specification
 
 ## 1. Purpose and Scope
 
@@ -108,15 +108,15 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.1 Sales
 
-- **Sequence.** Browse the product catalog (all active products) on the entry page → type a quantity per product and confirm with "Add to cart", staying on the catalog while the floating basket badge counts the total → open the floating basket to reach the Cart page → the Cart page lists the accumulated items (duplicate products merge quantities) with a "New item" action back to the catalog → optional customer selection or creation → sale date (defaults to today, backdatable) → payment type (cash or charge; terms selection and automatic due date for charge) → mode of payment (Cash, GCash, Maya, Bank Transfer, Check, or Other with a free-text value) → optional discount → delivery details when applicable → review (items, delivery fee, discount, net) → save → success or failure feedback.
+- **Sequence.** Browse the product catalog (all active products, shown in alphabetical order with a search filter) on the entry page → type a quantity per product and confirm with "Add to cart", staying on the catalog while the floating basket badge counts the total → open the floating basket to reach the Cart page → the Cart page lists the accumulated items (duplicate products merge quantities) with a "New item" action back to the catalog → optional customer selection or creation (the selected customer's address is shown) → sale date (defaults to today, backdatable) → payment type (cash or charge; terms selection and automatic due date for charge) → mode of payment (Cash, GCash, Maya, Bank Transfer, Check, or Other with a free-text value) → optional discount → delivery details when applicable → review (items, delivery fee, discount, net) → save → success or failure feedback.
 - **Requirements.** Customer selection stays optional (REQ-CUST-002); payment type is cash or charge (REQ-SALE-003); delivery supports fee, rider, and vehicle (REQ-SALE-004); store-specific sales stay distinguishable (REQ-SALE-005); business date, mode of payment, and discount are captured with the net total as items + fee − discount (REQ-SALE-006, REQ-SALE-007).
 - **Constraints.** The unit price is automatic per store (the selling price of the product's most recent receiving record); no manual price entry. Products never received at the store show "No price" and cannot be added. A successful save triggers the confirmed stock deduction behavior (REQ-INV-002). No editing or cancellation rules are defined here.
 
 ### 7.2 Customers
 
-- **Behavior.** Find and select an existing customer, or add a new customer during the sale flow or from the customer area.
+- **Behavior.** Find and select an existing customer, or add a new customer during the sale flow or from the customer area. Adding a customer captures an optional name, contact, and address; the customer list and the sale's selected customer show the address.
 - **Shared context.** The customer record is visibly shared across both stores, never presented as a store-specific record.
-- **Constraints.** Exact customer fields are Confirmation Required and are never defined here.
+- **Constraints.** Exact customer fields are Confirmation Required and are never defined here beyond the implemented name, contact, and address.
 
 ### 7.3 Credit / Collection
 
@@ -142,7 +142,7 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.7 Dashboard / Reports
 
-- **Behavior.** Admin users consume sales by store, overall sales, outstanding credit, payments, current stock, and received stock over a selected **From/To** date range (REQ-DASH-001 through REQ-DASH-006); the Excel export covers the same range (REQ-REP-001). Staff dashboards show today's sales, stock, outstanding credit, and weekly sales. The History destination shows an unread indicator until it is opened, and admins can filter History by store (All stores / Amara / Zeann), with business-wide events shown only under All stores. Reports are admin-only: staff never see the Reports route or navigation entry (REQ-REP-004).
+- **Behavior.** Admin users consume sales by store, overall sales, outstanding credit, payments, current stock, received stock, and a "Sales by mode of payment" breakdown over a selected **From/To** date range (REQ-DASH-001 through REQ-DASH-006); the Excel export covers the same range and includes the mode of payment per sale (REQ-REP-001). Staff dashboards show today's sales, stock, outstanding credit, and weekly sales. The History destination shows an unread indicator until it is opened, and admins can filter History by store (All stores / Amara / Zeann), with business-wide events shown only under All stores. Reports are admin-only: staff never see the Reports route or navigation entry (REQ-REP-004).
 - **Constraints.** "Other useful summaries" stay flexible within agreed scope (REQ-DASH-007); exact report columns and formats are Confirmation Required and are never defined here beyond the implemented sale-line columns.
 
 ### 7.8 Users / Staff
