@@ -1,4 +1,44 @@
-export const tokens = {
+export interface Theme {
+  color: {
+    white: string
+    cream: string
+    neutral: Record<
+      '50' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900',
+      string
+    >
+    brand: Record<'50' | '100' | '600' | '700', string> & { tint: string }
+    text: Record<'primary' | 'secondary' | 'muted' | 'inverse', string>
+    surface: Record<'page' | 'subtle' | 'card' | 'overlay', string>
+    border: Record<'default' | 'strong', string>
+    focus: Record<'ring' | 'glow' | 'dangerGlow', string>
+    status: Record<
+      'success' | 'warning' | 'danger' | 'info',
+      Record<'background' | 'border' | 'text', string>
+    >
+    store: Record<
+      'amara' | 'zeann',
+      Record<'background' | 'border' | 'text' | 'solid' | 'tint', string>
+    >
+  }
+  font: {
+    family: string
+    familyCondensed: string
+    size: Record<'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'display' | 'hero', string>
+    tracking: Record<'tight' | 'normal' | 'wide', string>
+    weight: Record<'regular' | 'medium' | 'semibold' | 'bold', number>
+    lineHeight: Record<'tight' | 'base', number>
+  }
+  space: Record<'0' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'xxxl', string>
+  radius: Record<'sm' | 'md' | 'lg' | 'xl' | 'full', string>
+  shadow: Record<'sm' | 'md' | 'lg' | 'raised' | 'paint', string>
+  layout: Record<'headerHeight' | 'tabBarHeight' | 'contentMaxWidth', string>
+  breakpoint: Record<'phoneWide' | 'tablet' | 'desktop', string>
+  motion: Record<'fast' | 'base', string>
+  zIndex: Record<'header' | 'nav' | 'dialog' | 'toast', number>
+  touch: Record<'minTarget', string>
+}
+
+export const tokens: Theme = {
   color: {
     white: '#ffffff',
     cream: '#f7f9fb',
@@ -143,6 +183,4 @@ export const tokens = {
   touch: {
     minTarget: '44px',
   },
-} as const
-
-export type Theme = typeof tokens
+}

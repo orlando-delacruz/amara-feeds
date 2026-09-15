@@ -5,14 +5,15 @@ import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
 import { listUsers, updateUser } from '@/services'
+import type { StoreId } from '@/store/stores'
 import { renderWithProviders } from '@/test/render'
 
-function renderSignIn() {
+function renderSignIn(store?: StoreId) {
   renderWithProviders(
     <MemoryRouter initialEntries={['/sign-in']}>
       <AppRoutes />
     </MemoryRouter>,
-    { user: null },
+    { user: null, store },
   )
 }
 
@@ -74,4 +75,22 @@ describe('SignInPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'ZAF ONE' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Sign in' })).toBeInTheDocument()
   })
+
+  it('shows both store logos on the signed-out brand panel', () => {
+    renderSignIn()
+
+    expect(screen.getByAltText('Amara logo')).toBeInTheDocument()
+    expect(screen.getByAltText('Zeann logo')).toBeInTheDocument()
+  })
+
+  it.each(['amara', 'zeann'] as const)(
+    'keeps the neutral slate submit button when the last-selected store was %s',
+    (store) => {
+      renderSignIn(store)
+
+      expect(
+        getComputedStyle(screen.getByRole('button', { name: 'Sign in' })).backgroundColor,
+      ).toBe('rgb(81, 91, 116)')
+    },
+  )
 })

@@ -1,13 +1,16 @@
 import styled from 'styled-components'
 import { Link, useNavigate } from 'react-router-dom'
-import logoMark from '@/assets/logo-mark.svg'
 import { StoreBadge } from '@/components/ui/StoreBadge'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
+import { storeBranding } from '@/store/storeBranding'
+import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 
 interface TopBarProps {
   sectionLabel: string
+  /** 'store' shows the active store's logo; 'dual' shows both store logos. */
+  brand: 'store' | 'dual'
 }
 
 const Header = styled.header`
@@ -67,6 +70,25 @@ const LogoMark = styled.img`
   width: 28px;
   height: 28px;
   flex-shrink: 0;
+  border-radius: ${({ theme }) => theme.radius.full};
+  background-color: ${({ theme }) => theme.color.text.inverse};
+  object-fit: cover;
+`
+
+const DualLogos = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+`
+
+const DualLogoMark = styled.img`
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: ${({ theme }) => theme.radius.full};
+  background-color: ${({ theme }) => theme.color.text.inverse};
+  object-fit: cover;
 `
 
 const SectionTag = styled.span`
@@ -131,10 +153,11 @@ const SignOutButton = styled.button`
   }
 `
 
-export function TopBar({ sectionLabel }: TopBarProps) {
+export function TopBar({ sectionLabel, brand }: TopBarProps) {
   const { store } = useStore()
   const { user, signOut } = useSession()
   const navigate = useNavigate()
+  const branding = storeBranding[store]
 
   function handleSignOut() {
     signOut()
@@ -145,7 +168,14 @@ export function TopBar({ sectionLabel }: TopBarProps) {
     <Header>
       <Inner>
         <Brand to="/" translate="no">
-          <LogoMark src={logoMark} alt="" aria-hidden="true" />
+          {brand === 'dual' ? (
+            <DualLogos>
+              <DualLogoMark src={storeBranding.amara.logo} alt={storeBranding.amara.alt} />
+              <DualLogoMark src={storeBranding.zeann.logo} alt={storeBranding.zeann.alt} />
+            </DualLogos>
+          ) : (
+            <LogoMark src={branding.logo} alt={branding.alt} title={storeNames[store]} />
+          )}
           <BrandName>ZAF ONE</BrandName>
         </Brand>
         <SectionTag>{sectionLabel}</SectionTag>

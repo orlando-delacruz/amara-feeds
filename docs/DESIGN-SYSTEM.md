@@ -9,10 +9,12 @@ these values express that behavior visually. The implementation is `src/theme/` 
 in `DESIGN.md`, and in `src/theme/tokens.ts` must stay in sync.
 
 Status labels follow `TEMPLATE-GUIDE.md`. All values below are **Confirmed** for the
-implemented system. The official logo (`logo-clear.png`, a circular badge reading "Aquatic
-Feeds / Zeann Feeds Supply") is provided by the business and its palette is the source for
-the brand colors in §3; the simplified small mark used at header/favicon sizes is a derived
-placeholder and may be replaced by the business at any time.
+implemented system. The business provided one logo per store (`amara-logo-clear.png`,
+"Amara's Feeds Supply"; `zeann-logo-clear.png`, "Aquatic Feeds / Zeann Feeds Supply");
+each store's palette is the source for its brand colors in §3.2 (DEC-029, DEC-030).
+The header shows the active store's badge on staff routes and both badges on
+admin routes; the signed-out sign-in panel shows both badges side by side on
+a neutral slate panel.
 
 ## 2. Principles
 
@@ -60,7 +62,17 @@ placeholder and may be replaced by the business at any time.
 | `border.default`  | `#cdcdcd`              | Default hairline borders                   |
 | `border.strong`   | `#929eb6`              | Strong borders                             |
 
-### 3.2 Brand (marine enamel — navy, accent, focus)
+### 3.2 Brand (area-scoped enamel, DEC-031)
+
+Each area wears a fixed theme; the Amara/Zeann filter changes data, never paint.
+Staff routes follow the assigned store (`StoreThemeProvider` in `StaffLayout`):
+Amara staff see bronze, Zeann staff see navy, and all `brand.*` usages (buttons,
+headers, nav markers, focus) recolor automatically. The admin site uses the fixed
+combined theme (navy shell + bronze accents) with both logos in the header; the
+sign-in page uses the fixed neutral slate theme. Surfaces (§3.1) and status
+paints (§3.3) stay shared across all themes.
+
+Zeann keeps the DEC-029 marine enamel (also the admin shell):
 
 | Token        | Value     |
 | ------------ | --------- |
@@ -70,10 +82,27 @@ placeholder and may be replaced by the business at any time.
 | `brand.700`  | `#002b4c` |
 | `brand.tint` | `#bee7f7` |
 
-White stencil ink (`#ffffff`) on `brand.600`/`brand.700` meets AA. The marine enamel is the
-deep navy of the logo's water; it carries route-board headers, the overall daily sales plate,
-primary actions, and the focus ring. The logo's mid blue `#0184b2` and light cyan `#4ed1f9`
-are the accent/focus tones. **No gradients** — paint is flat.
+Amara uses the bronze enamel (DEC-030, staff area only):
+
+| Token        | Value     |
+| ------------ | --------- |
+| `brand.50`   | `#faf3e8` |
+| `brand.100`  | `#f3e4cc` |
+| `brand.600`  | `#aa885a` |
+| `brand.700`  | `#7e6240` |
+| `brand.tint` | `#cfb18b` |
+
+Admin combined accents: focus ring `#aa885a` with a bronze glow, brand-plate
+detailing `brand.tint #cfb18b`, and the Amara bronze store identity elements
+sit naturally beside the navy shell and Zeann elements.
+
+Sign-in neutral slate: `brand.600 #515b74` (6.8:1 with white), `brand.700 #3a4256`,
+body text `#2a3040` — independent of any store selection.
+
+White stencil ink (`#ffffff`) on either `brand.700` meets AA. White on Amara
+`brand.600` is only ~3.3:1, so text-on-brand and interactive hover roles use the
+derived darker `#7e6240` (5.7:1); Amara body text is `#4a3f2e` (10.3:1 on white).
+**No gradients** — paint is flat.
 
 ### 3.3 Status paints (chips — always used with words)
 
@@ -92,13 +121,14 @@ vocabulary for credit and stock on the dashboards (`src/features/dashboard/Balan
 
 | Store | Background | Border    | Text      | Solid enamel |
 | ----- | ---------- | --------- | --------- | ------------ |
-| Amara | `#e6f3fa`  | `#b9dcf0` | `#013c68` | `#016a91`    |
+| Amara | `#faf3e8`  | `#e3cfa8` | `#4a3f2e` | `#7e6240`    |
 | Zeann | `#eceff4`  | `#c3cad8` | `#3a4256` | `#515b74`    |
 
 The solid enamel paints the store's hero plate (staff dashboard), store column headers
-(admin depot board), badges, and active-nav markers. Amara uses the logo's mid blue darkened
-to `#016a91` so white badge text meets AA; Zeann uses the logo's slate `#515b74`. The store
-name is always shown as text next to it.
+(admin depot board), badges, and active-nav markers. Amara uses the derived bronze darkened
+to `#7e6240` so white badge text meets AA; Zeann uses the slate `#515b74`. The store
+name is always shown as text next to it. Peach `#fcd4c8` and sage `#dae4c2` from the
+Amara palette are reserved for future Amara washes (assumed, pending confirmation).
 
 ### 3.5 Focus treatment
 
@@ -174,7 +204,7 @@ chrome respects device safe areas (`env(safe-area-inset-*)`).
 - `docs/UI-UX.md` — behavior and experience (authoritative for behavior)
 - `docs/REQUIREMENTS.md` — accessibility requirements (REQ-ACC-001–004)
 - `docs/TECH-STACK.md` — Styled Components selection
-- `docs/DECISIONS.md` — DEC-019 (identity redesign decision record)
+- `docs/DECISIONS.md` — DEC-029 (Zeann logo palette), DEC-030 (per-store theming), DEC-031 (area-scoped themes)
 - `DESIGN.md` — portable design-system spec (token-bearing)
 - `.impeccable/design.json` — design-system sidecar
 - `src/theme/` — token implementation

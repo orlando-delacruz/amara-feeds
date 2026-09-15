@@ -1,12 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styled from 'styled-components'
+import { ThemeProvider } from 'styled-components'
 import { useNavigate } from 'react-router-dom'
-import logo from '@/assets/logo-clear.png'
+import amaraLogo from '@/assets/amara-logo-clear.png'
+import zeannLogo from '@/assets/zeann-logo-clear.png'
 import { signIn } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { TextField } from '@/components/ui/TextField'
 import { useMutation } from '@/features/shared'
+import { defaultBrowserChrome, syncBrowserChrome } from '@/theme/browserChrome'
+import { signInTheme } from '@/theme/storeThemes'
 import { useSession } from './useSession'
 import type { User } from '@/domain'
 
@@ -47,7 +51,7 @@ const BrandPanel = styled.div`
   justify-content: center;
   gap: ${({ theme }) => theme.space.lg};
   padding: ${({ theme }) => theme.space.xxl} ${({ theme }) => theme.space.xl};
-  background-color: ${({ theme }) => theme.color.brand[600]};
+  background-color: ${({ theme }) => theme.color.neutral[500]};
   color: ${({ theme }) => theme.color.text.inverse};
   box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.14);
 
@@ -71,41 +75,29 @@ const Title = styled.h1`
 `
 
 const Subtitle = styled.p`
-  color: ${({ theme }) => theme.color.brand.tint};
+  color: ${({ theme }) => theme.color.text.inverse};
   font-size: ${({ theme }) => theme.font.size.md};
 `
 
 const BrandMark = styled.span`
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: ${({ theme }) => theme.space.lg};
   width: 100%;
   margin-bottom: ${({ theme }) => theme.space.md};
 `
 
-const LogoImg = styled.img`
-  width: 144px;
+const LogoImg = styled.img<{ $size?: 'sm' | 'lg' }>`
+  width: ${({ $size }) => ($size === 'lg' ? '120px' : '96px')};
   height: auto;
   object-fit: contain;
   flex-shrink: 0;
 `
 
-const StoreStrip = styled.div`
-  display: flex;
-  height: ${({ theme }) => theme.space.sm};
-  margin-top: ${({ theme }) => theme.space.sm};
-  overflow: hidden;
-  border-radius: ${({ theme }) => theme.radius.full};
-  opacity: 0.7;
-`
-
-const StoreStripHalf = styled.span<{ $store: 'amara' | 'zeann' }>`
-  flex: 1;
-  background-color: ${({ theme, $store }) => theme.color.store[$store].solid};
-`
-
 const StoreCaption = styled.p`
   font-size: ${({ theme }) => theme.font.size.sm};
-  color: ${({ theme }) => theme.color.brand.tint};
+  color: ${({ theme }) => theme.color.text.inverse};
 `
 
 const AccountPanel = styled.div`
@@ -141,6 +133,20 @@ const Form = styled.form`
 `
 
 export function SignInPage() {
+  // Fixed neutral theme (DEC-031): the signed-out page never wears the
+  // last-selected store's paint.
+  useEffect(() => {
+    syncBrowserChrome(defaultBrowserChrome.favicon, defaultBrowserChrome.themeColor)
+  }, [])
+
+  return (
+    <ThemeProvider theme={signInTheme}>
+      <SignInContent />
+    </ThemeProvider>
+  )
+}
+
+function SignInContent() {
   const { signIn: setSession } = useSession()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
@@ -165,17 +171,12 @@ export function SignInPage() {
       <Shell>
         <BrandPanel>
           <div>
-            <BrandMark aria-hidden="true">
-              <LogoImg src={logo} alt="" />
+            <BrandMark>
+              <LogoImg src={amaraLogo} alt="Amara logo" />
+              <LogoImg $size="lg" src={zeannLogo} alt="Zeann logo" />
             </BrandMark>
             <Title>ZAF ONE</Title>
             <Subtitle>Store management for Amara and Zeann.</Subtitle>
-          </div>
-          <div>
-            <StoreStrip aria-hidden="true">
-              <StoreStripHalf $store="amara" />
-              <StoreStripHalf $store="zeann" />
-            </StoreStrip>
           </div>
           <StoreCaption>Two stores, one shared system.</StoreCaption>
         </BrandPanel>

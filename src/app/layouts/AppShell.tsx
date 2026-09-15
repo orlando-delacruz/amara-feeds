@@ -10,6 +10,7 @@ import { useHistoryUnread } from '@/features/history/useHistoryUnread'
 interface AppShellProps {
   sectionLabel: string
   navItems: NavItem[]
+  brand: 'store' | 'dual'
 }
 
 const Shell = styled.div`
@@ -52,13 +53,13 @@ const Content = styled.main`
   }
 `
 
-export function AppShell({ sectionLabel, navItems }: AppShellProps) {
+export function AppShell({ sectionLabel, navItems, brand }: AppShellProps) {
   const { user } = useSession()
   const hasUnread = useHistoryUnread(user ?? undefined)
   return (
     <Shell>
       <SkipLink href="#main-content">Skip to content</SkipLink>
-      <TopBar sectionLabel={sectionLabel} />
+      <TopBar sectionLabel={sectionLabel} brand={brand} />
       <SideNav items={navItems} badge={hasUnread ? '•' : undefined} />
       <Content id="main-content" tabIndex={-1}>
         <Outlet />

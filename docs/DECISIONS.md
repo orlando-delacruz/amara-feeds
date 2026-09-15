@@ -115,6 +115,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-027 | Rider and vehicle full CRUD with reference guard | Accepted | 2026-09-14 |
 | DEC-028 | Rename brand and project to ZAF ONE | Accepted | 2026-09-14 |
 | DEC-029 | Adopt official logo and recolor theme to the logo palette | Accepted | 2026-09-14 |
+| DEC-030 | Per-store logo and color theme following the store context | Accepted | 2026-09-15 |
+| DEC-031 | Fixed sign-in theme and combined admin theme | Accepted | 2026-09-15 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -551,6 +553,36 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Related documents:** `docs/DESIGN-SYSTEM.md` §§1, 2, 3, 5, `docs/PROJECT.md` §10, `DESIGN.md`, `.impeccable/design.json`, `docs/DECISIONS.md` DEC-019, `src/theme/tokens.ts`, `src/assets/`, `public/favicon.svg`.
 - **Supersedes / Superseded by:** Supersedes DEC-019's color palette (motif, typography, and structure remain).
 - **Open questions or follow-up:** The simplified small mark is derived and replaceable; the full badge's "Aquatic Feeds / Zeann Feeds Supply" text and the product name ZAF ONE remain reconciled in `docs/PROJECT.md` §10.
+
+### DEC-030 — Per-store logo and color theme following the store context
+
+- **ID:** DEC-030
+- **Title:** Per-store logo and color theme following the store context
+- **Status:** Accepted
+- **Date:** 2026-09-15
+- **Context:** The client supplied a separate Amara logo (`amara-logo-clear.png`, "Amara's Feeds Supply" badge) with its own palette (bronze `#aa885a`, tan `#cfb18b`, peach `#fcd4c8`, sage `#dae4c2`, slate `#515b74`, light slate `#929eb6`, gray `#cdcdcd`, white `#ffffff`) and asked that the app show the appropriate logo and color theme per store. The DEC-029 theme was Zeann-only (marine navy). Staff are locked to their assigned store and admins switch the store context (`StoreProvider`), but `ThemeProvider` sat above the store context with a single static theme.
+- **Decision:** Ship two full themes with one shared shape (`src/theme/storeThemes.ts`): `zeannTheme` is the unchanged DEC-029 navy; `amaraTheme` remaps only `brand.*`, `text.primary`, `focus.*`, and the Amara `store.*` wash to the Amara palette. Surfaces and semantic status colors stay shared. A new `StoreThemeProvider` sits inside `StoreProvider` and themes the whole app from the active store (staff assignment, admin switch). `TopBar` shows the active store's full badge scaled to 28px (`src/store/storeBranding.ts`); the signed-out sign-in panel shows both badges side by side on a neutral slate panel; favicon and `theme-color` swap per store via effect. `Theme` becomes an explicit widened interface in `src/theme/tokens.ts` so both themes satisfy one type.
+- **Alternatives considered:** Logo + accents only under a neutral ZAF ONE shell — rejected; the client chose a full per-store recolor. Separate per-component store props instead of a theme swap — rejected; all ~56 `brand.*` usages recolor automatically through the theme with no component rewrites.
+- **Rationale:** Store context already drives data and badges; driving the theme from the same context keeps one source of truth and satisfies the client's per-store branding with the smallest maintainable change.
+- **Consequences:** `src/app/providers.tsx` composes `Session > Store > StoreTheme > Cart`; white text on Amara bronze `#aa885a` is only 3.3:1, so interactive/text-on-brand roles use derived `#7e6240` (5.7:1) and body text `#4a3f2e` (10.3:1) for WCAG AA; admin "All stores" views wear the selected store's paint while store columns/badges still label each store in text; the 2.4 MB Zeann PNG now loads on every page via the header — image optimization remains follow-up.
+- **Related documents:** `docs/DESIGN-SYSTEM.md` §3, `docs/PROJECT.md` §10, `docs/UI-UX.md` §§2, 6, `src/theme/storeThemes.ts`, `src/theme/StoreThemeProvider.tsx`, `src/store/storeBranding.ts`.
+- **Supersedes / Superseded by:** none (extends DEC-029, which remains the Zeann palette source).
+- **Open questions or follow-up:** Exact Amara wash roles (peach/sage) are assumed pending client confirmation; header-size simplified marks per store remain an option; report Excel/print headers stay static.
+
+### DEC-031 — Fixed sign-in theme and combined admin theme
+
+- **ID:** DEC-031
+- **Title:** Fixed sign-in theme and combined admin theme
+- **Status:** Accepted
+- **Date:** 2026-09-15
+- **Context:** DEC-030 themed the whole app from the store context. The client then required that (a) the sign-in page never change color when the admin switches the store filter, and (b) switching the Amara/Zeann filter on the admin site never re-theme the admin site — instead the admin theme combines both stores' colors. Root cause: one global `StoreThemeProvider` themed every route, and the signed-out store fallback retains the admin's last switch.
+- **Decision:** Scope themes per area (`src/theme/storeThemes.ts` gains two fixed themes, one shared `Theme` shape). Staff routes keep the per-store theme via `StoreThemeProvider` in `StaffLayout`. `AdminLayout` uses a fixed combined theme — navy shell (`brand.600/700` navy) with bronze accents (focus ring `#aa885a`, brand-plate detailing `brand.tint #cfb18b`, plus the Amara bronze identity elements) — and shows both store logos in the header (`TopBar brand="dual"`). `SignInPage` self-wraps in a fixed neutral slate theme (`brand.600 #515b74`, 6.8:1 with white). The Amara/Zeann filter keeps driving data, badges, and store columns only. Favicon/`theme-color` sync is per area (`src/theme/browserChrome.ts`): per-store for staff, navy mark for admin, default for sign-in.
+- **Alternatives considered:** One neutral shell for admin with store colors only on badges — rejected; the client chose navy shell with bronze accents. Route-keyed single theme provider — rejected; layout wrapping is smaller and matches the existing Staff/AdminLayout split.
+- **Rationale:** Each audience gets a stable identity: staff see their store, admin sees the combined business, sign-in belongs to neither. No component rewrites — nested `ThemeProvider`s override the static base.
+- **Consequences:** `providers.tsx` renders a static base theme; `GlobalStyle` renders at base plus once per staff tree (identical rules, staff values win). Layout tests pin the behavior (filter switch keeps navy; sign-in keeps slate across `initialStore`).
+- **Related documents:** `docs/DESIGN-SYSTEM.md` §3, `src/theme/storeThemes.ts`, `src/theme/browserChrome.ts`, `src/app/layouts/`.
+- **Supersedes / Superseded by:** none (narrows DEC-030's "whole app follows store" to the staff area).
+- **Open questions or follow-up:** Exact bronze accent slots beyond focus/tint remain assumed; image optimization still follow-up.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.
