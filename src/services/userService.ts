@@ -2,6 +2,7 @@ import type { NewUserInput, UpdateUserInput, User, UserId, UserRole } from '@/do
 import type { StoreId } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { isSupabaseConfigured, supabase, usernameEmail } from './supabaseClient'
 import { ServiceError } from './errors'
 
 export async function listUsers(
@@ -25,12 +26,57 @@ export async function getUser(id: UserId): Promise<User> {
   return { ...user }
 }
 
+interface ProfileRow {
+  id: string
+  username: string
+  name: string
+  role: UserRole
+  store_id: StoreId | null
+  active: boolean
+}
+
+function profileToUser(profile: ProfileRow): User {
+  return {
+    id: profile.id,
+    name: profile.name,
+    role: profile.role,
+    storeId: profile.store_id ?? undefined,
+    username: profile.username,
+    active: profile.active,
+  }
+}
+
 /**
- * Mock-only credential check for the localStorage login form.
- * Never real passwords; replaced by Supabase Auth in a later phase.
+ * Sign-in. With Supabase configured, resolves the username to its email
+ * convention, authenticates against Supabase Auth, and reads the caller's
+ * profile row for role/store. Otherwise uses the mock credential check for
+ * the localStorage login form (never real passwords).
  */
 export async function signIn(input: { username: string; password: string }): Promise<User> {
   const username = input.username.trim().toLowerCase()
+  if (isSupabaseConfigured && supabase) {
+    const email = usernameEmail(username)
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: input.password,
+    })
+    if (error || !data.user) {
+      throw new ServiceError('validation', 'Incorrect username or password.')
+    }
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, username, name, role, store_id, active')
+      .eq('id', data.user.id)
+      .single()
+    if (profileError || !profile) {
+      throw new ServiceError('validation', 'This account is disabled. Contact the admin.')
+    }
+    if (!profile.active) {
+      throw new ServiceError('validation', 'This account is disabled. Contact the admin.')
+    }
+    return profileToUser(profile)
+  }
+
   const user = getDb().users.find((item) => item.username.toLowerCase() === username)
   if (!user || user.password !== input.password) {
     throw new ServiceError('validation', 'Incorrect username or password.')
@@ -56,6 +102,29 @@ export async function createUser(input: NewUserInput): Promise<User> {
   if (input.role === 'staff' && !input.storeId) {
     throw new ServiceError('validation', 'Each staff member must be assigned to a store.')
   }
+
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('create_staff', {
+      p_username: username,
+      p_name: name,
+      p_role: input.role,
+      p_store_id: input.role === 'staff' ? (input.storeId ?? null) : null,
+      p_password: input.password,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    const userId = data?.user_id as string | undefined
+    return {
+      id: userId ?? '',
+      name,
+      role: input.role,
+      storeId: input.role === 'staff' ? input.storeId : undefined,
+      username,
+      active: true,
+    }
+  }
+
   const taken = getDb().users.some((item) => item.username.toLowerCase() === username.toLowerCase())
   if (taken) {
     throw new ServiceError('conflict', 'That username is already taken.')
@@ -125,4 +194,16 @@ export function assertActiveRecorder(userId: UserId): void {
   if (!user.active) {
     throw new ServiceError('validation', 'This account is disabled. Contact the admin.')
   }
+}
+
+export function serviceErrorFromSupabase(error: { message: string; code?: string }): ServiceError {
+  const message = error.message ?? 'Something went wrong.'
+  const code = error.code
+  if (code === 'P0001' || message.includes('already taken') || message.includes('duplicate')) {
+    return new ServiceError('conflict', message)
+  }
+  if (code === '42501' || message.toLowerCase().includes('not found')) {
+    return new ServiceError('not_found', message)
+  }
+  return new ServiceError('validation', message)
 }

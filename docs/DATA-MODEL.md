@@ -186,17 +186,17 @@ Unless explicitly rescoped, this model does NOT include: CRM entities, payroll/H
 
 | # | Item | Status | Notes |
 | --- | --- | --- | --- |
-| 1 | Exact fields per concept (customer, product, sale, payment, receiving) | **Confirmation Required** | Nothing assumed or invented. |
-| 2 | Exact payment-term options and due-date calculations | **Confirmation Required** | Selected-terms workflow confirmed; options and rules unconfirmed. |
-| 3 | Exact validation rules | **Confirmation Required** | Principles here; enforceable rules in `docs/API.md` / `docs/SECURITY.md` after confirmation. |
-| 4 | Sale editing, cancellation, and reversal behavior | **Confirmation Required** | Affects sale, stock, and credit concepts. |
-| 5 | Insufficient-stock behavior | **Confirmation Required** | No negative-stock or blocking rule assumed. |
+| 1 | Exact fields per concept (customer, product, sale, payment, receiving) | **Confirmation Required** | Mock shapes adopted as the Assumed DB baseline (DEC-034); real-field changes require confirmation. |
+| 2 | Exact payment-term options and due-date calculations | **Assumed baseline adopted** | 7/15/30-day terms, due = sale date + offset, enforced in DB (DEC-034); options/rules still Confirmation Required. |
+| 3 | Exact validation rules | **Assumed baseline adopted** | Enforced in DB functions (DEC-034); rule changes Confirmation Required. |
+| 4 | Sale editing, cancellation, and reversal behavior | **Confirmation Required** | No edit/cancel/reversal built (mock + DB agree). |
+| 5 | Insufficient-stock behavior | **Assumed baseline adopted** | DB refuses sales exceeding stock (DEC-034); change Confirmation Required. |
 | 6 | Duplicate customer handling | **Confirmation Required** | One-shared-record principle confirmed; merge/dedup behavior unconfirmed. |
-| 7 | Product rejection, editing, and resubmission behavior | **Confirmation Required** | Only pending→approved-by-admin is confirmed. |
-| 8 | Inventory adjustment behavior beyond receiving and sale deduction | **Confirmation Required** | No adjustment workflow assumed. |
+| 7 | Product rejection, editing, and resubmission behavior | **Confirmation Required** | Pending→approved and admin reject/delete built; edit/resubmission unconfirmed. |
+| 8 | Inventory adjustment behavior beyond receiving and sale deduction | **Assumed baseline adopted** | Manual absolute-quantity adjust + sales-guarded delete (DEC-032/034); change Confirmation Required. |
 | 9 | Payment reversal behavior | **Confirmation Required** | Partial-until-settled confirmed; reversals unconfirmed. |
 | 10 | Report/export data requirements (columns, formats) | **Confirmation Required** | Summaries confirmed; exact data unconfirmed. |
-| 11 | Detailed user permissions | **Confirmation Required** | Only store assignment and product approval confirmed. |
+| 11 | Detailed user permissions | **Confirmation Required** | Store assignment + product approval enforced in DB; richer model unconfirmed. |
 | 12 | Retention and deletion behavior | **Confirmation Required** | No periods or rules defined. |
 
 ## 12. Related Documentation

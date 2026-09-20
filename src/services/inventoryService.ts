@@ -2,11 +2,31 @@ import type { ProductId, StockLevel, UserRole } from '@/domain'
 import type { StoreId } from '@/domain'
 import { getDb } from './mocks/db'
 import { logAuditEvent } from './auditService'
+import { isSupabaseConfigured, supabase } from './supabaseClient'
+import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
 
 export async function listStock(
   filter: { storeId?: StoreId; productId?: ProductId } = {},
 ): Promise<StockLevel[]> {
+  if (isSupabaseConfigured && supabase) {
+    let query = supabase.from('stock_levels').select('store_id, product_id, quantity')
+    if (filter.storeId) {
+      query = query.eq('store_id', filter.storeId)
+    }
+    if (filter.productId) {
+      query = query.eq('product_id', filter.productId)
+    }
+    const { data, error } = await query
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (data ?? []).map((row) => ({
+      storeId: row.store_id as StoreId,
+      productId: row.product_id,
+      quantity: row.quantity,
+    }))
+  }
   return getDb()
     .stock.filter(
       (level) =>
@@ -55,6 +75,20 @@ export async function updateStock(
   productId: ProductId,
   input: UpdateStockInput,
 ): Promise<UpdateStockResult> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('adjust_stock', {
+      p_store_id: storeId,
+      p_product_id: productId,
+      p_quantity: input.quantity,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return {
+      level: { storeId, productId, quantity: input.quantity },
+      previousQuantity: input.quantity,
+    }
+  }
   const db = getDb()
   if (!Number.isInteger(input.quantity) || input.quantity < 0) {
     throw new ServiceError('validation', 'Quantity must be a whole number of 0 or more.')
@@ -70,13 +104,12 @@ export async function updateStock(
     level.quantity = input.quantity
   }
 
-  const productName = db.products.find((product) => product.id === productId)?.name ?? 'Item'
   await logAuditEvent({
     action: 'stock.updated',
     actorUserId: input.actorUserId,
     actorRole: input.actorRole,
     storeId,
-    subject: productName,
+    subject: db.products.find((product) => product.id === productId)?.name ?? 'Item',
     detail: `Adjusted from ${previousQuantity} to ${input.quantity}`,
   })
 
@@ -93,8 +126,18 @@ export async function updateStock(
 export async function deleteStock(
   storeId: StoreId,
   productId: ProductId,
-  actor: { userId: string; role: UserRole },
+  _actor: { userId: string; role: UserRole },
 ): Promise<StockLevel> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('delete_stock', {
+      p_store_id: storeId,
+      p_product_id: productId,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return { storeId, productId, quantity: 0 }
+  }
   const db = getDb()
   const index = db.stock.findIndex((row) => row.storeId === storeId && row.productId === productId)
   if (index === -1) {
@@ -111,13 +154,12 @@ export async function deleteStock(
   }
   const [removed] = db.stock.splice(index, 1)
 
-  const productName = db.products.find((product) => product.id === productId)?.name ?? 'Item'
   await logAuditEvent({
     action: 'stock.deleted',
-    actorUserId: actor.userId,
-    actorRole: actor.role,
+    actorUserId: _actor.userId,
+    actorRole: _actor.role,
     storeId,
-    subject: productName,
+    subject: db.products.find((product) => product.id === productId)?.name ?? 'Item',
     detail: `Removed with ${removed.quantity} on hand`,
   })
 

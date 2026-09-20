@@ -119,6 +119,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-031 | Fixed sign-in theme and combined admin theme | Accepted | 2026-09-15 |
 | DEC-032 | Manual stock edit and delete with sales-history guard | Accepted | 2026-09-20 |
 | DEC-033 | Sign-in brand copy: Zeann & Amara Feeds Supply tagline | Accepted | 2026-09-20 |
+| DEC-034 | Phase 3 gate deferral and assumption adoption for database work | Accepted | 2026-09-20 |
+| DEC-035 | Supabase-direct integration: profiles-based authz and service swap | Accepted | 2026-09-20 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -608,6 +610,30 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Context:** Client copy request for the sign-in brand panel.
 - **Decision:** Sign-in brand panel reads: title "ZAF ONE", subtitle "Zeann & Amara Feeds Supply", caption "One System • One Team • One Goal", both store logos unchanged above.
 - **Related documents:** `src/features/session/SignInPage.tsx`.
+
+### DEC-034 — Phase 3 gate deferral and assumption adoption for database work
+
+- **ID:** DEC-034
+- **Title:** Phase 3 gate deferral and assumption adoption for database work
+- **Status:** Accepted
+- **Date:** 2026-09-20
+- **Context:** `ROADMAP.md` Gate 3 requires the Phase 3 frontend workflow validation walkthrough to complete before any database work. The client proceeded to database/backend work directly, and Phase 5 requires final-or-explicitly-assumed fields and rules before migrations are written.
+- **Decision:** The Phase 3 validation gate is explicitly deferred, not silently skipped — recorded here so the requirement stays visible and the walkthrough can still run before Phase 7 (real-system validation). The mock implementation's behavior is adopted as the recorded Assumed baseline for the database, each item flagged Assumed with a revisit trigger: payment-term options + offset math (7/15/30 days), insufficient-stock refusal, no sale edit/cancel/reversal, product submit→pending→approve with unique active names, stock adjust/delete guard (DEC-032), expense type enum fuel/repair, dev-only credentials (`alice123`/`ben123`/`admin123`), and the fabricated email convention `username@zafone.local` for username login. Real changes to any of these arrive as later requirements; the database enforces the assumed baseline now.
+- **Consequences:** `supabase/migrations/00001–00004` encode the baseline; `docs/DATA-MODEL.md` and `docs/API.md` were updated to reflect the enforced rules and to keep the Confirmation Required matrix honest.
+- **Related documents:** `ROADMAP.md` §§3 (Phase 3/4), 6; `docs/DATA-MODEL.md` §11.
+
+### DEC-035 — Supabase-direct integration: profiles-based authz and service swap
+
+- **ID:** DEC-035
+- **Title:** Supabase-direct integration: profiles-based authz and service swap
+- **Status:** Accepted
+- **Date:** 2026-09-20
+- **Context:** Phase 6 re-points the service layer from mocks to Supabase holding the frontend contract stable. Authorization data (role, store assignment) must be server-enforced without JWT staleness or user-falsification risk.
+- **Decision:** Role/store live in a `profiles` table keyed to `auth.users` (`id = auth.uid()`), never in user-editable `user_metadata`. RLS policies read `(select public.current_profile())` — a `SECURITY DEFINER` helper that only returns the caller's own row, wrapped in `(select …)` for a single init-plan evaluation. All mutations run through `SECURITY DEFINER` functions in `public` (PostgREST RPC requires an exposed schema) with in-body `auth.uid()` scope checks and `authenticated`-only execute grants; `anon`/`PUBLIC` execute revoked. The frontend uses supabase-js behind the existing service seam, with a mock fallback when `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` are absent so tests and preview run without a backend. Login resolves a username to `username@zafone.local` (Assumed, DEC-034) then authenticates via Supabase Auth.
+- **Alternatives considered:** role/store in JWT `app_metadata` — rejected; needs Admin API to set and lags token refresh. Non-exposed `app` schema for functions — rejected; PostgREST RPC only exposes schemas in `api.schemas`, so functions stayed in `public` with strict grants.
+- **Rationale:** `profiles` gives admin UI staff-management a table to write, keeps the RLS pattern uniform (`(select auth.uid())` join), and lets RLS scope reads while functions enforce atomic writes.
+- **Consequences:** `@supabase/supabase-js` added (pinned, lockfile committed); `src/services/supabaseClient.ts`; services dual-mode (supabase + mock fallback); `SessionProvider` restores the real Auth session on reload. Mocks remain for unit tests only; zero mock imports on business paths is the Phase 6 exit criterion (ROADMAP Gate 5).
+- **Related documents:** `docs/SECURITY.md` §§2–4, `docs/API.md`, `src/services/`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

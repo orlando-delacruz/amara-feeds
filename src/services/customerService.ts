@@ -1,9 +1,27 @@
 import type { Customer, CustomerId, NewCustomerInput } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { isSupabaseConfigured, supabase } from './supabaseClient'
+import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
 
 export async function listCustomers(): Promise<Customer[]> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('id, name, contact, address, created_at')
+      .order('name', { ascending: true })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      contact: row.contact ?? undefined,
+      address: row.address ?? undefined,
+      createdAt: row.created_at,
+    }))
+  }
   return getDb().customers.map((customer) => ({ ...customer }))
 }
 
@@ -17,6 +35,26 @@ export async function getCustomer(id: CustomerId): Promise<Customer> {
 
 export async function searchCustomers(term: string): Promise<Customer[]> {
   const query = term.trim().toLowerCase()
+  if (isSupabaseConfigured && supabase) {
+    if (!query) {
+      return listCustomers()
+    }
+    const { data, error } = await supabase
+      .from('customers')
+      .select('id, name, contact, address, created_at')
+      .ilike('name', `%${query}%`)
+      .order('name', { ascending: true })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      contact: row.contact ?? undefined,
+      address: row.address ?? undefined,
+      createdAt: row.created_at,
+    }))
+  }
   if (!query) {
     return listCustomers()
   }
@@ -29,6 +67,23 @@ export async function createCustomer(input: NewCustomerInput): Promise<Customer>
   const name = input.name.trim()
   if (!name) {
     throw new ServiceError('validation', 'Customer name is required.')
+  }
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('create_customer', {
+      p_name: name,
+      p_contact: input.contact?.trim() || null,
+      p_address: input.address?.trim() || null,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return {
+      id: data?.customer_id as string,
+      name,
+      contact: input.contact?.trim() || undefined,
+      address: input.address?.trim() || undefined,
+      createdAt: new Date().toISOString(),
+    }
   }
   const customer: Customer = {
     id: nextId('cust'),

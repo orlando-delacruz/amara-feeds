@@ -2,6 +2,8 @@ import type { AuditEvent, NewAuditEventInput, StoreId, User, UserId } from '@/do
 import { isSameDate } from '@/lib/dates'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { isSupabaseConfigured, supabase } from './supabaseClient'
+import { serviceErrorFromSupabase } from './userService'
 
 export const AUDIT_ACTION_LABELS: Record<AuditEvent['action'], string> = {
   'sale.recorded': 'Sale recorded',
@@ -39,6 +41,38 @@ function roleOf(users: User[], userId: UserId): User['role'] {
 export async function listAuditEvents(
   filter: { date?: string; storeId?: StoreId } = {},
 ): Promise<AuditEvent[]> {
+  if (isSupabaseConfigured && supabase) {
+    // Real audit trail: the atomic functions write audit_events; RLS already
+    // scopes rows to the caller's visibility. Filtering by date/store here is
+    // convenience only (the same scope RLS applies regardless).
+    let query = supabase
+      .from('audit_events')
+      .select('id, action, actor_user_id, store_id, related_user_id, subject, detail, created_at')
+    if (filter.storeId) {
+      query = query.eq('store_id', filter.storeId)
+    }
+    if (filter.date) {
+      query = query
+        .gte('created_at', `${filter.date}T00:00:00`)
+        .lte('created_at', `${filter.date}T23:59:59`)
+    }
+    const { data, error } = await query.order('created_at', { ascending: false })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      action: row.action as AuditEvent['action'],
+      actorUserId: row.actor_user_id,
+      actorRole: 'staff',
+      storeId: row.store_id ?? undefined,
+      relatedUserId: row.related_user_id ?? undefined,
+      subject: row.subject,
+      detail: row.detail ?? undefined,
+      createdAt: row.created_at,
+    }))
+  }
+
   const db = getDb()
   const productNames = new Map(db.products.map((product) => [product.id, product.name]))
 

@@ -14,7 +14,7 @@ This file is the authoritative source for security requirements, principles, bou
 
 ## 2. Authentication
 
-- **Status:** Confirmed foundation — Supabase Auth provides individual staff and admin identity (REQ-USER-001, REQ-USER-003).
+- **Status:** Confirmed foundation — Supabase Auth provides individual staff and admin identity (REQ-USER-001, REQ-USER-003). Implemented (DEC-035): username login resolves to a `username@zafone.local` email convention (Assumed) and authenticates against Supabase Auth; role and store assignment come from the `profiles` table.
 - Anonymous users reach no operational surface; every operation requires an authenticated identity.
 - No custom identity system is built; changing the foundation requires a recorded decision in `docs/DECISIONS.md`.
 - Authentication flow detail (session handling, provisioning, recovery, timeouts) is Confirmation Required — nothing is invented here.
@@ -30,7 +30,7 @@ This file is the authoritative source for security requirements, principles, bou
 
 ## 4. Data-Access Principles
 
-- Row Level Security is an important enforcement boundary for store assignment and admin-wide access; frontend filtering is never relied on for security.
+- Row Level Security is an important enforcement boundary for store assignment and admin-wide access; frontend filtering is never relied on for security. Implemented (DEC-035): RLS is enabled on every exposed table; policies read the caller's `profiles` row via a `SECURITY DEFINER` helper (`current_profile`, only ever the caller's own row) wrapped in `(select …)` for single evaluation; mutations run through `SECURITY DEFINER` functions with in-body `auth.uid()` scope checks and `authenticated`-only execute grants.
 - Every write is authenticated, authorized, and validated at the data layer.
 - Shared records (customers, credit, payment history) are readable across stores per permissions with origin/payment-store attribution intact; store-specific records (sales, inventory, receiving) are scoped to their store.
 - Principles only — no SQL policies, table names, grants, or database rules are defined here.
@@ -124,7 +124,7 @@ No payment, notification, analytics, or other third-party service is selected; n
 | --- | --- | --- | --- |
 | 1 | Authentication flow detail (session, provisioning, recovery, timeouts) | **Confirmation Required** | Foundation confirmed; detail not established. |
 | 2 | Exact role and permission model | **Confirmation Required** | Only store assignment and product approval confirmed. |
-| 3 | Data-access policies | **Confirmation Required** | RLS boundary confirmed; principles only here. |
+| 3 | Data-access policies | **Assumed baseline implemented** | RLS boundary confirmed; policies implemented per DEC-035 (store scope, shared reads, admin-wide, no `auth.role()`). Exact rule changes Confirmation Required. |
 | 4 | Per-input validation and security controls | **Confirmation Required** | Principles only. |
 | 5 | Exact customer, product, payment, and receiving fields | **Confirmation Required** | No extra personal data without justification. |
 | 6 | Retention behavior | **Confirmation Required** | No periods defined. |

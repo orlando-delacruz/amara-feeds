@@ -1,9 +1,28 @@
 import type { NewProductInput, Product, ProductId, ProductStatus } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { isSupabaseConfigured, supabase } from './supabaseClient'
+import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
 
 export async function listProducts(filter: { status?: ProductStatus } = {}): Promise<Product[]> {
+  if (isSupabaseConfigured && supabase) {
+    let query = supabase.from('products').select('id, name, status, created_by_user_id, created_at')
+    if (filter.status) {
+      query = query.eq('status', filter.status)
+    }
+    const { data, error } = await query.order('name', { ascending: true })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      status: row.status as ProductStatus,
+      createdByUserId: row.created_by_user_id ?? undefined,
+      createdAt: row.created_at,
+    }))
+  }
   const products = getDb().products
   const scoped = filter.status
     ? products.filter((product) => product.status === filter.status)
@@ -24,6 +43,19 @@ export async function createProduct(input: NewProductInput): Promise<Product> {
   if (!name) {
     throw new ServiceError('validation', 'Product name is required.')
   }
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('submit_product', { p_name: name })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return {
+      id: data?.product_id as string,
+      name,
+      status: 'pending',
+      createdByUserId: input.createdByUserId,
+      createdAt: new Date().toISOString(),
+    }
+  }
   const product: Product = {
     id: nextId('prod'),
     name,
@@ -36,6 +68,13 @@ export async function createProduct(input: NewProductInput): Promise<Product> {
 }
 
 export async function approveProduct(id: ProductId): Promise<Product> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('approve_product', { p_product_id: id })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return { id, name: '', status: 'active', createdAt: new Date().toISOString() }
+  }
   const product = getDb().products.find((item) => item.id === id)
   if (!product) {
     throw new ServiceError('not_found', 'Product not found.')
@@ -48,6 +87,13 @@ export async function approveProduct(id: ProductId): Promise<Product> {
 }
 
 export async function rejectProduct(id: ProductId): Promise<Product> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('reject_product', { p_product_id: id })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return { id, name: '', status: 'pending', createdAt: new Date().toISOString() }
+  }
   const db = getDb()
   const index = db.products.findIndex((item) => item.id === id)
   if (index === -1) {

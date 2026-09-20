@@ -3,11 +3,37 @@ import type { StoreId } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
 import { assertActiveRecorder } from './userService'
+import { isSupabaseConfigured, supabase } from './supabaseClient'
+import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
 
 export async function listPayments(
   filter: { creditId?: CreditId; storeId?: StoreId } = {},
 ): Promise<Payment[]> {
+  if (isSupabaseConfigured && supabase) {
+    let query = supabase
+      .from('payments')
+      .select('id, credit_id, store_id, amount_minor, method, recorded_by_user_id, paid_at')
+    if (filter.creditId) {
+      query = query.eq('credit_id', filter.creditId)
+    }
+    if (filter.storeId) {
+      query = query.eq('store_id', filter.storeId)
+    }
+    const { data, error } = await query.order('paid_at', { ascending: false })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      creditId: row.credit_id,
+      storeId: row.store_id as StoreId,
+      amountMinor: row.amount_minor,
+      method: row.method ?? undefined,
+      recordedByUserId: row.recorded_by_user_id,
+      paidAt: row.paid_at,
+    }))
+  }
   return getDb()
     .payments.filter(
       (payment) =>
@@ -20,6 +46,39 @@ export async function listPayments(
 export async function recordPayment(
   input: RecordPaymentInput,
 ): Promise<{ payment: Payment; credit: CreditObligation }> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('record_payment', {
+      p_credit_id: input.creditId,
+      p_store_id: input.storeId,
+      p_amount_minor: input.amountMinor,
+      p_method: input.method?.trim() || null,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return {
+      payment: {
+        id: data?.payment_id as string,
+        creditId: input.creditId,
+        storeId: input.storeId,
+        amountMinor: input.amountMinor,
+        method: input.method?.trim() || undefined,
+        recordedByUserId: input.recordedByUserId,
+        paidAt: new Date().toISOString(),
+      },
+      credit: {
+        id: input.creditId,
+        customerId: '',
+        originStoreId: input.storeId,
+        termsId: '',
+        dueDate: '',
+        originalAmountMinor: 0,
+        balanceMinor: (data?.balance_minor as number) ?? 0,
+        status: data?.status as CreditObligation['status'],
+        createdAt: new Date().toISOString(),
+      },
+    }
+  }
   const db = getDb()
   assertActiveRecorder(input.recordedByUserId)
   const credit = db.credits.find((item) => item.id === input.creditId)

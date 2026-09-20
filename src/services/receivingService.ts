@@ -5,11 +5,43 @@ import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
 import { applyStockDelta } from './inventoryService'
 import { assertActiveRecorder } from './userService'
+import { isSupabaseConfigured, supabase } from './supabaseClient'
+import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
 
 export async function listReceiving(
   filter: { storeId?: StoreId; productId?: ProductId } = {},
 ): Promise<ReceivingRecord[]> {
+  if (isSupabaseConfigured && supabase) {
+    let query = supabase
+      .from('receiving_records')
+      .select(
+        'id, store_id, product_id, quantity, supplier, cost_price_minor, selling_price_minor, rider_id, vehicle_id, recorded_by_user_id, received_at',
+      )
+    if (filter.storeId) {
+      query = query.eq('store_id', filter.storeId)
+    }
+    if (filter.productId) {
+      query = query.eq('product_id', filter.productId)
+    }
+    const { data, error } = await query.order('received_at', { ascending: false })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      storeId: row.store_id as StoreId,
+      productId: row.product_id,
+      quantity: row.quantity,
+      supplier: row.supplier,
+      costPriceMinor: row.cost_price_minor,
+      sellingPriceMinor: row.selling_price_minor ?? undefined,
+      riderId: row.rider_id ?? undefined,
+      vehicleId: row.vehicle_id ?? undefined,
+      recordedByUserId: row.recorded_by_user_id,
+      receivedAt: row.received_at,
+    }))
+  }
   return getDb()
     .receiving.filter(
       (record) =>
@@ -25,6 +57,24 @@ export async function listReceiving(
  * Products never received at the store are omitted (they have no price).
  */
 export async function listStorePrices(storeId: StoreId): Promise<Record<string, Money>> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase
+      .from('receiving_records')
+      .select('product_id, selling_price_minor, received_at')
+      .eq('store_id', storeId)
+      .not('selling_price_minor', 'is', null)
+      .order('received_at', { ascending: false })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    const prices: Record<string, Money> = {}
+    for (const row of data ?? []) {
+      if (prices[row.product_id] === undefined) {
+        prices[row.product_id] = row.selling_price_minor as Money
+      }
+    }
+    return prices
+  }
   const records = getDb()
     .receiving.filter(
       (record) => record.storeId === storeId && record.sellingPriceMinor !== undefined,
@@ -40,6 +90,34 @@ export async function listStorePrices(storeId: StoreId): Promise<Record<string, 
 }
 
 export async function createReceiving(input: NewReceivingInput): Promise<ReceivingRecord> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('record_receiving', {
+      p_store_id: input.storeId,
+      p_product_id: input.productId,
+      p_quantity: input.quantity,
+      p_supplier: input.supplier,
+      p_cost_price_minor: input.costPriceMinor,
+      p_selling_price_minor: input.sellingPriceMinor ?? null,
+      p_rider_id: input.riderId ?? null,
+      p_vehicle_id: input.vehicleId ?? null,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return {
+      id: data?.receiving_id as string,
+      storeId: input.storeId,
+      productId: input.productId,
+      quantity: input.quantity,
+      supplier: input.supplier.trim(),
+      costPriceMinor: input.costPriceMinor,
+      sellingPriceMinor: input.sellingPriceMinor,
+      riderId: input.riderId,
+      vehicleId: input.vehicleId,
+      recordedByUserId: input.recordedByUserId,
+      receivedAt: new Date().toISOString(),
+    }
+  }
   assertActiveRecorder(input.recordedByUserId)
   if (input.quantity <= 0) {
     throw new ServiceError('validation', 'Received quantity must be greater than zero.')
@@ -53,8 +131,6 @@ export async function createReceiving(input: NewReceivingInput): Promise<Receivi
   if (input.sellingPriceMinor !== undefined && input.sellingPriceMinor < 0) {
     throw new ServiceError('validation', 'Selling price cannot be negative.')
   }
-  // Rider/vehicle are legacy-only: validated when provided so old records and
-  // old callers stay checked, but never required on new receipts.
   if (input.riderId) {
     const rider = getDb().riders.find((r) => r.id === input.riderId && r.storeId === input.storeId)
     if (!rider || !rider.active) {

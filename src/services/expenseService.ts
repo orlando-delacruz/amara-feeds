@@ -2,15 +2,66 @@ import type { Expense, NewExpenseInput, StoreId } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
 import { assertActiveRecorder } from './userService'
+import { isSupabaseConfigured, supabase } from './supabaseClient'
+import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
 
 export async function listExpenses(filter: { storeId?: StoreId } = {}): Promise<Expense[]> {
+  if (isSupabaseConfigured && supabase) {
+    let query = supabase
+      .from('expenses')
+      .select(
+        'id, store_id, rider_id, vehicle_id, type, amount_minor, note, recorded_by_user_id, created_at',
+      )
+    if (filter.storeId) {
+      query = query.eq('store_id', filter.storeId)
+    }
+    const { data, error } = await query.order('created_at', { ascending: false })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      storeId: row.store_id as StoreId,
+      riderId: row.rider_id ?? undefined,
+      vehicleId: row.vehicle_id ?? undefined,
+      type: row.type as Expense['type'],
+      amountMinor: row.amount_minor,
+      note: row.note ?? undefined,
+      recordedByUserId: row.recorded_by_user_id,
+      createdAt: row.created_at,
+    }))
+  }
   return getDb()
     .expenses.filter((record) => !filter.storeId || record.storeId === filter.storeId)
     .map((record) => ({ ...record }))
 }
 
 export async function createExpense(input: NewExpenseInput): Promise<Expense> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('create_expense', {
+      p_store_id: input.storeId,
+      p_rider_id: input.riderId ?? null,
+      p_vehicle_id: input.vehicleId ?? null,
+      p_type: input.type,
+      p_amount_minor: input.amountMinor,
+      p_note: input.note ?? null,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return {
+      id: data?.expense_id as string,
+      storeId: input.storeId,
+      riderId: input.riderId,
+      vehicleId: input.vehicleId,
+      type: input.type,
+      amountMinor: input.amountMinor,
+      note: input.note?.trim() || undefined,
+      recordedByUserId: input.recordedByUserId,
+      createdAt: new Date().toISOString(),
+    }
+  }
   assertActiveRecorder(input.recordedByUserId)
   if (input.amountMinor <= 0) {
     throw new ServiceError('validation', 'Expense amount must be greater than zero.')

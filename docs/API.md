@@ -52,7 +52,7 @@ Candidate operation groups, described conceptually — never field names or sche
 - **Receiving operations:** record store-specific receipts with store, item, quantity, supplier, purchase/cost price, and the required delivery rider and vehicle (validated as active at the same store).
 - **Product operations:** staff submit products (entering pending state); admin approves products into active state.
 - **Staff/user operations:** individual store-assigned identities; admin business-wide oversight. Admin-only operations: create a staff account (name, username, password, assigned store), update a staff account (rename, change username or store assignment, reset password), and enable/disable an account.
-- **Sign-in operations (mock):** authenticate with username and password against the current localStorage-backed mock; invalid or disabled accounts are denied with plain non-technical feedback. Replaced by Supabase Auth in a later phase.
+- **Sign-in operations:** authenticate with username and password through Supabase Auth (the username resolves to the `username@zafone.local` email convention; the profile row supplies role/store). Invalid, unknown, or disabled accounts are denied with plain non-technical feedback. Without Supabase env configuration the app falls back to the localStorage-backed mock login for tests/preview. All operation detail (payloads, function names) lives in implementation and `src/services/`.
 - **Rider operations:** list the riders of a store; add a rider; activate/deactivate a rider so inactive riders are not selectable on a sale.
 - **Vehicle operations:** list the vehicle types of a store; add a vehicle type; activate/deactivate a vehicle type so inactive types are not selectable on a sale.
 - **Expense operations:** record store-specific fuel/repair expenses against a rider or vehicle (at least one required); list expenses by store; retrieve per-rider and per-vehicle net summary (delivered-sales value minus expenses). Staff scope to own store; admin scope to selected store via the store control.
@@ -93,7 +93,7 @@ Authenticated, authorized admin operations within confirmed scope: access protec
 ## 10. Data-Platform Interaction Boundaries
 
 - **Structured application data:** all reads and writes pass through authenticated, authorized, validated data-platform operations; anonymous callers never reach operational data.
-- **Authentication foundation:** individual staff and admin identity via Supabase Auth; session/store-context handling deferred to `docs/SECURITY.md` and implementation.
+- **Authentication foundation:** individual staff and admin identity via Supabase Auth; role and store assignment come from the `profiles` table (implemented per `docs/SECURITY.md` and DEC-035), not from client-editable identity metadata.
 - **Database-side integrity/enforcement:** atomic sale-with-deduction, payment-with-balance-update, approval-gated activation, and store-scoped access execute at the data layer where appropriate; exact mechanisms (transactions, functions, policies, triggers) are implementation detail, not defined here.
 - **File storage:** no managed file/media storage is confirmed; none is defined here.
 

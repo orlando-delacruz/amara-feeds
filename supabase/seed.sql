@@ -1,0 +1,3 @@
+-- ZAF ONE — optional post-migration seed
+-- Business seed data lives in migration 00004 for dev parity. This file is
+-- kept because config.toml references it; leave empty.
