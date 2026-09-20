@@ -176,9 +176,9 @@ function SignInContent() {
               <LogoImg $size="lg" src={zeannLogo} alt="Zeann logo" />
             </BrandMark>
             <Title>ZAF ONE</Title>
-            <Subtitle>Store management for Amara and Zeann.</Subtitle>
+            <Subtitle>Zeann &amp; Amara Feeds Supply</Subtitle>
           </div>
-          <StoreCaption>Two stores, one shared system.</StoreCaption>
+          <StoreCaption>One System • One Team • One Goal</StoreCaption>
         </BrandPanel>
         <AccountPanel>
           <SectionTitle>Sign in</SectionTitle>

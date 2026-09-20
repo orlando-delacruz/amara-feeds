@@ -117,6 +117,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-029 | Adopt official logo and recolor theme to the logo palette | Accepted | 2026-09-14 |
 | DEC-030 | Per-store logo and color theme following the store context | Accepted | 2026-09-15 |
 | DEC-031 | Fixed sign-in theme and combined admin theme | Accepted | 2026-09-15 |
+| DEC-032 | Manual stock edit and delete with sales-history guard | Accepted | 2026-09-20 |
+| DEC-033 | Sign-in brand copy: Zeann & Amara Feeds Supply tagline | Accepted | 2026-09-20 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -583,6 +585,29 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Related documents:** `docs/DESIGN-SYSTEM.md` §3, `src/theme/storeThemes.ts`, `src/theme/browserChrome.ts`, `src/app/layouts/`.
 - **Supersedes / Superseded by:** none (narrows DEC-030's "whole app follows store" to the staff area).
 - **Open questions or follow-up:** Exact bronze accent slots beyond focus/tint remain assumed; image optimization still follow-up.
+
+### DEC-032 — Manual stock edit and delete with sales-history guard
+
+- **ID:** DEC-032
+- **Title:** Manual stock edit and delete with sales-history guard
+- **Status:** Accepted
+- **Date:** 2026-09-20
+- **Context:** Stock is fully derived (receiving adds, sales deduct), so staff and admin had no correction path for physical-count mismatches (damage, found stock, data-entry fixes). The current-stock row is a `StockLevel` (store + product + quantity), not an item record — the approved scope is quantities, not product records.
+- **Decision:** `inventoryService` gains `updateStock` (absolute integer quantity ≥ 0; creates the row when absent) and `deleteStock` (removes the row; refused with `conflict` when the product has any sale at that store — set quantity to 0 instead, mirroring the DEC-027 vehicle delete guard). Inventory rows gain Edit/Delete actions; edit opens a dialog, delete uses `ConfirmDialog`. Both write audit events (`stock.updated` with from→to detail, `stock.deleted`) into the session audit log per the DEC-013 attribution pattern. Scope stays store-aware: staff act on their own store, admins on the store filter they selected.
+- **Alternatives considered:** Product-record edit/delete — different surface, not requested; adjustment deltas instead of absolute set — rejected, staff think in shelf counts and a delta dialog costs more.
+- **Rationale:** Physical counts diverge from derived stock; a manual correction with a visible trail is the smallest trustworthy fix. The sales guard keeps derived sale history coherent; deleted rows only exist when nothing sold at that store.
+- **Consequences:** `AuditTrailPage` renders the two new actions via `AUDIT_ACTION_LABELS`; history gains adjustment visibility. Mock-only: enforcement moves to the real data layer in Phase 5.
+- **Related documents:** `docs/DATA-MODEL.md` §§4.10–4.11, `src/services/inventoryService.ts`, `src/features/inventory/`.
+
+### DEC-033 — Sign-in brand copy: Zeann & Amara Feeds Supply tagline
+
+- **ID:** DEC-033
+- **Title:** Sign-in brand copy: Zeann & Amara Feeds Supply tagline
+- **Status:** Accepted
+- **Date:** 2026-09-20
+- **Context:** Client copy request for the sign-in brand panel.
+- **Decision:** Sign-in brand panel reads: title "ZAF ONE", subtitle "Zeann & Amara Feeds Supply", caption "One System • One Team • One Goal", both store logos unchanged above.
+- **Related documents:** `src/features/session/SignInPage.tsx`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

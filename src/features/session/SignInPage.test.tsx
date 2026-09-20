@@ -73,6 +73,8 @@ describe('SignInPage', () => {
 
     expect(screen.getByRole('main')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'ZAF ONE' })).toBeInTheDocument()
+    expect(screen.getByText('Zeann & Amara Feeds Supply')).toBeInTheDocument()
+    expect(screen.getByText('One System • One Team • One Goal')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'Sign in' })).toBeInTheDocument()
   })
 

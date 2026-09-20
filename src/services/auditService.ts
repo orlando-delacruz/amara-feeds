@@ -13,6 +13,8 @@ export const AUDIT_ACTION_LABELS: Record<AuditEvent['action'], string> = {
   'rider.added': 'Rider added',
   'rider.status-changed': 'Rider status changed',
   'expense.recorded': 'Expense recorded',
+  'stock.updated': 'Stock adjusted',
+  'stock.deleted': 'Stock deleted',
 }
 
 /** Frontend-only session log. Derived seed history comes from stored records. */

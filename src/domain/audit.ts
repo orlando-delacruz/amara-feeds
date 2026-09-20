@@ -14,6 +14,8 @@ export type AuditAction =
   | 'rider.added'
   | 'rider.status-changed'
   | 'expense.recorded'
+  | 'stock.updated'
+  | 'stock.deleted'
 
 export interface AuditEvent {
   id: AuditId
