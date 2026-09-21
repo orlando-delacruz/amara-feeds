@@ -110,6 +110,84 @@ export async function getDeliveryNetSummary(storeId: StoreId): Promise<{
   riders: DeliveryNetEntry[]
   vehicles: DeliveryNetEntry[]
 }> {
+  if (isSupabaseConfigured && supabase) {
+    const [ridersQ, vehiclesQ, salesQ, expensesQ] = await Promise.all([
+      supabase.from('riders').select('id, name').eq('store_id', storeId),
+      supabase.from('vehicles').select('id, label').eq('store_id', storeId),
+      supabase
+        .from('sales')
+        .select('total_minor, delivery_rider_id, delivery_vehicle_id')
+        .eq('store_id', storeId),
+      supabase
+        .from('expenses')
+        .select('rider_id, vehicle_id, amount_minor')
+        .eq('store_id', storeId),
+    ])
+    const error = ridersQ.error ?? vehiclesQ.error ?? salesQ.error ?? expensesQ.error
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    const riderMap = new Map<string, { deliveredSalesMinor: number; expensesMinor: number }>()
+    const vehicleMap = new Map<string, { deliveredSalesMinor: number; expensesMinor: number }>()
+    for (const sale of salesQ.data ?? []) {
+      if (sale.delivery_rider_id) {
+        const entry = riderMap.get(sale.delivery_rider_id) ?? {
+          deliveredSalesMinor: 0,
+          expensesMinor: 0,
+        }
+        entry.deliveredSalesMinor += sale.total_minor
+        riderMap.set(sale.delivery_rider_id, entry)
+      }
+      if (sale.delivery_vehicle_id) {
+        const entry = vehicleMap.get(sale.delivery_vehicle_id) ?? {
+          deliveredSalesMinor: 0,
+          expensesMinor: 0,
+        }
+        entry.deliveredSalesMinor += sale.total_minor
+        vehicleMap.set(sale.delivery_vehicle_id, entry)
+      }
+    }
+    for (const expense of expensesQ.data ?? []) {
+      if (expense.rider_id) {
+        const entry = riderMap.get(expense.rider_id) ?? {
+          deliveredSalesMinor: 0,
+          expensesMinor: 0,
+        }
+        entry.expensesMinor += expense.amount_minor
+        riderMap.set(expense.rider_id, entry)
+      }
+      if (expense.vehicle_id) {
+        const entry = vehicleMap.get(expense.vehicle_id) ?? {
+          deliveredSalesMinor: 0,
+          expensesMinor: 0,
+        }
+        entry.expensesMinor += expense.amount_minor
+        vehicleMap.set(expense.vehicle_id, entry)
+      }
+    }
+    const riders = (ridersQ.data ?? []).map((rider) => {
+      const entry = riderMap.get(rider.id) ?? { deliveredSalesMinor: 0, expensesMinor: 0 }
+      return {
+        id: rider.id,
+        name: rider.name,
+        deliveredSalesMinor: entry.deliveredSalesMinor,
+        expensesMinor: entry.expensesMinor,
+        netMinor: entry.deliveredSalesMinor - entry.expensesMinor,
+      }
+    })
+    const vehicles = (vehiclesQ.data ?? []).map((vehicle) => {
+      const entry = vehicleMap.get(vehicle.id) ?? { deliveredSalesMinor: 0, expensesMinor: 0 }
+      return {
+        id: vehicle.id,
+        name: vehicle.label,
+        deliveredSalesMinor: entry.deliveredSalesMinor,
+        expensesMinor: entry.expensesMinor,
+        netMinor: entry.deliveredSalesMinor - entry.expensesMinor,
+      }
+    })
+    return { riders, vehicles }
+  }
+
   const db = getDb()
   const storeExpenses = db.expenses.filter((e) => e.storeId === storeId)
   const storeSales = db.sales.filter((s) => s.storeId === storeId)

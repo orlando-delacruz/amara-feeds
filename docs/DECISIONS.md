@@ -121,6 +121,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-033 | Sign-in brand copy: Zeann & Amara Feeds Supply tagline | Accepted | 2026-09-20 |
 | DEC-034 | Phase 3 gate deferral and assumption adoption for database work | Accepted | 2026-09-20 |
 | DEC-035 | Supabase-direct integration: profiles-based authz and service swap | Accepted | 2026-09-20 |
+| DEC-036 | Staff management RPC fixes and admin update semantics | Accepted | 2026-09-21 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -634,6 +635,16 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Rationale:** `profiles` gives admin UI staff-management a table to write, keeps the RLS pattern uniform (`(select auth.uid())` join), and lets RLS scope reads while functions enforce atomic writes.
 - **Consequences:** `@supabase/supabase-js` added (pinned, lockfile committed); `src/services/supabaseClient.ts`; services dual-mode (supabase + mock fallback); `SessionProvider` restores the real Auth session on reload. Mocks remain for unit tests only; zero mock imports on business paths is the Phase 6 exit criterion (ROADMAP Gate 5).
 - **Related documents:** `docs/SECURITY.md` §§2–4, `docs/API.md`, `src/services/`.
+
+### DEC-036 — Staff management RPC fixes and admin update semantics
+
+- **ID:** DEC-036
+- **Title:** Staff management RPC fixes and admin update semantics
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** Hosted testing surfaced three integration defects: `record_sale` rejected the client's `p_lines` (a JSON string for a `jsonb` param — PostgREST delivered a scalar, `jsonb_array_length` failed with 22023); `create_staff` raised `gen_salt(unknown) does not exist` (42883) because the function's `search_path = public` excluded the `extensions` schema where pgcrypto lives; and staff list/edit silently read the mock (`listUsers`/`updateUser` had no supabase branch), so staff management operated on fake data while everything else was real. Frontend-only `profiles` RLS also could not express admin edits of other accounts (own-row updates only) nor password resets (`auth.users`).
+- **Decision:** Migration 00005: `create_staff` gets `set search_path = public, extensions`; new admin-only `update_staff` (name, username→ synced auth email convention, store reassignment, enable/disable, optional password reset with revocation of the user's sessions and refresh tokens — Assumed, revisit trigger: session-revocation policy) implemented as `SECURITY DEFINER` with in-body admin checks. Services gain the missing supabase branches (`listUsers`, `getUser`, `updateUser` → `update_staff`, `getDeliveryNetSummary`). `serviceErrorFromSupabase` never surfaces raw SQLSTATEs — `P0001` business copy passes through classified by message; every other SQLSTATE collapses to a generic message with the detail logged. `p_lines` is passed as a real array (postgrest-js serializes JSON arrays to `jsonb` arrays; stringified values arrive as scalars). Password inputs gain a show/hide toggle in the shared `TextField`.
+- **Related documents:** `docs/SECURITY.md` §§5, 8, `src/services/`, `supabase/migrations/20260921022901_00005_staff_fixes.sql`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

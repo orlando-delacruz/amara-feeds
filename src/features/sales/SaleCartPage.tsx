@@ -220,6 +220,11 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
         size="compact"
       />
       {save.error && <Alert variant="danger">{save.error}</Alert>}
+      {(customers.error || products.error || terms.error) && (
+        <Alert variant="warning">
+          Some checkout details could not load. Retry or try again from the sales list.
+        </Alert>
+      )}
       <form onSubmit={handleSubmit} noValidate>
         <Stack>
           <Section

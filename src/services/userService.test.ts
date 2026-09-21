@@ -1,6 +1,39 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createUser, listUsers, signIn, updateUser } from './userService'
+import { createUser, listUsers, serviceErrorFromSupabase, signIn, updateUser } from './userService'
 import { resetDb } from './mocks/db'
+
+describe('serviceErrorFromSupabase', () => {
+  it('keeps our business copy and classifies by message', () => {
+    const conflict = serviceErrorFromSupabase({
+      code: 'P0001',
+      message: 'That username is already taken.',
+    })
+    expect(conflict.code).toBe('conflict')
+
+    const notFound = serviceErrorFromSupabase({ code: 'P0001', message: 'User not found.' })
+    expect(notFound.code).toBe('not_found')
+
+    const validation = serviceErrorFromSupabase({
+      code: 'P0001',
+      message: 'Received quantity must be greater than zero.',
+    })
+    expect(validation.code).toBe('validation')
+  })
+
+  it('never surfaces raw database internals', () => {
+    const mapped = serviceErrorFromSupabase({
+      code: '42883',
+      message: 'function gen_salt(unknown) does not exist',
+    })
+    expect(mapped.message).toBe('Something went wrong. Please try again.')
+
+    const scalar = serviceErrorFromSupabase({
+      code: '22023',
+      message: 'cannot get array length of a scalar',
+    })
+    expect(scalar.message).toBe('Something went wrong. Please try again.')
+  })
+})
 
 describe('userService', () => {
   beforeEach(() => resetDb())

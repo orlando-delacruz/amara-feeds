@@ -113,13 +113,14 @@ export async function createSale(input: NewSaleInput): Promise<Sale> {
       p_delivery_vehicle_id: input.delivery?.vehicleId ?? null,
       p_discount_minor: input.discountMinor ?? 0,
       p_terms_id: input.termsId ?? null,
-      p_lines: JSON.stringify(
-        input.lines.map((line) => ({
-          product_id: line.productId,
-          quantity: line.quantity,
-          unit_price_minor: line.unitPriceMinor,
-        })),
-      ),
+      // Pass a real array: postgrest-js serializes it as a JSON array, which
+      // PostgREST casts to the jsonb array `record_sale` expects (a stringified
+      // JSON value arrives as a jsonb scalar and breaks jsonb_array_length).
+      p_lines: input.lines.map((line) => ({
+        product_id: line.productId,
+        quantity: line.quantity,
+        unit_price_minor: line.unitPriceMinor,
+      })),
     })
     if (error) {
       throw serviceErrorFromSupabase(error)

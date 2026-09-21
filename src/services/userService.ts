@@ -8,6 +8,32 @@ import { ServiceError } from './errors'
 export async function listUsers(
   filter: { storeId?: StoreId; role?: UserRole; active?: boolean } = {},
 ): Promise<User[]> {
+  if (isSupabaseConfigured && supabase) {
+    // Roles read from the profiles table (RLS scopes staff to their own row);
+    // admins see and filter the full staff list.
+    let query = supabase.from('profiles').select('id, username, name, role, store_id, active')
+    if (filter.storeId) {
+      query = query.eq('store_id', filter.storeId)
+    }
+    if (filter.role) {
+      query = query.eq('role', filter.role)
+    }
+    if (filter.active !== undefined) {
+      query = query.eq('active', filter.active)
+    }
+    const { data, error } = await query.order('name', { ascending: true })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      role: row.role as UserRole,
+      storeId: row.store_id ?? undefined,
+      username: row.username,
+      active: row.active,
+    }))
+  }
   return getDb()
     .users.filter(
       (user) =>
@@ -19,6 +45,27 @@ export async function listUsers(
 }
 
 export async function getUser(id: UserId): Promise<User> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username, name, role, store_id, active')
+      .eq('id', id)
+      .maybeSingle()
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    if (!data) {
+      throw new ServiceError('not_found', 'User not found.')
+    }
+    return {
+      id: data.id,
+      name: data.name,
+      role: data.role as UserRole,
+      storeId: data.store_id ?? undefined,
+      username: data.username,
+      active: data.active,
+    }
+  }
   const user = getDb().users.find((item) => item.id === id)
   if (!user) {
     throw new ServiceError('not_found', 'User not found.')
@@ -143,6 +190,26 @@ export async function createUser(input: NewUserInput): Promise<User> {
 }
 
 export async function updateUser(id: UserId, patch: UpdateUserInput): Promise<User> {
+  if (isSupabaseConfigured && supabase) {
+    // Admin staff edits run through the update_staff function (SECURITY
+    // DEFINER, admin-only) because profiles RLS restricts direct updates to
+    // one's own row, and password resets touch auth.users.
+    const result = await supabase.rpc('update_staff', {
+      p_user_id: id,
+      p_name: patch.name?.trim() ?? null,
+      p_username: patch.username?.trim() ?? null,
+      p_store_id: patch.storeId ?? null,
+      p_active: patch.active ?? null,
+      p_password: patch.password ?? null,
+    })
+    const { error } = result
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    // Read back the authoritative row.
+    return getUser(id)
+  }
+
   const user = getDb().users.find((item) => item.id === id)
   if (!user) {
     throw new ServiceError('not_found', 'User not found.')
@@ -196,14 +263,36 @@ export function assertActiveRecorder(userId: UserId): void {
   }
 }
 
+/**
+ * Maps a supabase-js/PostgREST error into a ServiceError with user-safe copy.
+ * Our atomic functions raise business messages with errcode P0001; those copy
+ * blocks are already plain-language and are surfaced verbatim (classified by
+ * message). Everything else (raw SQLSTATEs like 42883, 22023, 23505, RLS
+ * denials) is never intelligible or safe to show — collapse it to a generic
+ * message and log the detail for diagnostics.
+ */
 export function serviceErrorFromSupabase(error: { message: string; code?: string }): ServiceError {
   const message = error.message ?? 'Something went wrong.'
-  const code = error.code
-  if (code === 'P0001' || message.includes('already taken') || message.includes('duplicate')) {
+  const code = error.code ?? ''
+
+  // Our business raises (P0001) and known constraint violations carry copy we
+  // wrote for users — keep them, but classify correctly.
+  if (code === 'P0001') {
+    if (
+      /already taken|already settled|used by existing|Only admins|cannot be deleted/.test(message)
+    ) {
+      return new ServiceError('conflict', message)
+    }
+    if (/not found/i.test(message)) {
+      return new ServiceError('not_found', message)
+    }
+    return new ServiceError('validation', message)
+  }
+  if (code === '23505' || /duplicate key/i.test(message)) {
     return new ServiceError('conflict', message)
   }
-  if (code === '42501' || message.toLowerCase().includes('not found')) {
-    return new ServiceError('not_found', message)
-  }
-  return new ServiceError('validation', message)
+
+  // Never surface raw database internals to users (docs/SECURITY.md §7, §11).
+  console.error(`[supabase] ${code || 'unknown'}: ${message}`)
+  return new ServiceError('validation', 'Something went wrong. Please try again.')
 }

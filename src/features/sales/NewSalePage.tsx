@@ -3,11 +3,13 @@ import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { listProducts, listStorePrices } from '@/services'
 import { Alert } from '@/components/ui/Alert'
+import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
-import { EmptyState } from '@/components/ui/EmptyState'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
+
 import { TextField } from '@/components/ui/TextField'
 import { useAsyncData } from '@/features/shared'
 import { useCart } from '@/features/sales/useCart'
@@ -114,53 +116,74 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
         value={search}
         onChange={(event) => setSearch(event.target.value)}
       />
-      {visibleProducts.length === 0 && (
-        <EmptyState
-          title={search.trim() ? 'No items match your search' : 'No items available'}
-          description={
-            search.trim()
-              ? 'Try a different search term.'
-              : 'Add items at your store to start selling.'
-          }
-        />
-      )}
-      <CatalogGrid>
-        {visibleProducts.map((product: Product) => {
-          const price = prices.data?.[product.id]
-          const quantity = quantities[product.id] ?? '1'
-          return (
-            <ProductCard key={product.id}>
-              <ProductName>{product.name}</ProductName>
-              <ProductPrice>
-                Price per bag:{' '}
-                {price !== undefined ? <MoneyText amountMinor={price} /> : 'No price'}
-              </ProductPrice>
-              {price !== undefined && (
-                <QtyField
-                  id={`sale-quantity-${product.id}`}
-                  label="Quantity"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={quantity}
-                  onChange={(event) =>
-                    setQuantities((current) => ({ ...current, [product.id]: event.target.value }))
-                  }
-                  required
-                />
-              )}
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={price === undefined}
-                onClick={() => price !== undefined && addToCart(product.id, product.name, price)}
-              >
-                Add to cart
-              </Button>
-            </ProductCard>
-          )
-        })}
-      </CatalogGrid>
+      <AsyncBoundary
+        loading={products.loading || prices.loading}
+        error={
+          products.error && !products.data
+            ? products.error
+            : prices.error && !products.data
+              ? prices.error
+              : null
+        }
+        onRetry={() => {
+          products.reload()
+          prices.reload()
+        }}
+        skeleton={<ListSkeleton rows={3} />}
+        empty={
+          products.error || prices.error
+            ? null
+            : visibleProducts.length === 0
+              ? {
+                  title: search.trim() ? 'No items match your search' : 'No items available',
+                  description: search.trim()
+                    ? 'Try a different search term.'
+                    : 'Add items at your store to start selling.',
+                }
+              : null
+        }
+      >
+        {(products.error || prices.error) && (
+          <Alert variant="warning">Some item prices may not have loaded.</Alert>
+        )}
+        <CatalogGrid>
+          {visibleProducts.map((product: Product) => {
+            const price = prices.data?.[product.id]
+            const quantity = quantities[product.id] ?? '1'
+            return (
+              <ProductCard key={product.id}>
+                <ProductName>{product.name}</ProductName>
+                <ProductPrice>
+                  Price per bag:{' '}
+                  {price !== undefined ? <MoneyText amountMinor={price} /> : 'No price'}
+                </ProductPrice>
+                {price !== undefined && (
+                  <QtyField
+                    id={`sale-quantity-${product.id}`}
+                    label="Quantity"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={quantity}
+                    onChange={(event) =>
+                      setQuantities((current) => ({ ...current, [product.id]: event.target.value }))
+                    }
+                    required
+                  />
+                )}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={price === undefined}
+                  onClick={() => price !== undefined && addToCart(product.id, product.name, price)}
+                >
+                  Add to cart
+                </Button>
+              </ProductCard>
+            )
+          })}
+        </CatalogGrid>
+      </AsyncBoundary>
       <BasketFab onClick={() => navigate(`${basePath}/cart`)} />
     </Stack>
   )
