@@ -51,7 +51,7 @@ Before working on a task:
 3. Inspect the existing implementation before modifying it.
 4. Do not assume documentation is more accurate than the actual code for implemented behavior. Identify discrepancies explicitly.
 
-**Session handoff trigger:** when the client says "hand-off context to Session.md" (exact phrase), summarize the current chat session — key points, state, verification baseline, decisions made, and remaining items — and (re)write `docs/SESSION.md` in the established format so the next session can load it. Follow the structure of the previous handoff; never commit secrets (passwords/keys stay out of `SESSION.md`).
+**Session handoff trigger:** when the client says "hand-off context to Session.md" (exact phrase), summarize the current chat session — key points, state, verification baseline, decisions made, and remaining items — and (re)write `SESSION.md` (project root) in the established format so the next session can load it. Follow the structure of the previous handoff; never commit secrets (passwords/keys stay out of `SESSION.md`).
 
 ## 5. Understand Before Changing
 

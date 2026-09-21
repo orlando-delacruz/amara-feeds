@@ -1,6 +1,6 @@
 # SESSION.md — Session Context (for a new chat session)
 
-This file is the session handoff: a new chat session reads it first to orient on the project without re-explaining it. It is refreshed at the end of a session, or automatically whenever the client says **"hand-off context to Session.md"** (standing rule — see the note at the bottom and in `AGENTS.md`).
+This root-level file is the session handoff: a new chat session reads it first to orient on the project without re-explaining it. It is refreshed at the end of a session, or automatically whenever the client says **"hand-off context to Session.md"** (standing rule — see the note at the bottom and in `AGENTS.md`).
 
 ## 1. Objective
 
