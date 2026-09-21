@@ -1,16 +1,15 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { deleteStock, getCurrentStock } from '@/services'
-import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
-import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
+import { StoreControl, useAsyncData, useAlertMutation } from '@/features/shared'
+import { confirmAction, notifySuccess } from '@/lib/swal'
 import { useSession } from '@/features/session/useSession'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
@@ -34,37 +33,42 @@ const RowActions = styled.div`
 export function InventoryPage() {
   const { store, canSwitchStore } = useStore()
   const { user } = useSession()
-  const [notice, setNotice] = useState<string | null>(null)
   const [editing, setEditing] = useState<Row | null>(null)
-  const [deleting, setDeleting] = useState<Row | null>(null)
   const { data, loading, error, reload } = useAsyncData(async () => {
     const stock = await getCurrentStock()
     return stock.filter((row) => row.storeId === store)
   }, store)
-  const remove = useMutation((input: { storeId: StoreId; productId: ProductId }) =>
-    deleteStock(input.storeId, input.productId, {
-      userId: user?.id ?? '',
-      role: user?.role ?? 'staff',
-    }),
+  const remove = useAlertMutation(
+    (input: { storeId: StoreId; productId: ProductId }) =>
+      deleteStock(input.storeId, input.productId, {
+        userId: user?.id ?? '',
+        role: user?.role ?? 'staff',
+      }),
+    'Could not delete the stock.',
   )
-
-  async function handleDelete() {
-    if (!deleting) {
-      return
-    }
-    const removed = await remove.run({ storeId: deleting.storeId, productId: deleting.productId })
-    if (removed) {
-      setNotice(`Stock for "${productNameOf(deleting)}" deleted.`)
-      setDeleting(null)
-      reload()
-    }
-  }
 
   function productNameOf(row: Row): string {
     return (
       (data ?? []).find((item) => item.productId === row.productId && item.storeId === row.storeId)
         ?.productName ?? 'Item'
     )
+  }
+
+  async function requestDelete(row: Row) {
+    const confirmed = await confirmAction({
+      title: 'Delete stock?',
+      text: `Delete all stock of "${productNameOf(row)}" at ${storeNames[row.storeId]}? This cannot be undone. Items with sales at this store cannot be deleted.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    })
+    if (!confirmed) {
+      return
+    }
+    const removed = await remove.run({ storeId: row.storeId, productId: row.productId })
+    if (removed) {
+      void notifySuccess(`Stock for "${productNameOf(row)}" deleted.`)
+      reload()
+    }
   }
 
   type RowWithActions = Row & Record<string, React.ReactNode>
@@ -81,7 +85,7 @@ export function InventoryPage() {
           size="sm"
           variant="danger"
           disabled={remove.pending}
-          onClick={() => setDeleting(row)}
+          onClick={() => void requestDelete(row)}
         >
           Delete
         </Button>
@@ -96,7 +100,6 @@ export function InventoryPage() {
         description={`Current stock for ${storeNames[store]}. Stock changes automatically on sales and receiving.`}
         size="compact"
       />
-      {notice && <Alert variant="success">{notice}</Alert>}
       {canSwitchStore && (
         <FilterBar>
           <StoreControl />
@@ -116,7 +119,6 @@ export function InventoryPage() {
             : null
         }
       >
-        {remove.error && <Alert variant="danger">{remove.error}</Alert>}
         {rows.length > 0 && (
           <RecordList
             caption={`Current stock at ${storeNames[store]}`}
@@ -136,23 +138,10 @@ export function InventoryPage() {
         actorRole={user?.role ?? 'staff'}
         onClose={() => setEditing(null)}
         onSaved={(quantity, previousQuantity) => {
-          setNotice(`Stock adjusted from ${previousQuantity} to ${quantity}.`)
+          void notifySuccess(`Stock adjusted from ${previousQuantity} to ${quantity}.`)
           setEditing(null)
           reload()
         }}
-      />
-      <ConfirmDialog
-        open={deleting !== null}
-        title="Delete stock"
-        message={
-          deleting
-            ? `Delete all stock of "${productNameOf(deleting)}" at ${storeNames[deleting.storeId]}? This cannot be undone. Items with sales at this store cannot be deleted.`
-            : ''
-        }
-        confirmLabel="Delete"
-        pending={remove.pending}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleting(null)}
       />
     </Stack>
   )

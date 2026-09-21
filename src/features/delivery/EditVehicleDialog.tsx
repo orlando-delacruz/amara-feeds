@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { updateVehicle } from '@/services'
-import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { TextField } from '@/components/ui/TextField'
-import { useMutation } from '@/features/shared'
+import { useAlertMutation } from '@/features/shared'
 import type { Vehicle } from '@/domain'
 
 interface EditVehicleDialogProps {
@@ -24,8 +23,9 @@ export function EditVehicleDialog({ vehicle, onClose, onSaved }: EditVehicleDial
   // Remounted per vehicle (keyed by the caller), so initial state always
   // reflects the selected vehicle.
   const [label, setLabel] = useState(vehicle?.label ?? '')
-  const { run, pending, error } = useMutation((input: { id: string; label: string }) =>
-    updateVehicle(input.id, { label: input.label }),
+  const { run, pending } = useAlertMutation(
+    (input: { id: string; label: string }) => updateVehicle(input.id, { label: input.label }),
+    'Could not update the vehicle.',
   )
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -42,7 +42,6 @@ export function EditVehicleDialog({ vehicle, onClose, onSaved }: EditVehicleDial
   return (
     <Dialog open={vehicle !== null} title="Edit vehicle" onClose={onClose}>
       <Form onSubmit={handleSubmit} noValidate>
-        {error && <Alert variant="danger">{error}</Alert>}
         <TextField
           id="edit-vehicle-label"
           label="Vehicle type"

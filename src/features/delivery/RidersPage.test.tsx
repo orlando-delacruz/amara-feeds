@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
+import { __awaitSwal } from '@/test/swalMock'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 
@@ -52,7 +53,7 @@ describe('RidersPage', () => {
     await actor.type(screen.getByLabelText(/^Rider name/), 'Nadia Santos')
     await actor.click(screen.getByRole('button', { name: 'Add rider' }))
 
-    expect(await screen.findByText('Nadia Santos added.')).toBeInTheDocument()
+    await __awaitSwal('Nadia Santos added.')
   })
 
   it('lets an admin review riders per store', async () => {
@@ -77,8 +78,8 @@ describe('RidersPage', () => {
     await actor.type(nameInput, 'Jojo Dela Cruz')
     await actor.click(within(dialog).getByRole('button', { name: 'Save changes' }))
 
-    expect(await screen.findByText('Jojo Dela Cruz updated.')).toBeInTheDocument()
-    expect(screen.getByText('Jojo Dela Cruz')).toBeInTheDocument()
+    await __awaitSwal('Jojo Dela Cruz updated.')
+    expect(await screen.findByText('Jojo Dela Cruz')).toBeInTheDocument()
   })
 
   it('deletes a rider that is not referenced by records', async () => {
@@ -88,14 +89,12 @@ describe('RidersPage', () => {
 
     await actor.type(screen.getByLabelText(/^Rider name/), 'Standby Rider')
     await actor.click(screen.getByRole('button', { name: 'Add rider' }))
-    await screen.findByText('Standby Rider added.')
+    await __awaitSwal('Standby Rider added.')
 
-    const row = screen.getByText('Standby Rider').closest('tr') as HTMLElement
+    const row = (await screen.findByText('Standby Rider')).closest('tr') as HTMLElement
     await actor.click(within(row).getByRole('button', { name: 'Delete' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Delete rider' })
-    await actor.click(within(dialog).getByRole('button', { name: 'Delete' }))
 
-    expect(await screen.findByText('Standby Rider deleted.')).toBeInTheDocument()
+    await __awaitSwal('Standby Rider deleted.')
     expect(screen.queryByText('Standby Rider')).not.toBeInTheDocument()
   })
 
@@ -105,12 +104,9 @@ describe('RidersPage', () => {
     const row = (await screen.findByText('Jojo Ramos')).closest('tr') as HTMLElement
 
     await actor.click(within(row).getByRole('button', { name: 'Delete' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Delete rider' })
-    await actor.click(within(dialog).getByRole('button', { name: 'Delete' }))
 
-    expect(
-      await screen.findByText(/used by existing sales, receiving, or expenses/),
-    ).toBeInTheDocument()
+    const refused = await __awaitSwal('Could not delete the rider.')
+    expect(String(refused?.text)).toMatch(/used by existing sales, receiving, or expenses/)
     expect(screen.getByText('Jojo Ramos')).toBeInTheDocument()
   })
 })

@@ -35,6 +35,7 @@ Status labels (see `TEMPLATE-GUIDE.md`): **Selected** — confirmed direction. *
 | Critical end-to-end testing | Playwright | Conditional | Critical-path E2E (sale, payment, approval) only if budget and schedule permit |
 | Excel export library | write-excel-file | Selected (DEC-024) | Browser-lazy `.xlsx` of the admin report sale lines |
 | PDF export library | None | Rejected (DEC-024) | Superseded by the Excel export; jsPDF/jspdf-autotable removed |
+| Feedback popups | sweetalert2 | Selected (DEC-038) | Themed modals for action feedback and confirmations; replaces the app's ConfirmDialog |
 | Analytics | None | Not Selected | No confirmed requirement |
 | Notifications / email | None | Not Selected | No confirmed requirement |
 

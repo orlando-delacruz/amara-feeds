@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
+import { __awaitSwal } from '@/test/swalMock'
 import { renderWithProviders } from '@/test/render'
 import type { CartLine } from '@/features/sales/CartContext'
 import type { User } from '@/domain'
@@ -90,7 +91,8 @@ describe('SaleCartPage', () => {
     await user.selectOptions(screen.getByLabelText(/^Payment terms/), 'terms-7')
     await user.click(screen.getByRole('button', { name: 'Save sale' }))
 
-    expect(await screen.findByText('A charge sale requires a customer.')).toBeInTheDocument()
+    const waled = await __awaitSwal('Could not record the sale.')
+    expect(String(waled?.text)).toMatch(/requires a customer/)
   })
 
   it('records a sale with a rider and vehicle from the store lists', async () => {

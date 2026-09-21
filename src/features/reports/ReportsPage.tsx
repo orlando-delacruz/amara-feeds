@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Stack } from '@/components/ui/Stack'
 import { Icon } from '@/components/ui/icons'
+import { notifySuccess, notifyError } from '@/lib/swal'
 import { todayIso } from '@/lib/dates'
 import { exportReportExcel } from '@/lib/exportReportExcel'
 import { buildSalesReportRows } from './reportRows'
@@ -17,7 +17,6 @@ export function ReportsPage() {
   const [from, setFrom] = useState(today)
   const [to, setTo] = useState(today)
   const [exporting, setExporting] = useState(false)
-  const [exportError, setExportError] = useState<string | null>(null)
   const summaries = useReportSummaries(from, to)
 
   function handleFromChange(next: string) {
@@ -38,14 +37,14 @@ export function ReportsPage() {
     if (!summaries.data || exporting) {
       return
     }
-    setExportError(null)
     setExporting(true)
     await new Promise((resolve) => setTimeout(resolve, 0))
     try {
       const rows = await buildSalesReportRows(from, to)
       await exportReportExcel({ from, to, rows })
+      void notifySuccess('Report exported.', 'The Excel file has been downloaded.')
     } catch {
-      setExportError('Could not export the report. Please try again.')
+      void notifyError('Could not export the report.', 'Please try again.')
     } finally {
       setExporting(false)
     }
@@ -74,7 +73,6 @@ export function ReportsPage() {
         />
         <DatePicker id="report-to" label="To" value={to} onChange={handleToChange} min={from} />
       </FilterBar>
-      {exportError && <Alert variant="danger">{exportError}</Alert>}
       <SummarySections from={from} to={to} summaries={summaries} />
     </Stack>
   )

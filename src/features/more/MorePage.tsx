@@ -8,6 +8,7 @@ import { navItemsForRole } from '@/components/navigation/navItems'
 import { NavIcon } from '@/components/navigation/icons'
 import { useSession } from '@/features/session/useSession'
 import { useHistoryUnread } from '@/features/history/useHistoryUnread'
+import { confirmAction } from '@/lib/swal'
 
 const Group = styled.ul`
   display: flex;
@@ -47,7 +48,16 @@ export function MorePage() {
   const overflow = navItemsForRole(user?.role ?? 'staff').filter((item) => !item.primary)
   const hasUnread = useHistoryUnread(user ?? undefined)
 
-  function handleSignOut() {
+  async function handleSignOut() {
+    const confirmed = await confirmAction({
+      title: 'Sign out?',
+      text: 'You will be returned to the sign-in screen.',
+      confirmLabel: 'Sign out',
+      danger: true,
+    })
+    if (!confirmed) {
+      return
+    }
     signOut()
     navigate('/sign-in', { replace: true })
   }
@@ -72,7 +82,7 @@ export function MorePage() {
           ))}
         </Group>
       </nav>
-      <Button variant="secondary" fullWidth type="button" onClick={handleSignOut}>
+      <Button variant="secondary" fullWidth type="button" onClick={() => void handleSignOut()}>
         Sign out
       </Button>
     </Stack>

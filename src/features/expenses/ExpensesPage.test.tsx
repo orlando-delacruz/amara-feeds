@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDb } from '@/services/mocks/db'
 import { renderWithProviders } from '@/test/render'
+import { __awaitSwal } from '@/test/swalMock'
 import type { User } from '@/domain'
 import { ExpensesPage } from './ExpensesPage'
 
@@ -36,7 +37,7 @@ describe('ExpensesPage', () => {
     await user.type(screen.getByLabelText(/Amount/), '750')
     await user.click(screen.getByRole('button', { name: 'Record expense' }))
 
-    expect(await screen.findByText('Expense recorded.')).toBeInTheDocument()
+    await __awaitSwal('Expense recorded.')
   })
 
   it('shows expense history from seeded data', async () => {

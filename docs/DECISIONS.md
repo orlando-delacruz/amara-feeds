@@ -123,6 +123,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-035 | Supabase-direct integration: profiles-based authz and service swap | Accepted | 2026-09-20 |
 | DEC-036 | Staff management RPC fixes and admin update semantics | Accepted | 2026-09-21 |
 | DEC-037 | Catalog lists only sellable items; pending-seed parity | Accepted | 2026-09-21 |
+| DEC-038 | SweetAlert2 feedback system + logout confirmation | Accepted | 2026-09-21 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -656,6 +657,18 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Context:** Hosted testing showed an approved pending product appearing in the sale catalog while absent from inventory. Verified against the hosted data: the seeded demo item (Cooking Oil 1L) was created pending with no receiving record and no stock, so approval made it catalog-visible (decoupled from stock) but inventory-invisible. Root questions decided with the client: (1) approval behavior — keep as-is, approval only activates the product and stock comes from receiving; (2) catalog behavior — the sale catalog should list only sellable items (product priced at the current store, i.e. actually received there); (3) seed parity — the demo pending item must behave like a real staff receipt.
 - **Decision:** `NewSalePage` filters the product list to items present in `listStorePrices(store)` (products with no price, therefore no stock, at the current store never render — no "No price" disabled card). The seed gains a receiving record + stock row for the pending demo item (DB `00006`, mock `seed.ts`) so approval-flow demos read correctly: stock exists before approval; approval makes it sellable in both catalog and inventory. Existing unstocked active products (e.g. prod-3 driven live by verification) resolve automatically once the receiving row exists — no manual data surgery.
 - **Related documents:** `src/features/sales/NewSalePage.tsx`, `src/services/mocks/seed.ts`, `supabase/migrations/20260921031853_00006_pending_seed_parity.sql`, `docs/DATA-MODEL.md` §§4.3, 4.8.
+
+### DEC-038 — SweetAlert2 feedback system + logout confirmation
+
+- **ID:** DEC-038
+- **Title:** SweetAlert2 feedback system + logout confirmation
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** The client requested SweetAlert2 for all action feedback and a confirmation before sign-out. Decisions: (Q1) success and failure both render as modal popups; (Q2) SweetAlert2 confirm modals replace the in-app `ConfirmDialog` everywhere; (Q3) page-level loading/empty/error states and inline client-side field validation stay as before.
+- **Decision:** `sweetalert2` is the adopted runtime dependency (`docs/TECH-STACK.md` §2). A thin wrapper `src/lib/swal.ts` exposes `confirmAction` (boolean; destructive confirmations render the danger/deny button), `notifySuccess`/`notifyError`/`notifyInfo` modals, and busy helpers. Brand alignment happens through GlobalStyle `swal2-*` overrides (navy confirm, danger deny, theme fonts/radii); buttons stay SweetAlert2-native for focus/ARIA. Every success `setNotice` inline banner and every mutation error `Alert` is replaced by the popup; every replaced confirmation (stock/rider/vehicle delete, approve/reject, staff enable/disable, sign-out on MorePage + TopBar) runs through `confirmAction`. Sign-out now asks first on both locales. The `ConfirmDialog` component was removed (fully unused).
+- **Known limitation recorded:** a wrong-password sign-in logs `POST /auth/v1/token?grant_type=password 400` in the browser console — that is DevTools' automatic network log for the expected failed auth request, not an app error, and cannot be suppressed from app code; the popup now surfaces the failure instead of an inline alert.
+- **Testing:** Vitest runs against a deterministic double (`src/test/swalMock.ts`) — `fire()` resolves confirmed and records its options; tests assert popups via `__awaitSwal(title)` instead of rendered-text queries. The real library is never rendered under jsdom.
+- **Related documents:** `docs/TECH-STACK.md` §2, `src/lib/swal.ts`, `src/test/swalMock.ts`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

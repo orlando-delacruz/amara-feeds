@@ -22,7 +22,8 @@ import { Select } from '@/components/ui/Select'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
-import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
+import { StoreControl, useAsyncData, useAlertMutation } from '@/features/shared'
+import { notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { toMinor } from '@/lib/money'
@@ -81,14 +82,13 @@ export function ExpensesPage() {
   const { store, canSwitchStore } = useStore()
   const { user } = useSession()
   const [form, setForm] = useState<ExpenseFormState>(emptyForm)
-  const [notice, setNotice] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const expenses = useAsyncData(() => listExpenses({ storeId: store }), store)
   const riders = useAsyncData(() => listRiders({ storeId: store, active: true }), store)
   const vehicles = useAsyncData(() => listVehicles({ storeId: store, active: true }), store)
   const users = useAsyncData(() => listUsers())
   const netSummary = useAsyncData(() => getDeliveryNetSummary(store), store)
-  const add = useMutation(createExpense)
+  const add = useAlertMutation(createExpense, 'Could not record the expense.')
 
   function updateForm<K extends keyof ExpenseFormState>(key: K, value: ExpenseFormState[K]) {
     setForm((current) => {
@@ -108,7 +108,6 @@ export function ExpensesPage() {
           ? 'Select a rider to assign the expense to.'
           : 'Select a vehicle to assign the expense to.',
       )
-      setNotice(null)
       return
     }
     setFormError(null)
@@ -122,7 +121,7 @@ export function ExpensesPage() {
     })
     if (record) {
       setForm(emptyForm)
-      setNotice('Expense recorded.')
+      void notifySuccess('Expense recorded.')
       expenses.reload()
       netSummary.reload()
     }
@@ -150,9 +149,7 @@ export function ExpensesPage() {
         description={`Fuel and repair expenses at ${storeNames[store]}.`}
         size="compact"
       />
-      {notice && <Alert variant="success">{notice}</Alert>}
       {formError && <Alert variant="danger">{formError}</Alert>}
-      {add.error && <Alert variant="danger">{add.error}</Alert>}
       {canSwitchStore && (
         <FilterBar>
           <StoreControl />

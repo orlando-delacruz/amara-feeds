@@ -13,7 +13,6 @@ import {
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DateText } from '@/components/ui/DateText'
 import { Dialog } from '@/components/ui/Dialog'
 import { FilterBar } from '@/components/ui/FilterBar'
@@ -26,7 +25,8 @@ import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { TextField } from '@/components/ui/TextField'
-import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
+import { StoreControl, useAsyncData, useAlertMutation } from '@/features/shared'
+import { confirmAction, notifyError, notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { toMinor } from '@/lib/money'
@@ -107,18 +107,15 @@ export function ReceivingPage() {
   const [form, setForm] = useState<ReceivingFormState>(emptyForm)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [tab, setTab] = useState<'pending' | 'received'>('pending')
-  const [notice, setNotice] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const [decision, setDecision] = useState<{
-    product: Product
-    action: 'approve' | 'reject'
-  } | null>(null)
   const list = useAsyncData(() => listReceiving({ storeId: store }), store)
   const products = useAsyncData(() => listProducts())
   const users = useAsyncData(() => listUsers())
-  const receive = useMutation(createReceiving)
-  const review = useMutation((input: { id: string; action: 'approve' | 'reject' }) =>
-    input.action === 'approve' ? approveProduct(input.id) : rejectProduct(input.id),
+  const receive = useAlertMutation(createReceiving, 'Could not record the receipt.')
+  const review = useAlertMutation(
+    (input: { id: string; action: 'approve' | 'reject' }) =>
+      input.action === 'approve' ? approveProduct(input.id) : rejectProduct(input.id),
+    'Could not review the item.',
   )
   const isAdmin = user?.role === 'admin'
 
@@ -140,14 +137,12 @@ export function ReceivingPage() {
     let submittedNewItem = false
     if (!productId) {
       setFormError('Choose an item before recording the receipt.')
-      setNotice(null)
       return
     }
     if (isCustomItem) {
       const name = form.customItemName.trim()
       if (!name) {
         setFormError('Enter a name for the new item.')
-        setNotice(null)
         return
       }
       // Reuse an existing product (any status) on a case-insensitive match so
@@ -167,8 +162,8 @@ export function ReceivingPage() {
           submittedNewItem = true
           products.reload()
         } catch (error) {
-          setFormError(error instanceof Error ? error.message : 'Could not add the new item.')
-          setNotice(null)
+          const message = error instanceof Error ? error.message : null
+          await notifyError('Could not add the new item.', message ?? undefined)
           return
         }
       }
@@ -188,7 +183,7 @@ export function ReceivingPage() {
     if (record) {
       setDialogOpen(false)
       setForm(emptyForm)
-      setNotice(
+      void notifySuccess(
         submittedNewItem
           ? 'New item submitted for admin approval. Receiving recorded.'
           : 'Receiving recorded.',
@@ -197,25 +192,34 @@ export function ReceivingPage() {
     }
   }
 
-  async function handleDecision() {
-    if (!decision || !user) {
+  async function handleDecision(product: Product, action: 'approve' | 'reject') {
+    if (!user) {
       return
     }
-    const saved = await review.run({ id: decision.product.id, action: decision.action })
+    const approve = action === 'approve'
+    const confirmed = await confirmAction({
+      title: approve ? 'Approve item?' : 'Reject item?',
+      text: approve
+        ? `"${product.name}" will become active.`
+        : `Reject "${product.name}"? It will be removed.`,
+      confirmLabel: approve ? 'Approve' : 'Reject',
+      danger: !approve,
+    })
+    if (!confirmed) {
+      return
+    }
+    const saved = await review.run({ id: product.id, action })
     if (saved) {
       await logAuditEvent({
-        action: decision.action === 'approve' ? 'product.approved' : 'product.rejected',
+        action: approve ? 'product.approved' : 'product.rejected',
         actorUserId: user.id,
         actorRole: user.role,
-        relatedUserId: decision.product.createdByUserId,
+        relatedUserId: product.createdByUserId,
         subject: saved.name,
       })
-      setNotice(
-        decision.action === 'approve'
-          ? `${saved.name} is now active.`
-          : `${saved.name} was rejected and removed.`,
+      void notifySuccess(
+        approve ? `${saved.name} is now active.` : `${saved.name} was rejected and removed.`,
       )
-      setDecision(null)
       products.reload()
     }
   }
@@ -253,7 +257,6 @@ export function ReceivingPage() {
         }
         size="compact"
       />
-      {notice && <Alert variant="success">{notice}</Alert>}
       <FilterBar>
         <StoreControl />
         <FilterBarEnd>
@@ -272,7 +275,6 @@ export function ReceivingPage() {
       <Dialog open={dialogOpen} title="Add stock" onClose={closeDialog}>
         <form onSubmit={handleSubmit} noValidate>
           {formError && <Alert variant="danger">{formError}</Alert>}
-          {receive.error && <Alert variant="danger">{receive.error}</Alert>}
           <Fields>
             <Select
               id="receiving-product"
@@ -343,7 +345,6 @@ export function ReceivingPage() {
       {tab === 'pending' ? (
         isAdmin ? (
           <>
-            {review.error && <Alert variant="danger">{review.error}</Alert>}
             {pendingProducts.length === 0 ? (
               <Alert variant="success">No items awaiting approval.</Alert>
             ) : (
@@ -366,7 +367,7 @@ export function ReceivingPage() {
                       <Button
                         size="sm"
                         disabled={review.pending}
-                        onClick={() => setDecision({ product, action: 'approve' })}
+                        onClick={() => void handleDecision(product, 'approve')}
                       >
                         Approve
                       </Button>
@@ -374,7 +375,7 @@ export function ReceivingPage() {
                         size="sm"
                         variant="danger"
                         disabled={review.pending}
-                        onClick={() => setDecision({ product, action: 'reject' })}
+                        onClick={() => void handleDecision(product, 'reject')}
                       >
                         Reject
                       </Button>
@@ -461,21 +462,6 @@ export function ReceivingPage() {
           )}
         </AsyncBoundary>
       )}
-      <ConfirmDialog
-        open={decision !== null}
-        title={decision?.action === 'reject' ? 'Reject item' : 'Approve item'}
-        message={
-          decision
-            ? decision.action === 'reject'
-              ? `Reject "${decision.product.name}"? It will be removed.`
-              : `Approve "${decision.product.name}"? It will become active.`
-            : ''
-        }
-        confirmLabel={decision?.action === 'reject' ? 'Reject' : 'Approve'}
-        pending={review.pending}
-        onConfirm={handleDecision}
-        onCancel={() => setDecision(null)}
-      />
     </Stack>
   )
 }

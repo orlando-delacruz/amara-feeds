@@ -23,7 +23,8 @@ import { Select } from '@/components/ui/Select'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
 import { AddCustomerDialog } from '@/features/customers/AddCustomerDialog'
-import { useAsyncData, useMutation } from '@/features/shared'
+import { useAsyncData, useAlertMutation } from '@/features/shared'
+import { notifySuccess } from '@/lib/swal'
 import { useSession } from '@/features/session/useSession'
 import { useCart } from '@/features/sales/useCart'
 import { toMinor } from '@/lib/money'
@@ -110,7 +111,7 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
         : Promise.resolve(null),
     `${paymentType}:${termsId}:${saleDate}`,
   )
-  const save = useMutation(createSale)
+  const save = useAlertMutation(createSale, 'Could not record the sale.')
 
   const hasDelivery = Boolean(deliveryFee.trim() || riderId || vehicleId)
 
@@ -150,6 +151,7 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
     })
     if (sale) {
       cart.clear()
+      await notifySuccess('Sale recorded.', 'The stock has been updated for this store.')
       navigate(basePath)
     }
   }
@@ -219,7 +221,6 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
         }
         size="compact"
       />
-      {save.error && <Alert variant="danger">{save.error}</Alert>}
       {(customers.error || products.error || terms.error) && (
         <Alert variant="warning">
           Some checkout details could not load. Retry or try again from the sales list.

@@ -118,4 +118,52 @@ export const GlobalStyle = createGlobalStyle`
       padding: 0 !important;
     }
   }
+
+  /* SweetAlert2 brand alignment (DEC-038): navy-on-light shell matching the
+     app's tokens; fonts/radii inherit the theme. */
+  .swal2-popup {
+    font-family: ${({ theme }) => theme.font.family};
+    border-radius: ${({ theme }) => theme.radius.xl};
+  }
+
+  .swal2-title {
+    color: ${({ theme }) => theme.color.text.primary};
+    font-size: ${({ theme }) => theme.font.size.lg};
+  }
+
+  .swal2-html-container {
+    color: ${({ theme }) => theme.color.text.secondary};
+  }
+
+  .swal2-confirm.swal2-styled {
+    background-color: ${({ theme }) => theme.color.brand[600]};
+    border-radius: ${({ theme }) => theme.radius.md};
+    box-shadow: none;
+  }
+
+  .swal2-confirm.swal2-styled:not(.zafone-danger):hover {
+    background-color: ${({ theme }) => theme.color.brand[700]} !important;
+  }
+
+  .swal2-cancel.swal2-styled {
+    background-color: ${({ theme }) => theme.color.neutral[100]};
+    color: ${({ theme }) => theme.color.text.secondary};
+    box-shadow: none;
+  }
+
+  .swal2-deny.swal2-styled {
+    background-color: ${({ theme }) => theme.color.status.danger.text};
+    border-radius: ${({ theme }) => theme.radius.md};
+    box-shadow: none;
+  }
+
+  .swal2-deny.swal2-styled:hover {
+    background-color: ${({ theme }) => theme.color.status.danger.text};
+    opacity: 0.9;
+  }
+
+  .swal2-styled.swal2-confirm:focus,
+  .swal2-styled.swal2-cancel:focus {
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.color.focus.glow};
+  }
 `

@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { updateStock } from '@/services'
-import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { TextField } from '@/components/ui/TextField'
-import { useMutation } from '@/features/shared'
+import { useAlertMutation } from '@/features/shared'
 import { storeNames } from '@/store/stores'
 import type { ProductId, StoreId } from '@/domain'
 
@@ -32,12 +31,14 @@ export function EditStockDialog({
   onSaved,
 }: EditStockDialogProps) {
   const [quantity, setQuantity] = useState(row ? String(row.quantity) : '')
-  const { run, pending, error } = useMutation((input: { quantity: number }) =>
-    updateStock(row!.storeId, row!.productId, {
-      quantity: input.quantity,
-      actorUserId: actorUserId ?? '',
-      actorRole,
-    }),
+  const { run, pending } = useAlertMutation(
+    (input: { quantity: number }) =>
+      updateStock(row!.storeId, row!.productId, {
+        quantity: input.quantity,
+        actorUserId: actorUserId ?? '',
+        actorRole,
+      }),
+    'Could not update the stock.',
   )
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -58,7 +59,6 @@ export function EditStockDialog({
   return (
     <Dialog open={row !== null} title="Edit stock" onClose={onClose}>
       <Form onSubmit={handleSubmit} noValidate>
-        {error && <Alert variant="danger">{error}</Alert>}
         <p>
           {row?.productName} at {row ? storeNames[row.storeId] : ''}.
         </p>

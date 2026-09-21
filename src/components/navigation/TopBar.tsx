@@ -6,6 +6,7 @@ import { useSession } from '@/features/session/useSession'
 import { storeBranding } from '@/store/storeBranding'
 import { storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
+import { confirmAction } from '@/lib/swal'
 
 interface TopBarProps {
   sectionLabel: string
@@ -159,7 +160,16 @@ export function TopBar({ sectionLabel, brand }: TopBarProps) {
   const navigate = useNavigate()
   const branding = storeBranding[store]
 
-  function handleSignOut() {
+  async function handleSignOut() {
+    const confirmed = await confirmAction({
+      title: 'Sign out?',
+      text: 'You will be returned to the sign-in screen.',
+      confirmLabel: 'Sign out',
+      danger: true,
+    })
+    if (!confirmed) {
+      return
+    }
     signOut()
     navigate('/sign-in', { replace: true })
   }
@@ -183,7 +193,7 @@ export function TopBar({ sectionLabel, brand }: TopBarProps) {
         <Controls>
           <StoreBadge store={store} />
           {user && <UserName>{getDisplayName(user.name)}</UserName>}
-          <SignOutButton type="button" onClick={handleSignOut}>
+          <SignOutButton type="button" onClick={() => void handleSignOut()}>
             Sign out
           </SignOutButton>
         </Controls>

@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { updateUser } from '@/services'
-import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { Select } from '@/components/ui/Select'
 import { TextField } from '@/components/ui/TextField'
-import { useMutation } from '@/features/shared'
+import { useAlertMutation } from '@/features/shared'
 import { storeIds, storeNames } from '@/store/stores'
 import type { StoreId, UpdateUserInput, User, UserId } from '@/domain'
 
@@ -29,8 +28,9 @@ export function EditStaffDialog({ user, onClose, onSaved }: EditStaffDialogProps
   const [username, setUsername] = useState(user?.username ?? '')
   const [password, setPassword] = useState('')
   const [storeId, setStoreId] = useState<StoreId>(user?.storeId ?? 'amara')
-  const { run, pending, error } = useMutation((input: { id: UserId; patch: UpdateUserInput }) =>
-    updateUser(input.id, input.patch),
+  const { run, pending } = useAlertMutation(
+    (input: { id: UserId; patch: UpdateUserInput }) => updateUser(input.id, input.patch),
+    'Could not update the staff account.',
   )
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -55,7 +55,6 @@ export function EditStaffDialog({ user, onClose, onSaved }: EditStaffDialogProps
   return (
     <Dialog open={user !== null} title="Edit staff" onClose={onClose}>
       <Form onSubmit={handleSubmit} noValidate>
-        {error && <Alert variant="danger">{error}</Alert>}
         <TextField
           id="edit-staff-name"
           label="Name"

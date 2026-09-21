@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { createRider, deleteRider, listRiders, listUsers, setRiderActive } from '@/services'
-import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DateText } from '@/components/ui/DateText'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -13,7 +11,8 @@ import { RecordList } from '@/components/ui/RecordList'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
-import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
+import { StoreControl, useAsyncData, useAlertMutation, useMutation } from '@/features/shared'
+import { confirmAction, notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { storeNames } from '@/store/stores'
@@ -53,16 +52,14 @@ export function RidersPage() {
   const { store, canSwitchStore } = useStore()
   const { user } = useSession()
   const [name, setName] = useState('')
-  const [notice, setNotice] = useState<string | null>(null)
   const [editing, setEditing] = useState<Rider | null>(null)
-  const [deleting, setDeleting] = useState<Rider | null>(null)
   const list = useAsyncData(() => listRiders({ storeId: store }), store)
   const users = useAsyncData(() => listUsers())
-  const add = useMutation(createRider)
+  const add = useAlertMutation(createRider, 'Could not add the rider.')
   const toggle = useMutation((input: { id: string; active: boolean }) =>
     setRiderActive(input.id, input.active),
   )
-  const remove = useMutation(deleteRider)
+  const remove = useAlertMutation(deleteRider, 'Could not delete the rider.')
 
   const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
 
@@ -71,27 +68,41 @@ export function RidersPage() {
     const created = await add.run({ name, storeId: store, createdByUserId: user?.id })
     if (created) {
       setName('')
-      setNotice(`${created.name} added.`)
+      void notifySuccess(`${created.name} added.`)
       list.reload()
     }
   }
 
   async function handleToggle(id: string, active: boolean) {
-    const saved = await toggle.run({ id, active })
-    if (saved) {
-      setNotice(active ? `${saved.name} is active.` : `${saved.name} is inactive.`)
-      list.reload()
-    }
+    await confirmAction({
+      title: active ? 'Activate rider?' : 'Deactivate rider?',
+      confirmLabel: active ? 'Activate' : 'Deactivate',
+      ...(active ? {} : { text: 'Inactive riders are not selectable on a sale.' }),
+    }).then(async (confirmed) => {
+      if (!confirmed) {
+        return
+      }
+      const saved = await toggle.run({ id, active })
+      if (saved) {
+        void notifySuccess(active ? `${saved.name} is active.` : `${saved.name} is inactive.`)
+        list.reload()
+      }
+    })
   }
 
-  async function handleDelete() {
-    if (!deleting) {
+  async function requestDelete(rider: Rider) {
+    const confirmed = await confirmAction({
+      title: 'Delete rider?',
+      text: `Delete "${rider.name}"? This cannot be undone. Riders used by sales, receiving, or expenses cannot be deleted.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    })
+    if (!confirmed) {
       return
     }
-    const removed = await remove.run(deleting.id)
+    const removed = await remove.run(rider.id)
     if (removed) {
-      setNotice(`${removed.name} deleted.`)
-      setDeleting(null)
+      void notifySuccess(`${removed.name} deleted.`)
       list.reload()
     }
   }
@@ -103,7 +114,6 @@ export function RidersPage() {
         description={`Delivery riders at ${storeNames[store]}.`}
         size="compact"
       />
-      {notice && <Alert variant="success">{notice}</Alert>}
       {canSwitchStore && (
         <FilterBar>
           <StoreControl />
@@ -125,7 +135,6 @@ export function RidersPage() {
               </Button>
             </Actions>
           </Fields>
-          {add.error && <Alert variant="danger">{add.error}</Alert>}
         </form>
       </Card>
       <AsyncBoundary
@@ -142,8 +151,6 @@ export function RidersPage() {
             : null
         }
       >
-        {toggle.error && <Alert variant="danger">{toggle.error}</Alert>}
-        {remove.error && <Alert variant="danger">{remove.error}</Alert>}
         {list.data && list.data.length > 0 && (
           <RecordList
             caption={`Riders at ${storeNames[store]}`}
@@ -178,7 +185,7 @@ export function RidersPage() {
                     size="sm"
                     variant="danger"
                     disabled={remove.pending}
-                    onClick={() => setDeleting(rider)}
+                    onClick={() => void requestDelete(rider)}
                   >
                     Delete
                   </Button>
@@ -194,22 +201,9 @@ export function RidersPage() {
         onClose={() => setEditing(null)}
         onSaved={(rider) => {
           setEditing(null)
-          setNotice(`${rider.name} updated.`)
+          void notifySuccess(`${rider.name} updated.`)
           list.reload()
         }}
-      />
-      <ConfirmDialog
-        open={deleting !== null}
-        title="Delete rider"
-        message={
-          deleting
-            ? `Delete "${deleting.name}"? This cannot be undone. Riders used by sales, receiving, or expenses cannot be deleted.`
-            : ''
-        }
-        confirmLabel="Delete"
-        pending={remove.pending}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleting(null)}
       />
     </Stack>
   )

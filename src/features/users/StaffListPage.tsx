@@ -1,16 +1,15 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { listUsers, updateUser } from '@/services'
-import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { StoreBadge } from '@/components/ui/StoreBadge'
-import { useAsyncData, useMutation } from '@/features/shared'
+import { useAlertMutation, useAsyncData } from '@/features/shared'
+import { confirmAction, notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { AddStaffDialog } from './AddStaffDialog'
 import { EditStaffDialog } from './EditStaffDialog'
@@ -38,25 +37,32 @@ const AccountBadge = styled.span<{ $tone: 'success' | 'warning' }>`
 export function StaffListPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState<User | null>(null)
-  const [toggling, setToggling] = useState<User | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
   const { data, loading, error, reload } = useAsyncData(() => listUsers({ role: 'staff' }))
-  const toggle = useMutation((input: { id: UserId; patch: UpdateUserInput }) =>
-    updateUser(input.id, input.patch),
+  const toggle = useAlertMutation(
+    (input: { id: UserId; patch: UpdateUserInput }) => updateUser(input.id, input.patch),
+    'Could not update the staff account.',
   )
 
-  async function handleToggle() {
-    if (!toggling) {
+  async function requestToggle(user: User) {
+    const disabling = user.active
+    const confirmed = await confirmAction({
+      title: disabling ? 'Disable staff?' : 'Enable staff?',
+      text: disabling
+        ? `Disable "${getDisplayName(user.name)}"? They will no longer be able to sign in.`
+        : `Enable "${getDisplayName(user.name)}"? They will be able to sign in again.`,
+      confirmLabel: disabling ? 'Disable' : 'Enable',
+      danger: disabling,
+    })
+    if (!confirmed) {
       return
     }
-    const saved = await toggle.run({ id: toggling.id, patch: { active: !toggling.active } })
+    const saved = await toggle.run({ id: user.id, patch: { active: !user.active } })
     if (saved) {
-      setNotice(
+      void notifySuccess(
         saved.active
           ? `${getDisplayName(saved.name)} is enabled.`
           : `${getDisplayName(saved.name)} is disabled and can no longer sign in.`,
       )
-      setToggling(null)
       reload()
     }
   }
@@ -69,8 +75,6 @@ export function StaffListPage() {
         actions={<Button onClick={() => setAddOpen(true)}>Add staff</Button>}
         size="compact"
       />
-      {notice && <Alert variant="success">{notice}</Alert>}
-      {toggle.error && <Alert variant="danger">{toggle.error}</Alert>}
       <AsyncBoundary
         loading={loading}
         error={error}
@@ -113,7 +117,8 @@ export function StaffListPage() {
                   <Button
                     size="sm"
                     variant={user.active ? 'danger' : 'secondary'}
-                    onClick={() => setToggling(user)}
+                    disabled={toggle.pending}
+                    onClick={() => void requestToggle(user)}
                   >
                     {user.active ? 'Disable' : 'Enable'}
                   </Button>
@@ -128,7 +133,7 @@ export function StaffListPage() {
         onClose={() => setAddOpen(false)}
         onCreated={(user) => {
           setAddOpen(false)
-          setNotice(`${getDisplayName(user.name)} added.`)
+          void notifySuccess(`${getDisplayName(user.name)} added.`)
           reload()
         }}
       />
@@ -138,24 +143,9 @@ export function StaffListPage() {
         onClose={() => setEditing(null)}
         onSaved={(user) => {
           setEditing(null)
-          setNotice(`${getDisplayName(user.name)} updated.`)
+          void notifySuccess(`${getDisplayName(user.name)} updated.`)
           reload()
         }}
-      />
-      <ConfirmDialog
-        open={toggling !== null}
-        title={toggling?.active ? 'Disable staff' : 'Enable staff'}
-        message={
-          toggling
-            ? toggling.active
-              ? `Disable "${getDisplayName(toggling.name)}"? They will no longer be able to sign in.`
-              : `Enable "${getDisplayName(toggling.name)}"? They will be able to sign in again.`
-            : ''
-        }
-        confirmLabel={toggling?.active ? 'Disable' : 'Enable'}
-        pending={toggle.pending}
-        onConfirm={handleToggle}
-        onCancel={() => setToggling(null)}
       />
     </Stack>
   )

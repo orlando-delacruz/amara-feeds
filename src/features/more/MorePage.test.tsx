@@ -62,6 +62,9 @@ describe('MorePage', () => {
     // Scoped to main: the header keeps its own (CSS-hidden on phones) Sign out button.
     const main = screen.getByRole('main')
     await userEvent.setup().click(within(main).getByRole('button', { name: 'Sign out' }))
-    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    // The sign-out path awaits the confirm popup, then signs out and navigates.
+    expect(
+      await screen.findByRole('heading', { name: 'Sign in' }, { timeout: 3000 }),
+    ).toBeInTheDocument()
   })
 })

@@ -22,7 +22,8 @@ import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { TextField } from '@/components/ui/TextField'
-import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
+import { StoreControl, useAsyncData, useAlertMutation } from '@/features/shared'
+import { notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { PAYMENT_METHOD_PRESETS } from '@/domain'
@@ -83,7 +84,6 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<string>('Cash')
   const [customMethod, setCustomMethod] = useState('')
-  const [notice, setNotice] = useState<string | null>(null)
 
   const history = useAsyncData(
     () => (creditId ? getCreditHistory(creditId) : Promise.resolve(null)),
@@ -92,7 +92,7 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
   const customers = useAsyncData(() => listCustomers())
   const terms = useAsyncData(() => listPaymentTerms())
   const users = useAsyncData(() => listUsers())
-  const pay = useMutation(recordPayment)
+  const pay = useAlertMutation(recordPayment, 'Could not record the payment.')
 
   const credit = history.data?.credit
   const customerNames = new Map(
@@ -119,7 +119,7 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
       setAmount('')
       setMethod('Cash')
       setCustomMethod('')
-      setNotice('Payment recorded.')
+      void notifySuccess('Payment recorded.')
       history.reload()
     }
   }
@@ -139,7 +139,6 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
         actions={<BackLink to={basePath}>Back to credit</BackLink>}
         size="compact"
       />
-      {notice && <Alert variant="success">{notice}</Alert>}
       <AsyncBoundary
         loading={history.loading}
         error={history.error}
@@ -207,7 +206,6 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
                 <Card>
                   <form onSubmit={handlePay} noValidate>
                     <PaymentFields>
-                      {pay.error && <Alert variant="danger">{pay.error}</Alert>}
                       <TextField
                         id="payment-amount"
                         label="Payment amount (₱)"

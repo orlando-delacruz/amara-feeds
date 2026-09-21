@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDb } from '@/services/mocks/db'
+import { __awaitSwal } from '@/test/swalMock'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 import { ReceivingPage } from './ReceivingPage'
@@ -98,7 +99,7 @@ describe('ReceivingPage', () => {
     await user.type(screen.getByLabelText(/Selling price/), '1500')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(await screen.findByText('Receiving recorded.')).toBeInTheDocument()
+    await __awaitSwal('Receiving recorded.')
     await showListItems(user)
     expect(await screen.findByText('New Supplier Co')).toBeInTheDocument()
   })
@@ -116,9 +117,7 @@ describe('ReceivingPage', () => {
     await user.type(screen.getByLabelText(/Cost price/), '2200')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(
-      await screen.findByText('New item submitted for admin approval. Receiving recorded.'),
-    ).toBeInTheDocument()
+    await __awaitSwal('New item submitted for admin approval. Receiving recorded.')
     expect(await screen.findByText('Hog Pellets 50kg')).toBeInTheDocument()
   })
 
@@ -134,9 +133,8 @@ describe('ReceivingPage', () => {
     await user.type(screen.getByLabelText(/Cost price/), '100')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(
-      await screen.findByText('Received quantity must be greater than zero.'),
-    ).toBeInTheDocument()
+    const refused = await __awaitSwal('Could not record the receipt.')
+    expect(String(refused?.text)).toMatch(/greater than zero/)
   })
 
   it('surfaces a missing custom item name', async () => {
@@ -185,10 +183,8 @@ describe('ReceivingPage', () => {
     expect(await screen.findByText('Items awaiting approval')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Approve' }))
-    const approveDialog = await screen.findByRole('dialog', { name: 'Approve item' })
-    await user.click(within(approveDialog).getByRole('button', { name: 'Approve' }))
 
-    expect(await screen.findByText('Cooking Oil 1L is now active.')).toBeInTheDocument()
+    await __awaitSwal('Cooking Oil 1L is now active.')
   })
 
   it('lets admins reject pending items from receiving', async () => {
@@ -197,9 +193,7 @@ describe('ReceivingPage', () => {
     expect(await screen.findByText('Items awaiting approval')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Reject' }))
-    const rejectDialog = await screen.findByRole('dialog', { name: 'Reject item' })
-    await user.click(within(rejectDialog).getByRole('button', { name: 'Reject' }))
 
-    expect(await screen.findByText('Cooking Oil 1L was rejected and removed.')).toBeInTheDocument()
+    await __awaitSwal('Cooking Oil 1L was rejected and removed.')
   })
 })

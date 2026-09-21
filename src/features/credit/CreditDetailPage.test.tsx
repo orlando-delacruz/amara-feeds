@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
 import { renderWithProviders } from '@/test/render'
+import { __awaitSwal } from '@/test/swalMock'
 import type { User } from '@/domain'
 
 const staffUser: User = {
@@ -42,8 +43,8 @@ describe('CreditDetailPage', () => {
     await user.type(await screen.findByLabelText(/Payment amount/), '50')
     await user.click(screen.getByRole('button', { name: 'Record payment' }))
 
-    expect(await screen.findByText('Payment recorded.')).toBeInTheDocument()
-    expect(screen.getByText('₱150.00')).toBeInTheDocument()
+    await __awaitSwal('Payment recorded.')
+    expect(await screen.findByText('₱150.00')).toBeInTheDocument()
   })
 
   it('records a cross-store payment against a credit from the other store', async () => {
@@ -53,7 +54,7 @@ describe('CreditDetailPage', () => {
     await user.type(await screen.findByLabelText(/Payment amount/), '50')
     await user.click(screen.getByRole('button', { name: 'Record payment' }))
 
-    expect(await screen.findByText('Payment recorded.')).toBeInTheDocument()
-    expect(screen.getByText('₱145.00')).toBeInTheDocument()
+    await __awaitSwal('Payment recorded.')
+    expect(await screen.findByText('₱145.00')).toBeInTheDocument()
   })
 })

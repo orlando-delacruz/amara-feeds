@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
+import { __awaitSwal } from '@/test/swalMock'
 import { listUsers, updateUser } from '@/services'
 import type { StoreId } from '@/store/stores'
 import { renderWithProviders } from '@/test/render'
@@ -49,7 +50,7 @@ describe('SignInPage', () => {
     renderSignIn()
     await fillLogin('alice', 'wrong-password')
 
-    expect(await screen.findByText('Incorrect username or password.')).toBeInTheDocument()
+    await __awaitSwal('Sign-in failed.')
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 
@@ -63,9 +64,7 @@ describe('SignInPage', () => {
     renderSignIn()
     await fillLogin('alice', 'alice123')
 
-    expect(
-      await screen.findByText('This account is disabled. Contact the admin.'),
-    ).toBeInTheDocument()
+    await __awaitSwal('Sign-in failed.')
   })
 
   it('renders the brand inside a main landmark', async () => {

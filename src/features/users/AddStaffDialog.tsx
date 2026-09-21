@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { createUser } from '@/services'
-import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { Select } from '@/components/ui/Select'
 import { TextField } from '@/components/ui/TextField'
-import { useMutation } from '@/features/shared'
+import { useAlertMutation } from '@/features/shared'
 import { storeIds, storeNames } from '@/store/stores'
 import type { StoreId, User } from '@/domain'
 
@@ -27,7 +26,7 @@ export function AddStaffDialog({ open, onClose, onCreated }: AddStaffDialogProps
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [storeId, setStoreId] = useState<StoreId>('amara')
-  const { run, pending, error } = useMutation(createUser)
+  const { run, pending } = useAlertMutation(createUser, 'Could not add the staff account.')
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -44,7 +43,6 @@ export function AddStaffDialog({ open, onClose, onCreated }: AddStaffDialogProps
   return (
     <Dialog open={open} title="Add staff" onClose={onClose}>
       <Form onSubmit={handleSubmit} noValidate>
-        {error && <Alert variant="danger">{error}</Alert>}
         <TextField
           id="new-staff-name"
           label="Name"

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDb } from '@/services/mocks/db'
 import { renderWithProviders } from '@/test/render'
+import { __awaitSwal } from '@/test/swalMock'
 import type { User } from '@/domain'
 import { CustomerListPage } from './CustomerListPage'
 
@@ -46,7 +47,7 @@ describe('CustomerListPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Add customer' }))
 
     expect(await screen.findByText('Pedro Penduko')).toBeInTheDocument()
-    expect(await screen.findByText('Customer added.')).toBeInTheDocument()
+    await __awaitSwal('Customer added.')
   })
 
   it('captures an address when adding a customer', async () => {

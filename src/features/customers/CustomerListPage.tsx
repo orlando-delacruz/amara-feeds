@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { listCustomers, listUsers, searchCustomers } from '@/services'
-import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -9,6 +8,7 @@ import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
 import { useAsyncData } from '@/features/shared'
+import { notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { AddCustomerDialog } from './AddCustomerDialog'
@@ -21,7 +21,6 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
   const { user } = useSession()
   const [term, setTerm] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
 
   const { data, loading, error, reload } = useAsyncData(
     () => (term.trim() ? searchCustomers(term) : listCustomers()),
@@ -32,7 +31,7 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
 
   function handleCreated() {
     setDialogOpen(false)
-    setNotice('Customer added.')
+    void notifySuccess('Customer added.')
     reload()
   }
 
@@ -46,7 +45,6 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
         }
         size="compact"
       />
-      {notice && <Alert variant="success">{notice}</Alert>}
       <TextField
         id="customer-search"
         label="Search customers"

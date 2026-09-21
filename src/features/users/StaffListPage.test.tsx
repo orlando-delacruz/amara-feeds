@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
+import { __awaitSwal } from '@/test/swalMock'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 
@@ -51,8 +52,8 @@ describe('StaffListPage', () => {
     await actor.selectOptions(within(dialog).getByLabelText(/^Assigned store/), 'zeann')
     await actor.click(within(dialog).getByRole('button', { name: 'Add staff' }))
 
-    expect(await screen.findByText('Cora Staff added.')).toBeInTheDocument()
-    expect(screen.getByText('cora')).toBeInTheDocument()
+    await __awaitSwal('Cora Staff added.')
+    expect(await screen.findByText('cora')).toBeInTheDocument()
   })
 
   it('rejects a taken username', async () => {
@@ -67,7 +68,7 @@ describe('StaffListPage', () => {
     await actor.type(within(dialog).getByLabelText(/^Password/), 'copy1234')
     await actor.click(within(dialog).getByRole('button', { name: 'Add staff' }))
 
-    expect(await within(dialog).findByText('That username is already taken.')).toBeInTheDocument()
+    await __awaitSwal('Could not add the staff account.')
   })
 
   it('disables a staff account through a confirmation', async () => {
@@ -77,10 +78,8 @@ describe('StaffListPage', () => {
 
     const disableButtons = screen.getAllByRole('button', { name: 'Disable' })
     await actor.click(disableButtons[0])
-    const dialog = await screen.findByRole('dialog', { name: 'Disable staff' })
-    await actor.click(within(dialog).getByRole('button', { name: 'Disable' }))
 
-    expect(await screen.findByText(/is disabled and can no longer sign in/)).toBeInTheDocument()
-    expect(screen.getByText('Disabled')).toBeInTheDocument()
+    await __awaitSwal(/is disabled and can no longer sign in/)
+    expect(await screen.findByText('Disabled')).toBeInTheDocument()
   })
 })

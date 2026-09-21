@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { createVehicle, deleteVehicle, listUsers, listVehicles, setVehicleActive } from '@/services'
-import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { DateText } from '@/components/ui/DateText'
 import { FilterBar } from '@/components/ui/FilterBar'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -13,7 +11,8 @@ import { RecordList } from '@/components/ui/RecordList'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
-import { StoreControl, useAsyncData, useMutation } from '@/features/shared'
+import { StoreControl, useAsyncData, useAlertMutation, useMutation } from '@/features/shared'
+import { confirmAction, notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { storeNames } from '@/store/stores'
@@ -53,16 +52,14 @@ export function VehiclesPage() {
   const { store, canSwitchStore } = useStore()
   const { user } = useSession()
   const [label, setLabel] = useState('')
-  const [notice, setNotice] = useState<string | null>(null)
   const [editing, setEditing] = useState<Vehicle | null>(null)
-  const [deleting, setDeleting] = useState<Vehicle | null>(null)
   const list = useAsyncData(() => listVehicles({ storeId: store }), store)
   const users = useAsyncData(() => listUsers())
-  const add = useMutation(createVehicle)
+  const add = useAlertMutation(createVehicle, 'Could not add the vehicle.')
   const toggle = useMutation((input: { id: string; active: boolean }) =>
     setVehicleActive(input.id, input.active),
   )
-  const remove = useMutation(deleteVehicle)
+  const remove = useAlertMutation(deleteVehicle, 'Could not delete the vehicle.')
 
   const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
 
@@ -71,27 +68,41 @@ export function VehiclesPage() {
     const created = await add.run({ label, storeId: store, createdByUserId: user?.id })
     if (created) {
       setLabel('')
-      setNotice(`${created.label} added.`)
+      void notifySuccess(`${created.label} added.`)
       list.reload()
     }
   }
 
   async function handleToggle(id: string, active: boolean) {
-    const saved = await toggle.run({ id, active })
-    if (saved) {
-      setNotice(active ? `${saved.label} is active.` : `${saved.label} is inactive.`)
-      list.reload()
-    }
+    await confirmAction({
+      title: active ? 'Activate vehicle?' : 'Deactivate vehicle?',
+      confirmLabel: active ? 'Activate' : 'Deactivate',
+      ...(active ? {} : { text: 'Inactive vehicle types are not selectable on a sale.' }),
+    }).then(async (confirmed) => {
+      if (!confirmed) {
+        return
+      }
+      const saved = await toggle.run({ id, active })
+      if (saved) {
+        void notifySuccess(active ? `${saved.label} is active.` : `${saved.label} is inactive.`)
+        list.reload()
+      }
+    })
   }
 
-  async function handleDelete() {
-    if (!deleting) {
+  async function requestDelete(vehicle: Vehicle) {
+    const confirmed = await confirmAction({
+      title: 'Delete vehicle?',
+      text: `Delete "${vehicle.label}"? This cannot be undone. Vehicles used by sales, receiving, or expenses cannot be deleted.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    })
+    if (!confirmed) {
       return
     }
-    const removed = await remove.run(deleting.id)
+    const removed = await remove.run(vehicle.id)
     if (removed) {
-      setNotice(`${removed.label} deleted.`)
-      setDeleting(null)
+      void notifySuccess(`${removed.label} deleted.`)
       list.reload()
     }
   }
@@ -103,7 +114,6 @@ export function VehiclesPage() {
         description={`Vehicle types used for deliveries at ${storeNames[store]}.`}
         size="compact"
       />
-      {notice && <Alert variant="success">{notice}</Alert>}
       {canSwitchStore && (
         <FilterBar>
           <StoreControl />
@@ -126,7 +136,6 @@ export function VehiclesPage() {
               </Button>
             </Actions>
           </Fields>
-          {add.error && <Alert variant="danger">{add.error}</Alert>}
         </form>
       </Card>
       <AsyncBoundary
@@ -143,8 +152,6 @@ export function VehiclesPage() {
             : null
         }
       >
-        {toggle.error && <Alert variant="danger">{toggle.error}</Alert>}
-        {remove.error && <Alert variant="danger">{remove.error}</Alert>}
         {list.data && list.data.length > 0 && (
           <RecordList
             caption={`Vehicles at ${storeNames[store]}`}
@@ -179,7 +186,7 @@ export function VehiclesPage() {
                     size="sm"
                     variant="danger"
                     disabled={remove.pending}
-                    onClick={() => setDeleting(vehicle)}
+                    onClick={() => void requestDelete(vehicle)}
                   >
                     Delete
                   </Button>
@@ -195,22 +202,9 @@ export function VehiclesPage() {
         onClose={() => setEditing(null)}
         onSaved={(vehicle) => {
           setEditing(null)
-          setNotice(`${vehicle.label} updated.`)
+          void notifySuccess(`${vehicle.label} updated.`)
           list.reload()
         }}
-      />
-      <ConfirmDialog
-        open={deleting !== null}
-        title="Delete vehicle"
-        message={
-          deleting
-            ? `Delete "${deleting.label}"? This cannot be undone. Vehicles used by sales, receiving, or expenses cannot be deleted.`
-            : ''
-        }
-        confirmLabel="Delete"
-        pending={remove.pending}
-        onConfirm={handleDelete}
-        onCancel={() => setDeleting(null)}
       />
     </Stack>
   )

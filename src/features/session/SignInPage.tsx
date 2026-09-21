@@ -5,10 +5,11 @@ import { useNavigate } from 'react-router-dom'
 import amaraLogo from '@/assets/amara-logo-clear.png'
 import zeannLogo from '@/assets/zeann-logo-clear.png'
 import { signIn } from '@/services'
-import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { TextField } from '@/components/ui/TextField'
-import { useMutation } from '@/features/shared'
+import { useAlertMutation } from '@/features/shared'
+import { notifySuccess } from '@/lib/swal'
+import { getDisplayName } from '@/features/session/displayName'
 import { defaultBrowserChrome, syncBrowserChrome } from '@/theme/browserChrome'
 import { signInTheme } from '@/theme/storeThemes'
 import { useSession } from './useSession'
@@ -151,10 +152,11 @@ function SignInContent() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const login = useMutation(signIn)
+  const login = useAlertMutation(signIn, 'Sign-in failed.')
 
   function handleSignedIn(user: User) {
     setSession(user)
+    void notifySuccess(`Welcome, ${getDisplayName(user.name)}!`)
     navigate(user.role === 'admin' ? '/admin' : '/dashboard', { replace: true })
   }
 
@@ -184,7 +186,6 @@ function SignInContent() {
           <SectionTitle>Sign in</SectionTitle>
           <AccountMeta>Use your staff account to continue.</AccountMeta>
           <Form onSubmit={handleSubmit} noValidate>
-            {login.error && <Alert variant="danger">{login.error}</Alert>}
             <TextField
               id="sign-in-username"
               label="Username"
