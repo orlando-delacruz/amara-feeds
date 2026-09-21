@@ -1,110 +1,80 @@
 # SESSION.md — Session Context (for a new chat session)
 
-This file captures the summarized context of the session that built the work described below. Use it to orient a new chat session without re-explaining the project.
+This file is the session handoff: a new chat session reads it first to orient on the project without re-explaining it. It is refreshed at the end of a session, or automatically whenever the client says **"hand-off context to Session.md"** (standing rule — see the note at the bottom and in `AGENTS.md`).
 
 ## 1. Objective
 
-- **Project:** ZAF ONE — a business management web application for the **Amara and Zeann** two-store business, mobile-primary.
-- **Scope:** frontend-only for now; a centralized in-memory mock data layer stands in for the backend. No Supabase/database yet (Phase 4+).
-- **Agreed constraints:** ₱10,000 budget for the initial/core version; target completion September 30, 2026; scope limited to the core version in `docs/PROJECT.md` and `docs/REQUIREMENTS.md`.
+- **Project:** ZAF ONE — business management web app for the **Amara and Zeann** two-store business, mobile-primary.
+- **Constraints:** ₱10,000 budget, target **September 30, 2026**, scope limited to the core version (`docs/PROJECT.md`, `docs/REQUIREMENTS.md`).
+- **Where the project is now: Phase 4–6 are built and live.** The hosted Supabase project is linked and is the real backend; all services run against it (the in-memory mock remains only for unit tests/preview).
 
-## 2. Important Details
+## 2. Live environment (key facts)
 
-### Stack
-- React 19, Vite 8, TypeScript ~6.0, styled-components 6, react-router-dom 7, Vitest 5 + React Testing Library, npm, Node ≥20.
-- Path alias `@` → `src`. `write-excel-file@4` (browser build) for Excel export. `jspdf`/`jspdf-autotable` were removed (superseded by Excel).
+- **Supabase project (production):** `https://fsfmecmmpaljwurfqsto.supabase.co`, ref `fsfmecmmpaljwurfqsto`. Linked; migrations `00001–00006` applied. Migrations are the schema source of truth (`supabase/migrations/`).
+- **`.env` (gitignored)** holds `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`. Without them the app falls back to the in-memory mock (tests/preview path).
+- **YouTube-auth note:** client Supabase access token expires **2026-09-21** — after that, CLI work needs a fresh `npx supabase login` or a new personal access token.
+- **Owner login (production):** `jhoann@admin.com` (+ password held by the client — **never committed**, DEC-042). The login field accepts an email-shaped handle directly; bare usernames still map to `username@zafone.local`.
+- Shared-credit model is **confirmed and kept**: credit stays with its origin store; cross-store payments are recorded with payment-store attribution (client confirmed — no "transfer" behavior).
 
-### Architecture & Rules
-- SPA with mock services over a centralized in-memory DB: `src/services/mocks/db.ts`, seeded by `src/services/mocks/seed.ts`. The service layer is the only mutation entry point.
-- Follow `AGENTS.md` operating rules; docs under `docs/` are the source of truth (see ownership table in `AGENTS.md`). Use the status vocabulary from `TEMPLATE-GUIDE.md` (Confirmed / Conditional / Confirmation Required / Reference-Only).
+## 3. Work completed in this session (2026-09-20 → 21)
 
-### Branding
-- Product/system name: **ZAF ONE** (renamed from "Amara + Zeann Store Management System" / on-screen "Amara Feeds", DEC-028). Package name `zaf-one`; localStorage keys `zaf-one.session.v1`, `zaf-one:history:last-seen`; Excel filename `zaf-one-report-*`.
-- Official logo: `src/assets/logo-clear.png` (2000×1414, transparent, reads "AQUATIC FEEDS" / "ZEANN FEEDS SUPPLY"). Shown full on the sign-in page; a **derived simplified mark** `src/assets/logo-mark.svg` (navy circle + cyan fish) is used in the header and as `public/favicon.svg`. The small mark is a placeholder — swap when the business supplies a proper asset.
-- Store names **Amara** and **Zeann** are unchanged and are separate from the brand.
+### Database + backend (DEC-034, DEC-035)
+- Supabase project initialized; imperative migrations `00001` (schema, FKs, stores/terms reference rows), `00002` (RLS everywhere via `SECURITY DEFINER` `current_profile()` helper + `to authenticated` predicates; no `auth.role()`/`user_metadata`), `00003` (atomic `SECURITY DEFINER` functions with in-body `auth.uid()` store checks: `record_sale`, `record_receiving`, `record_payment`, product submit/approve/reject, `adjust_stock`/`delete_stock`, rider/vehicle guarded delete, `create_customer`, `create_expense`, `create_staff`), `00004` (dev-parity seed + 3 auth users), `00005` (`create_staff` search_path fix incl. `extensions`; admin-only `update_staff` — rename, username sync, store reassign, enable/disable, password reset with session revocation), `00006` (pending-seed parity for the demo item).
+- **Gate 4 SQL proofs** in `supabase/proofs/gate4.sql` — all 9 pass (anon reaches nothing, store-scoped reads, shared cross-store reads, cross-store update denied, direct writes denied, sale atomic + oversell refused, payment settles + overpayment refused, approval gating, stock-delete guard). `db advisors` clean.
+- Hosted push fixed along the way: `00004` needed `set search_path = public, extensions` (pgcrypto) and **GoTrue-safe auth.users inserts** (token columns as `''`, one `auth.identities` row per user — otherwise GoTrue throws `Database error querying schema`).
 
-### Sale model (DEC-023)
-- `Sale`/`NewSaleInput` fields: `saleDate` (YYYY-MM-DD, defaults today, backdatable; **credit due dates derive from it**), `paymentMethod` (Cash / GCash / Maya / Bank Transfer / Check / Other with free-text), `discountMinor`.
-- `totalMinor = items + delivery fee − discount`. `createSale` validates discount (0 ≤ discount ≤ items+fee), non-blank payment method, and sale-date format.
-- `dashboardService` filters use `sale.saleDate`; `auditService` uses `sale.createdAt`.
-- `listSales` filter supports `{ storeId, date, from, to, customerId }`.
+### Frontend integration
+- `@supabase/supabase-js` + `src/services/supabaseClient.ts`; every service runs against Supabase when env vars are set, mock fallback otherwise; `isSupabaseConfigured` is forced false under Vitest (tests stay mock-only).
+- `SessionProvider` restores the real Auth session; `signIn` authenticates via Supabase Auth with the email convention.
+- All services carry supabase branches: customers, products, inventory (`update_stock`/`delete_stock` RPCs), receiving, sales (nested `sale_lines` read), credit, payments, riders, vehicles, expenses (incl. `getDeliveryNetSummary`), users (`listUsers`/`updateUser` → `update_staff`), audit (`audit_events` table), dashboard summaries.
+- **Integration-hardening fixes (DEC-036):** `record_sale` receives `p_lines` as a real JSON array (stringified value arrived as jsonb scalar → 22023); staff pages run on real `profiles` (were silently mock); `serviceErrorFromSupabase` classifies `P0001` business copy and never surfaces raw SQLSTATEs; password fields gained a show/hide eye toggle; sale catalog and checkout gained distinct loading/error states.
 
-### Theme (DEC-029, logo palette)
-- Brand navy `#013c68` / hover `#002b4c`; accent `#0184b2`; aqua `#4ed1f9`; slate `#515b74`; light slate `#929eb6`; light gray `#cdcdcd`; white `#ffffff`.
-- Surfaces: page `#f4f7fa`, card `#ffffff`, subtle `#eef2f5`. Text: primary `#013c68`, secondary `#515b74`, muted `#6b7590`, inverse `#ffffff`. Shadows are cool-navy based.
-- **Status colors kept semantic** (success/warning/danger/info) — the palette has no red/amber. Store solids: Amara `#016a91`, Zeann `#515b74` (AA-safe with white text).
+### Product/UX decisions this session
+- **DEC-032:** manual stock edit (absolute qty) + delete with sales-history guard, audited.
+- **DEC-033:** sign-in brand copy "ZAF ONE / Zeann & Amara Feeds Supply / One System • One Team • One Goal".
+- **DEC-037:** catalog lists only sellable items (priced = received at that store); approved-but-unstocked products stay hidden; seed parity via `00006`.
+- **DEC-038:** SweetAlert2 for ALL action feedback — success/failure modals everywhere (sign-in failure incl.), themed confirm modals replacing the removed `ConfirmDialog` (stock/rider/vehicle delete, approve/reject, staff enable/disable), sign-out confirmation on More page + TopBar. Inline page load/empty/error states and field validation unchanged. Test double in `src/test/swalMock.ts` (`__awaitSwal(title)` assertions). Known cosmetica: the wrong-password 400 in DevTools is the browser's network log for the expected failed auth request — not suppressible from app code.
+- **DEC-039:** hosted data wiped to owner-only clean slate (one-time FK-safe script `supabase/cleanup/wipe-business-data.sql`; kept `stores`, `payment_terms`; local dev seed untouched).
+- **DEC-040/041:** admin Amara/Zeann switch relocated to the **More page** ("Store context" section, admin-only) and defaults to **All stores** — combined admin views with a Store column on inventory/riders/vehicles/expenses/receiving-history/sales-list; write flows needing a concrete store (checkout, receiving record, payment) are disabled with a pointing hint until one is chosen. Admin header never renders a single-store badge. Staff unchanged (store-locked, no switch).
+- **DEC-042 (owner credential):** production owner login now uses the email handle `jhoann@admin.com` (password held by the client). `usernameEmail` passes email-shaped inputs through as-is. Client already confirmed it works in-browser after a fresh build.
 
-## 3. Work Completed in This Session
+## 4. Verification baseline (current)
 
-All items below are implemented and covered by tests (verification baseline in §4).
+- `typecheck`, `format:check`, `build`: pass. `lint`: exactly **1 pre-existing error** (DatePicker `react-hooks/set-state-in-effect`).
+- `test:run`: **242/246** — the only failures are the 4 documented pre-existing ones (DatePicker ×3, SaleListPage ×1). MorePage sign-out occasionally flakes under full parallel runs (passes in isolation).
+- Hosted: Gate-4 proofs + REST checks verified (owner sign-in, RLS scoping, sale→stock, staff create/update, wipe state).
 
-### Sale checkout + reports + history (DEC-023, DEC-024, DEC-025, DEC-026)
-- Checkout captures sale date (backdatable; drives credit due dates), mode of payment, and optional discount; catalog quantity is a manual number input.
-- Staff dashboard drops the monthly sales card.
-- Reports are **admin-only**; Excel export of the day's sale lines via `write-excel-file` (supersedes the jsPDF PDF export, DEC-020). Excel header text is white on navy (`textColor`, not `color`).
-- Reports support a **From/To date range**; new range queries (`getSalesByStoreInRange`, `getOverallSalesInRange`, range filters on payments/received) and a Reports-only `useReportSummaries` seam.
-- Reports page includes a **"Sales by mode of payment"** section; Excel adds a **Mode of Payment** column (kept the Cash/Charge "Type" column).
-- History shows an unread badge (side nav + More page) until opened, and has an **admin-only store filter** (All stores / Amara / Zeann); business-wide events (product approvals) appear only under All stores.
+## 5. Next steps / open items
 
-### Rider & Vehicle full CRUD (DEC-027)
-- `updateRider`/`updateVehicle` (rename + active) and `deleteRider`/`deleteVehicle`. Delete is **refused with a conflict error** if the entry is referenced by any sale, receiving, or expense — deactivate instead. Edit dialogs + ConfirmDialog delete.
+- **Phase 3 walkthrough** (owed per DEC-034 deferral) before Phase 7; Phase 7 real-system validation; Phase 8 hardening + Vercel deploy (needs `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` in Vercel env).
+- Confirmation Required items remain flagged in `docs/DATA-MODEL.md` §11 / `API.md`; adopted-baseline assumptions have revisit triggers in DEC-034.
+- No new business data has been created on hosted as of 2026-09-21.
 
-### Sales catalog (third batch)
-- `NewSalePage`: **search filter** (case-insensitive name) + **alphabetical sort** + empty state.
+## 6. Relevant files (navigation map)
 
-### Customers (third + later batches)
-- `Customer.address` added to domain/service; `AddCustomerDialog` (shared by the Customers page and sales/cart) includes an **Address input**.
-- `CustomerListPage` shows an Address column; seed customers (`cust-1..3`) have mock addresses.
-- In sales/cart, **selecting an existing customer auto-shows their address** in a read-only **Address input field**; adding a new customer with an address in the cart appears automatically on the Customers page (shared mock DB).
+- Migrations: `supabase/migrations/00001–00006`; proofs `supabase/proofs/gate4.sql`; wipe + cleanup scripts under `supabase/cleanup/`.
+- DB access: `src/services/supabaseClient.ts`; store context: `src/store/` (`StoreProvider` defaults admin to `all`, staff locked).
+- Services: `src/services/*Service.ts` (dual-mode), errors mapping in `userService.serviceErrorFromSupabase`, `useAlertMutation` for popup-on-fail.
+- Session: `src/features/session/` (email-shaped login handles; `SessionProvider` marks wiped profiles unsigned-out via `.maybeSingle()`).
+- Feedback: `src/lib/swal.ts` (+ `src/test/swalMock.ts`), `useAlertMutation` hook.
+- Sales catalog: `src/features/sales/NewSalePage.tsx` (sellable-only, store-required hints); inventory edit/delete: `src/features/inventory/`.
+- Admin store switch: `src/features/more/MorePage.tsx` (More → Store context).
+- Theme/admin paint: `src/app/layouts/` (AdminLayout fixed navy; TopBar hides badge for admins).
 
-### Brand rename (DEC-028) + logo/theme (DEC-029)
-- Renamed brand/project to **ZAF ONE** across UI, package, storage keys, filename, docs, and tests.
-- Adopted the official logo (sign-in: full badge, centered, aspect preserved; header/favicon: derived simplified mark) and recolored the whole token theme to the logo palette.
-
-### This session also fixed
-- Pre-existing AuditTrailPage test bug (duplicate-text assertion) — History tests now pass.
-- Sign-in logo alignment/positioning (was forced into a 104×104 square; now 144px wide, `height: auto`, centered in its container).
-
-## 4. Verification Baseline
-
-- `typecheck`, `format:check`, `build` all pass.
-- `lint`: exactly **1 pre-existing error** — `src/components/ui/DatePicker.tsx:317` (`react-hooks/set-state-in-effect`). Do not treat it as a new regression.
-- `test:run`: **208 passed / 212**, with **4 pre-existing failures**: `DatePicker.test.tsx` ×3 and `SaleListPage.test.tsx` ×1 (confirmed on a pristine `develop`).
-- Flake note: `SignInPage.test.tsx` and `SaleCartPage.test.tsx` occasionally fail under full parallel runs but pass in isolation / on re-run.
-
-## 5. Next Steps / Open Items
-
-- **Phase 3** (frontend workflow validation gate) is next; database work (Supabase/auth/persistence) is Phase 4+.
-- Confirmation Required: exact report columns/formats; exact payment-method vocabulary and discount policy; exact customer fields beyond name/contact/address; the derived small logo mark (replaceable placeholder).
-- The official badge PNG is ~2.4 MB and loads only on the sign-in page; an optimized copy is desirable later.
-
-## 6. Relevant Files (navigation map)
-
-- Domain: `src/domain/` (sale, customer, rider, vehicle, dashboard, payment, audit, store).
-- Mock data: `src/services/mocks/db.ts`, `src/services/mocks/seed.ts`.
-- Services: `src/services/` — saleService (createSale/listSales), creditService (due dates), dashboardService (summaries, payment-method grouping), customerService (address), riderService/vehicleService (CRUD + delete guard), auditService (history, store filter), paymentService.
-- Sales: `src/features/sales/` — NewSalePage (catalog search/sort), SaleCartPage (checkout, customer address), BasketFab, cart context/provider.
-- Customers: `src/features/customers/` — CustomerListPage, AddCustomerDialog.
-- Delivery: `src/features/delivery/` — RidersPage, VehiclesPage, Edit dialogs.
-- Reports: `src/features/reports/` — ReportsPage (From/To), SummarySections, reportRows, useReportSummaries; `src/lib/exportReportExcel.ts`.
-- History: `src/features/history/` — AuditTrailPage, historySeen, useHistoryUnread.
-- Session/brand: `src/features/session/` — SignInPage, sessionStorage; `src/components/navigation/TopBar.tsx`.
-- Theme: `src/theme/tokens.ts`, `src/theme/GlobalStyle.ts`; `src/assets/` (logo-clear.png, logo-mark.svg); `public/favicon.svg`.
-- Tests: co-located `*.test.ts(x)` per module; render helper `src/test/render.tsx`.
-
-## 7. Recent Decision Register (one-liners)
+## 7. Recent decision register (one-liners)
 
 | ID | Title | Status |
 | --- | --- | --- |
-| DEC-020 | Report PDF export with jsPDF | Superseded by DEC-024 |
-| DEC-021 | Add-to-cart split of the sale entry flow | Accepted |
-| DEC-022 | Shopee-style catalog, automatic pricing, floating basket | Accepted |
-| DEC-023 | Sale checkout additions and manual quantity input | Accepted |
-| DEC-024 | Admin-only reports with Excel export | Accepted |
-| DEC-025 | Staff dashboard trim, history unread badge, admin customer add | Accepted |
-| DEC-026 | Report date range and History store filter | Accepted |
-| DEC-027 | Rider and vehicle full CRUD with reference guard | Accepted |
-| DEC-028 | Rename brand and project to ZAF ONE | Accepted |
-| DEC-029 | Adopt official logo and recolor theme to the logo palette | Accepted (supersedes DEC-019's palette) |
+| DEC-032 | Manual stock edit/delete with sales-history guard | Accepted |
+| DEC-033 | Sign-in brand copy | Accepted |
+| DEC-034 | Phase 3 gate deferral + assumption adoption (dev creds, email convention) | Accepted |
+| DEC-035 | Supabase-direct integration (profiles authz, service swap) | Accepted |
+| DEC-036 | Staff RPC fixes + admin `update_staff` semantics | Accepted |
+| DEC-037 | Catalog lists only sellable items + pending-seed parity | Accepted |
+| DEC-038 | SweetAlert2 feedback system + logout confirmation | Accepted |
+| DEC-039 | Hosted production wipe to owner-only clean slate | Accepted |
+| DEC-040 | Admin store switch relocated to the More page | Accepted |
+| DEC-041 | Admin default store context is All stores | Accepted |
+| DEC-042 | Production owner login uses an email handle | Accepted |
 
-Full records and governance in `docs/DECISIONS.md`.
+Full records in `docs/DECISIONS.md`.
