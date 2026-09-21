@@ -52,6 +52,8 @@ export interface StockSummaryRow {
   productId: ProductId
   productName: string
   quantity: number
+  /** admin-approved rows are edit/delete-locked for staff (client change) */
+  adminApproved?: boolean
 }
 
 export interface ReceivedStockSummaryRow {

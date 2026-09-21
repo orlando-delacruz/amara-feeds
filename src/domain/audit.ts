@@ -17,6 +17,8 @@ export type AuditAction =
   | 'expense.recorded'
   | 'stock.updated'
   | 'stock.deleted'
+  | 'stock.approved'
+  | 'credit.imported'
   | 'staff.added'
   | 'staff.updated'
 

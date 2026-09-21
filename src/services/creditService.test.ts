@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { getCreditHistory, listCredits, listPaymentTerms } from './creditService'
+import {
+  createExistingCredit,
+  getCreditHistory,
+  listCredits,
+  listPaymentTerms,
+} from './creditService'
 import { resetDb } from './mocks/db'
 
 describe('creditService', () => {
@@ -24,5 +29,33 @@ describe('creditService', () => {
     const terms = await listPaymentTerms()
     expect(terms.length).toBeGreaterThan(0)
     expect(terms[0]).toHaveProperty('label')
+  })
+
+  it('encodes an existing credit balance with no sale and no terms (client change)', async () => {
+    const created = await createExistingCredit({
+      customerId: 'cust-1',
+      originStoreId: 'amara',
+      amountMinor: 250000,
+      dueDate: '2026-10-01',
+    })
+    expect(created.termsId).toBeUndefined()
+    expect(created.saleId).toBeUndefined()
+    expect(created.balanceMinor).toBe(250000)
+    expect(created.status).toBe('outstanding')
+    const credits = await listCredits({ customerId: 'cust-1' })
+    expect(credits.some((credit) => credit.id === created.id && credit.termsId === undefined)).toBe(
+      true,
+    )
+  })
+
+  it('rejects non-positive existing credit amounts', async () => {
+    await expect(
+      createExistingCredit({
+        customerId: 'cust-1',
+        originStoreId: 'amara',
+        amountMinor: 0,
+        dueDate: '2026-10-01',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
   })
 })

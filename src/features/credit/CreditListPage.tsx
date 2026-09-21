@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listCredits, listCustomers } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
+import { Button } from '@/components/ui/Button'
 import { DateText } from '@/components/ui/DateText'
 import { ListRow } from '@/components/ui/ListRow'
 import { MoneyText } from '@/components/ui/MoneyText'
@@ -12,7 +13,11 @@ import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { useAsyncData } from '@/features/shared'
-import { storeNames } from '@/store/stores'
+import { notifySuccess } from '@/lib/swal'
+import { useSession } from '@/features/session/useSession'
+import { concreteStoreId, storeNames } from '@/store/stores'
+import { useStore } from '@/store/useStore'
+import { ExistingCreditDialog } from './ExistingCreditDialog'
 import type { CreditStatus } from '@/domain'
 
 interface CreditListPageProps {
@@ -23,8 +28,12 @@ type StatusFilter = 'all' | CreditStatus
 
 export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
   const [status, setStatus] = useState<StatusFilter>('all')
+  const [existingOpen, setExistingOpen] = useState(false)
+  const { user } = useSession()
+  const { store } = useStore()
   const credits = useAsyncData(() => listCredits())
   const customers = useAsyncData(() => listCustomers())
+  const isAdmin = user?.role === 'admin'
 
   const customerNames = useMemo(
     () => new Map((customers.data ?? []).map((customer) => [customer.id, customer.name])),
@@ -40,6 +49,13 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
         description="Shared credit across both stores, with traceable origin and payment stores."
         size="compact"
       />
+      {isAdmin && (
+        <div>
+          <Button variant="secondary" onClick={() => setExistingOpen(true)}>
+            Add existing credit
+          </Button>
+        </div>
+      )}
       <SegmentedControl
         label="Status"
         value={status}
@@ -106,6 +122,17 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
           />
         )}
       </AsyncBoundary>
+      <ExistingCreditDialog
+        open={existingOpen}
+        customers={customers.data ?? []}
+        defaultStoreId={concreteStoreId(store)}
+        onClose={() => setExistingOpen(false)}
+        onCreated={() => {
+          setExistingOpen(false)
+          void notifySuccess('Existing credit encoded.', 'The balance was added for this customer.')
+          credits.reload()
+        }}
+      />
     </Stack>
   )
 }

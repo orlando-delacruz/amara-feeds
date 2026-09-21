@@ -169,7 +169,11 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
                 </DetailItem>
                 <DetailItem>
                   <DetailLabel>Terms</DetailLabel>
-                  <DetailValue>{termLabels.get(credit.termsId) ?? 'Not available'}</DetailValue>
+                  <DetailValue>
+                    {credit.termsId
+                      ? (termLabels.get(credit.termsId) ?? 'Not available')
+                      : 'Existing balance'}
+                  </DetailValue>
                 </DetailItem>
                 <DetailItem>
                   <DetailLabel>Due date</DetailLabel>

@@ -7,6 +7,7 @@ import { resetDb } from '@/services/mocks/db'
 import { __awaitSwal } from '@/test/swalMock'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
+import type { StoreContextId } from '@/store/stores'
 
 const staffUser: User = {
   id: 'user-1',
@@ -25,12 +26,12 @@ const adminUser: User = {
   active: true,
 }
 
-function renderRiders(path = '/riders', user: User = staffUser) {
+function renderRiders(path = '/riders', user: User = staffUser, initialStore?: StoreContextId) {
   return renderWithProviders(
     <MemoryRouter initialEntries={[path]}>
       <AppRoutes />
     </MemoryRouter>,
-    { user },
+    { user, store: initialStore },
   )
 }
 
@@ -57,9 +58,9 @@ describe('RidersPage', () => {
   })
 
   it('lets an admin review riders per store', async () => {
-    // The Amara/Zeann switch moved to the admin More page (store context now
-    // chosen once); per-store review is exercised through the store context.
-    renderRiders('/admin/riders', adminUser)
+    // The store context is chosen once (More page or page-level switches);
+    // per-store review is exercised through the store context.
+    renderRiders('/admin/riders', adminUser, 'amara')
     expect(await screen.findByText('Jojo Ramos')).toBeInTheDocument()
     expect(screen.queryByRole('radio', { name: 'Zeann' })).not.toBeInTheDocument()
   })

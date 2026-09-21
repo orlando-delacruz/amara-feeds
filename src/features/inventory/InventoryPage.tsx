@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import { deleteStock, getCurrentStock } from '@/services'
+import { approveStock, deleteStock, getCurrentStock } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -20,6 +20,7 @@ interface Row {
   productId: ProductId
   productName: string
   quantity: number
+  adminApproved?: boolean
 }
 
 const RowActions = styled.div`
@@ -34,9 +35,15 @@ const StoreCell = styled.span`
   color: ${({ theme }) => theme.color.text.secondary};
 `
 
+const ApprovedCell = styled.span`
+  font-size: ${({ theme }) => theme.font.size.sm};
+  color: ${({ theme }) => theme.color.text.muted};
+`
+
 export function InventoryPage() {
   const { store } = useStore()
   const { user } = useSession()
+  const isAdmin = user?.role === 'admin'
   const [editing, setEditing] = useState<Row | null>(null)
   // "All stores" shows both stores combined; a concrete store filters to it.
   const allMode = isAllStores(store)
@@ -51,6 +58,14 @@ export function InventoryPage() {
         role: user?.role ?? 'staff',
       }),
     'Could not delete the stock.',
+  )
+  const approve = useAlertMutation(
+    (input: { storeId: StoreId; productId: ProductId }) =>
+      approveStock(input.storeId, input.productId, {
+        userId: user?.id ?? '',
+        role: user?.role ?? 'staff',
+      }),
+    'Could not approve the inventory.',
   )
 
   function productNameOf(row: Row): string {
@@ -77,25 +92,57 @@ export function InventoryPage() {
     }
   }
 
+  async function requestApprove(row: Row) {
+    const confirmed = await confirmAction({
+      title: 'Approve inventory?',
+      text: `Approve the stock of "${productNameOf(row)}" at ${storeNames[row.storeId]}? Store staff will no longer be able to edit or delete it — only you can.`,
+      confirmLabel: 'Approve',
+    })
+    if (!confirmed) {
+      return
+    }
+    const approved = await approve.run({ storeId: row.storeId, productId: row.productId })
+    if (approved) {
+      void notifySuccess(`Inventory for "${productNameOf(row)}" approved.`)
+      reload()
+    }
+  }
+
   type RowWithActions = Row & Record<string, React.ReactNode>
   const rows: RowWithActions[] = (data ?? []).map((row) => ({
     ...row,
     product: row.productName,
     store: <StoreCell>{storeNames[row.storeId]}</StoreCell>,
     quantityDisplay: String(row.quantity),
+    approved: row.adminApproved ? <ApprovedCell>Approved</ApprovedCell> : '',
     actions: (
       <RowActions>
-        <Button size="sm" variant="secondary" onClick={() => setEditing(row)}>
-          Edit
-        </Button>
-        <Button
-          size="sm"
-          variant="danger"
-          disabled={remove.pending}
-          onClick={() => void requestDelete(row)}
-        >
-          Delete
-        </Button>
+        {isAdmin && !row.adminApproved && (
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={approve.pending}
+            onClick={() => void requestApprove(row)}
+          >
+            Approve
+          </Button>
+        )}
+        {(isAdmin || !row.adminApproved) && (
+          <Button size="sm" variant="secondary" onClick={() => setEditing(row)}>
+            Edit
+          </Button>
+        )}
+        {(isAdmin || !row.adminApproved) && (
+          <Button
+            size="sm"
+            variant="danger"
+            disabled={remove.pending}
+            onClick={() => void requestDelete(row)}
+          >
+            Delete
+          </Button>
+        )}
+        {!isAdmin && row.adminApproved && <ApprovedCell>Admin-managed</ApprovedCell>}
       </RowActions>
     ),
   }))
@@ -128,6 +175,7 @@ export function InventoryPage() {
               { key: 'product', header: 'Product' },
               ...(allMode ? ([{ key: 'store', header: 'Store' }] as const) : []),
               { key: 'quantityDisplay', header: 'Quantity' },
+              { key: 'approved', header: 'Status' },
               { key: 'actions', header: 'Actions' },
             ]}
             rows={rows}

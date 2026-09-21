@@ -339,7 +339,7 @@ export async function getCurrentStock(): Promise<StockSummaryRow[]> {
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase
       .from('stock_levels')
-      .select('store_id, product_id, quantity, products(name)')
+      .select('store_id, product_id, quantity, admin_approved, products(name)')
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
@@ -348,6 +348,7 @@ export async function getCurrentStock(): Promise<StockSummaryRow[]> {
       productId: row.product_id,
       productName: (row.products as { name?: string } | null)?.name ?? 'Unknown',
       quantity: row.quantity,
+      adminApproved: row.admin_approved ?? false,
     }))
   }
   const db = getDb()
@@ -356,6 +357,7 @@ export async function getCurrentStock(): Promise<StockSummaryRow[]> {
     productId: level.productId,
     productName: db.products.find((product) => product.id === level.productId)?.name ?? 'Unknown',
     quantity: level.quantity,
+    adminApproved: level.adminApproved ?? false,
   }))
 }
 

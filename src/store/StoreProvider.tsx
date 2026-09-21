@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useSession } from '@/features/session/useSession'
 import { StoreContext } from './StoreContext'
-import { type StoreContextId } from './stores'
+import { DEFAULT_ADMIN_STORE, type StoreContextId } from './stores'
 
 interface StoreProviderProps {
   children: ReactNode
@@ -11,8 +11,11 @@ interface StoreProviderProps {
 
 export function StoreProvider({ children, initialStore }: StoreProviderProps) {
   const { user } = useSession()
-  // Admins default to "all stores" (combined view); staff are locked below.
-  const [selectedStore, setSelectedStore] = useState<StoreContextId>(initialStore ?? 'all')
+  // Admins start in the default store (Zeann — the combined "All stores"
+  // selection was removed per client request, DEC-048); staff are locked below.
+  const [selectedStore, setSelectedStore] = useState<StoreContextId>(
+    initialStore ?? DEFAULT_ADMIN_STORE,
+  )
 
   // Staff operate within their assigned store; admins are business-wide and may
   // switch the store context for store-specific views.

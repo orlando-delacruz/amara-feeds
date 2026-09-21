@@ -316,4 +316,94 @@ end $$;
 rollback;
 select 'pass: atomic payment balance guard (C2)' as proof;
 
+-- --- 17. Existing credit: admin encodes, no stock effect ---------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select quantity = 20 as stock_before from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+select public.create_existing_credit(
+  'aaaaaaaa-0000-0000-0000-000000000001', 'amara', 250000, current_date + 30
+)->>'credit_id' as encoded_credit \gset
+select balance_minor = 250000 and original_amount_minor = 250000 and terms_id is null
+  and sale_id is null and status = 'outstanding' as legacy_credit_shape
+ from public.credit_obligations
+ where id = :'encoded_credit'::uuid;
+select quantity = 20 as stock_unchanged_after_credit from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+-- Payment against the encoded balance rides the normal flow.
+select public.record_payment(:'encoded_credit'::uuid, 'zeann', 50000, 'Cash');
+select balance_minor = 200000 as encoded_balance_payable from public.credit_obligations
+ where id = :'encoded_credit'::uuid;
+rollback;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.create_existing_credit(
+      'aaaaaaaa-0000-0000-0000-000000000001', 'amara', 250000, current_date + 30
+    );
+    raise exception 'FAIL: staff encoded existing credit';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff credit encoding blocked'; else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: existing credit encoded admin-only, stock untouched' as proof;
+
+-- --- 18. Approved inventory: staff locked out, admin retains edits -----
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.approve_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001');
+select admin_approved as row_approved from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+rollback;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.approve_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001');
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.adjust_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 15);
+    raise exception 'FAIL: staff adjusted approved inventory';
+  exception when others then
+    if sqlerrm like '%Approved inventory%' then raise notice 'staff adjust of approved stock blocked'; else raise; end if;
+  end;
+  begin
+    perform public.delete_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001');
+    raise exception 'FAIL: staff deleted approved inventory';
+  exception when others then
+    if sqlerrm like '%Approved inventory%' then raise notice 'staff delete of approved stock blocked'; else raise; end if;
+  end;
+end $$;
+-- Receiving into an approved row stays allowed (normal workflow).
+select public.record_receiving('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 5, 'Proof Supplier', 100000, 115000, null, null);
+select quantity = 25 as receiving_still_adds from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+rollback;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.approve_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001');
+select public.adjust_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 18);
+select quantity = 18 as admin_still_edits from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+rollback;
+select 'pass: approved inventory admin-edit-only, receiving unaffected' as proof;
+
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

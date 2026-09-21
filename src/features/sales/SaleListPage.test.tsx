@@ -42,14 +42,16 @@ describe('SaleListPage', () => {
     expect(screen.getAllByText('Cash').length).toBeGreaterThan(0)
   })
 
-  it('offers admins a quick store switch that re-scopes the list (DEC-046)', async () => {
+  it('offers admins a quick store switch that re-scopes the list (DEC-046, DEC-048)', async () => {
     const user = userEvent.setup()
     renderAt('/admin/sales', adminUser)
-    expect(await screen.findByText(/Sales recorded at All stores/)).toBeInTheDocument()
-
-    await user.click(screen.getByRole('radio', { name: 'Zeann' }))
-
+    // Zeann is the default context; the combined option is gone (DEC-048).
     expect(await screen.findByText(/Sales recorded at Zeann/)).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'All stores' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Amara' }))
+
+    expect(await screen.findByText(/Sales recorded at Amara/)).toBeInTheDocument()
   })
 
   it('does not show the store switch to staff', async () => {

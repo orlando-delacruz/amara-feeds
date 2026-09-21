@@ -15,10 +15,11 @@ export interface CreditObligation {
   id: CreditId
   customerId: CustomerId
   originStoreId: StoreId
-  /** assumed: link to the originating charge sale */
+  /** assumed: link to the originating charge sale; absent for encoded existing balances */
   saleId?: SaleId
-  termsId: PaymentTermsId
-  /** assumed: due date derived from terms; calculation rules are Confirmation Required */
+  /** absent for encoded existing balances (legacy credits carry no terms) */
+  termsId?: PaymentTermsId
+  /** assumed: due date derived from terms, or admin-set for existing balances */
   dueDate: string
   originalAmountMinor: Money
   balanceMinor: Money

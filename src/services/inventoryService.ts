@@ -10,7 +10,9 @@ export async function listStock(
   filter: { storeId?: StoreId; productId?: ProductId } = {},
 ): Promise<StockLevel[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase.from('stock_levels').select('store_id, product_id, quantity')
+    let query = supabase
+      .from('stock_levels')
+      .select('store_id, product_id, quantity, admin_approved')
     if (filter.storeId) {
       query = query.eq('store_id', filter.storeId)
     }
@@ -25,6 +27,7 @@ export async function listStock(
       storeId: row.store_id as StoreId,
       productId: row.product_id,
       quantity: row.quantity,
+      adminApproved: row.admin_approved ?? false,
     }))
   }
   return getDb()
@@ -106,6 +109,10 @@ export async function updateStock(
   }
   const level = getStockRow(storeId, productId)
   const previousQuantity = level?.quantity ?? 0
+  // Approved inventory is admin-edit-only (client change, amends DEC-032).
+  if (level?.adminApproved && input.actorRole !== 'admin') {
+    throw new ServiceError('validation', 'Approved inventory can only be changed by an admin.')
+  }
   if (!level) {
     if (input.quantity === 0) {
       return { level: { storeId, productId, quantity: 0 }, previousQuantity }
@@ -154,6 +161,10 @@ export async function deleteStock(
   if (index === -1) {
     throw new ServiceError('not_found', 'Stock not found.')
   }
+  // Approved inventory is admin-edit-only (client change, amends DEC-032).
+  if (db.stock[index].adminApproved && _actor.role !== 'admin') {
+    throw new ServiceError('validation', 'Approved inventory can only be changed by an admin.')
+  }
   const hasSales = db.sales.some(
     (sale) => sale.storeId === storeId && sale.lines.some((line) => line.productId === productId),
   )
@@ -179,4 +190,44 @@ export async function deleteStock(
 
 function getStockRow(storeId: StoreId, productId: ProductId): StockLevel | undefined {
   return getDb().stock.find((row) => row.storeId === storeId && row.productId === productId)
+}
+
+/**
+ * Admin-only approval of a stock row (client change): approved rows refuse
+ * staff adjust/delete at the data layer; admins keep full edit rights.
+ * Receiving into an approved row stays allowed.
+ */
+export async function approveStock(
+  storeId: StoreId,
+  productId: ProductId,
+  actor: { userId: string; role: UserRole },
+): Promise<StockLevel> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('approve_stock', {
+      p_store_id: storeId,
+      p_product_id: productId,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    const row = getStockRow(storeId, productId)
+    return { storeId, productId, quantity: row?.quantity ?? 0, adminApproved: true }
+  }
+  const row = getStockRow(storeId, productId)
+  if (!row) {
+    throw new ServiceError('not_found', 'Stock not found.')
+  }
+  if (actor.role !== 'admin') {
+    throw new ServiceError('validation', 'Only admins can approve inventory.')
+  }
+  row.adminApproved = true
+  await logAuditEvent({
+    action: 'stock.approved',
+    actorUserId: actor.userId,
+    actorRole: actor.role,
+    storeId,
+    subject: getDb().products.find((product) => product.id === productId)?.name ?? 'Item',
+    detail: 'Inventory approved — staff edits locked',
+  })
+  return { ...row }
 }

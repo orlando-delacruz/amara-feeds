@@ -26,19 +26,15 @@ describe('StoreControl', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Store' })).not.toBeInTheDocument()
   })
 
-  it('lets an admin switch the store context', async () => {
+  it('lets an admin switch the store context (no All stores option, DEC-048)', async () => {
     const actor = userEvent.setup()
     renderWithProviders(<StoreControl />, { user: adminUser })
     expect(screen.getByRole('radiogroup', { name: 'Store' })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'All stores' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    )
-    await actor.click(screen.getByRole('radio', { name: 'Zeann' }))
+    // Zeann is the default store context; the combined option is gone.
+    expect(screen.queryByRole('radio', { name: 'All stores' })).not.toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'Zeann' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('radio', { name: 'All stores' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    )
+    await actor.click(screen.getByRole('radio', { name: 'Amara' }))
+    expect(screen.getByRole('radio', { name: 'Amara' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'Zeann' })).toHaveAttribute('aria-checked', 'false')
   })
 })

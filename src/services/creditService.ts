@@ -78,7 +78,7 @@ export async function listCredits(
       customerId: row.customer_id,
       originStoreId: row.origin_store_id as StoreId,
       saleId: row.sale_id ?? undefined,
-      termsId: row.terms_id,
+      termsId: row.terms_id ?? undefined,
       dueDate: row.due_date,
       originalAmountMinor: row.original_amount_minor,
       balanceMinor: row.balance_minor,
@@ -132,7 +132,7 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
         customerId: credit.customer_id,
         originStoreId: credit.origin_store_id as StoreId,
         saleId: credit.sale_id ?? undefined,
-        termsId: credit.terms_id,
+        termsId: credit.terms_id ?? undefined,
         dueDate: credit.due_date,
         originalAmountMinor: credit.original_amount_minor,
         balanceMinor: credit.balance_minor,
@@ -182,6 +182,70 @@ export function createObligationFromSale(input: CreateObligationInput): CreditOb
     balanceMinor: input.amountMinor,
     status: 'outstanding',
     createdAt: input.createdAt,
+  }
+  getDb().credits.push(obligation)
+  return { ...obligation }
+}
+
+export interface CreateExistingCreditInput {
+  customerId: CustomerId
+  originStoreId: StoreId
+  amountMinor: Money
+  /** Admin-set due date (legacy balances carry no terms). */
+  dueDate: string
+}
+
+/**
+ * Encodes a customer's pre-system credit balance (client change): a
+ * balance-only obligation with no sale and no stock/receiving effect. The
+ * database function is admin-only and writes the `credit.imported` audit
+ * event; payments against it ride the normal payment flow.
+ */
+export async function createExistingCredit(
+  input: CreateExistingCreditInput,
+): Promise<CreditObligation> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('create_existing_credit', {
+      p_customer_id: input.customerId,
+      p_store_id: input.originStoreId,
+      p_amount_minor: input.amountMinor,
+      p_due_date: input.dueDate,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return {
+      id: data?.credit_id as string,
+      customerId: input.customerId,
+      originStoreId: input.originStoreId,
+      termsId: undefined,
+      dueDate: input.dueDate,
+      originalAmountMinor: input.amountMinor,
+      balanceMinor: input.amountMinor,
+      status: 'outstanding',
+      createdAt: new Date().toISOString(),
+    }
+  }
+  if (input.amountMinor <= 0) {
+    throw new ServiceError('validation', 'Credit amount must be greater than zero.')
+  }
+  if (!input.dueDate) {
+    throw new ServiceError('validation', 'A due date is required.')
+  }
+  const customer = getDb().customers.find((item) => item.id === input.customerId)
+  if (!customer) {
+    throw new ServiceError('not_found', 'Customer not found.')
+  }
+  const obligation: CreditObligation = {
+    id: nextId('cred'),
+    customerId: input.customerId,
+    originStoreId: input.originStoreId,
+    termsId: undefined,
+    dueDate: input.dueDate,
+    originalAmountMinor: input.amountMinor,
+    balanceMinor: input.amountMinor,
+    status: 'outstanding',
+    createdAt: new Date().toISOString(),
   }
   getDb().credits.push(obligation)
   return { ...obligation }

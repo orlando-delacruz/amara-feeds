@@ -2,6 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDb } from '@/services/mocks/db'
+import { approveStock } from '@/services'
 import { __awaitSwal } from '@/test/swalMock'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
@@ -13,6 +14,14 @@ const staffUser: User = {
   role: 'staff',
   storeId: 'amara',
   username: 'alice',
+  active: true,
+}
+
+const adminUser: User = {
+  id: 'user-3',
+  name: 'Owner',
+  role: 'admin',
+  username: 'owner',
   active: true,
 }
 
@@ -63,5 +72,29 @@ describe('InventoryPage', () => {
     await user.click(within(row).getByRole('button', { name: 'Delete' }))
 
     await __awaitSwal('Stock for "Sugar 1kg" deleted.')
+  })
+
+  it('lets an admin approve a stock row, which locks staff edits (client change)', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<InventoryPage />, { user: adminUser, store: 'amara' })
+    const row = (await screen.findByText('Rice 25kg')).closest('tr') as HTMLElement
+
+    await user.click(within(row).getByRole('button', { name: 'Approve' }))
+
+    await __awaitSwal('Inventory for "Rice 25kg" approved.')
+    const approvedRow = (await screen.findByText('Rice 25kg')).closest('tr') as HTMLElement
+    expect(within(approvedRow).getByText('Approved')).toBeInTheDocument()
+    expect(within(approvedRow).getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(within(approvedRow).queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument()
+  })
+
+  it('hides edit and delete actions from staff on approved rows (client change)', async () => {
+    await approveStock('amara', 'prod-1', { userId: 'user-3', role: 'admin' })
+    renderWithProviders(<InventoryPage />, { user: staffUser })
+    const row = (await screen.findByText('Rice 25kg')).closest('tr') as HTMLElement
+
+    expect(within(row).getByText('Admin-managed')).toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    expect(within(row).queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
   })
 })

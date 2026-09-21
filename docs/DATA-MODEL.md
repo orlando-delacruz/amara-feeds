@@ -64,8 +64,8 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.6 Credit obligation — Confirmed
 
-- **Concept:** a shared outstanding obligation arising from a charge sale, carrying the originating store, selected payment terms with an automatically calculated due date, remaining balance, and outstanding/settled state.
-- **Source:** REQ-CRED-001–004, REQ-CRED-006; `docs/PROJECT.md` §4.
+- **Concept:** a shared outstanding obligation arising from a charge sale, carrying the originating store, selected payment terms with an automatically calculated due date, remaining balance, and outstanding/settled state. Encoded existing balances (client change, DEC-048) are balance-only obligations with no originating sale and no payment terms — an admin-set due date and origin store only — and never affect stock; they are settled through the normal payment flow.
+- **Source:** REQ-CRED-001–004, REQ-CRED-006; `docs/PROJECT.md` §4; existing-credit encoding per client request (DEC-048).
 - **Boundary:** exact term options, calculation rules, and status vocabulary beyond outstanding/settled are Confirmation Required.
 
 ### 4.7 Payment — Confirmed
@@ -76,8 +76,8 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.8 Inventory / Stock — Confirmed
 
-- **Concept:** the per-store quantity of a product/item held by Amara or Zeann, increased by receiving and decreased by successful sales.
-- **Source:** REQ-INV-001–002; `docs/PROJECT.md` §2.
+- **Concept:** the per-store quantity of a product/item held by Amara or Zeann, increased by receiving and decreased by successful sales. Each stock row carries an admin-approval state (client change, DEC-048, amending DEC-032): once an admin approves a row, store staff can no longer manually edit or delete it — only admins can — while receiving into an approved row stays allowed (the normal workflow, not a manual edit).
+- **Source:** REQ-INV-001–002; `docs/PROJECT.md` §2; approved-inventory lock per client request (DEC-048).
 - **Boundary:** exact stock calculations, negative-stock rules, adjustment workflows, and reversal behavior are Confirmation Required.
 
 ### 4.9 Receiving record — Confirmed

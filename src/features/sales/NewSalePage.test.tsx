@@ -160,15 +160,19 @@ describe('NewSalePage', () => {
     expect(within(sugar).getByText('On hand: 50')).toBeInTheDocument()
   })
 
-  it('gives admins a quick store switch on the catalog with per-store stock (DEC-046)', async () => {
+  it('gives admins a quick store switch on the catalog with per-store stock (DEC-046, DEC-048)', async () => {
     const user = userEvent.setup()
     renderNewSale('/admin/sales/new', adminUser)
 
-    // All-stores default: catalog is parked until a store is chosen.
-    expect(await screen.findByText('Pick a store to start a sale')).toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: 'Zeann' }))
-
+    // Zeann is the default context — the catalog renders immediately.
+    // The combined "All stores" option is gone (DEC-048).
+    expect(screen.queryByText('Pick a store to start a sale')).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'All stores' })).not.toBeInTheDocument()
     const rice = await productCard('Rice 25kg')
     expect(within(rice).getByText('On hand: 12')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Amara' }))
+    const amaraRice = await productCard('Rice 25kg')
+    expect(within(amaraRice).getByText('On hand: 20')).toBeInTheDocument()
   })
 })

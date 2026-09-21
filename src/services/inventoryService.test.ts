@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { deleteStock, getStock, listStock, updateStock } from './inventoryService'
+import { approveStock, deleteStock, getStock, listStock, updateStock } from './inventoryService'
 import { listAuditEvents } from './auditService'
 import { resetDb } from './mocks/db'
 
@@ -97,6 +97,40 @@ describe('inventoryService', () => {
       await expect(deleteStock('amara', 'prod-never', actor)).rejects.toMatchObject({
         code: 'not_found',
       })
+    })
+  })
+
+  describe('approveStock (approved inventory lock, client change)', () => {
+    it('flags the row and writes an audit event', async () => {
+      const approved = await approveStock('amara', 'prod-1', { userId: 'user-3', role: 'admin' })
+      expect(approved.adminApproved).toBe(true)
+      expect(await getStock('amara', 'prod-1')).toMatchObject({ adminApproved: true })
+      const events = await listAuditEvents()
+      expect(events.some((event) => event.action === 'stock.approved')).toBe(true)
+    })
+
+    it('refuses staff approval', async () => {
+      await expect(
+        approveStock('amara', 'prod-1', { userId: 'user-1', role: 'staff' }),
+      ).rejects.toMatchObject({ code: 'validation' })
+    })
+
+    it('refuses staff updates and deletes on approved rows; admins keep access', async () => {
+      await approveStock('amara', 'prod-1', { userId: 'user-3', role: 'admin' })
+      await expect(
+        updateStock('amara', 'prod-1', { quantity: 5, actorUserId: 'user-1', actorRole: 'staff' }),
+      ).rejects.toMatchObject({ code: 'validation' })
+      await expect(
+        deleteStock('amara', 'prod-1', { userId: 'user-1', role: 'staff' }),
+      ).rejects.toMatchObject({
+        code: 'validation',
+      })
+      const saved = await updateStock('amara', 'prod-1', {
+        quantity: 7,
+        actorUserId: 'user-3',
+        actorRole: 'admin',
+      })
+      expect(saved.level.quantity).toBe(7)
     })
   })
 })

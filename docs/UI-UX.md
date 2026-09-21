@@ -122,12 +122,14 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 - **Behavior.** View outstanding credit with its origin store; record a payment (full or partial) identifying the payment store; see the updated remaining balance and status; review the preserved shared payment history.
 - **Cross-store payment.** The sequence makes the origin store and the payment store explicit at both recording and review time, with one traceable shared history (REQ-CRED-005 through REQ-CRED-007, REQ-PAY-001, REQ-PAY-002).
+- **Existing balances (DEC-048).** Admins can encode a customer's pre-system credit balance from the Credit page ("Add existing credit": customer, origin store, outstanding amount, due date). Encoding never changes stock; the encoded balance appears like any other obligation and is settled through the normal payment flow. Encoded credits carry no payment terms (shown as "Existing balance" on the detail page).
 - **Constraints.** Exact payment-term options, calculation rules beyond the selected-terms workflow, and edge-case handling are Confirmation Required.
 
 ### 7.4 Inventory
 
 - **Behavior.** Inventory is shown per store with the current store context always visible.
 - **Requirements.** Automatic stock deduction occurs after a successful sale save (REQ-INV-002) and is reflected in the displayed stock.
+- **Approved inventory (DEC-048).** Admins can approve a stock row; approved rows show an "Approved" status and staff no longer see Edit/Delete on them ("Admin-managed") — only admins can edit or delete approved inventory. Receiving stock into an approved row stays available for staff.
 - **Constraints.** No stock adjustment workflows beyond the confirmed behavior are defined here.
 
 ### 7.5 Receiving Stock
@@ -143,7 +145,7 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 ### 7.7 Dashboard / Reports
 
 - **Behavior.** Admin users consume sales by store, overall sales, outstanding credit, payments, current stock, received stock, and a "Sales by mode of payment" breakdown over a selected **From/To** date range (REQ-DASH-001 through REQ-DASH-006); the Excel export covers the same range and includes the mode of payment per sale (REQ-REP-001). Staff dashboards show today's sales, stock, outstanding credit, and weekly sales. The History destination shows an unread indicator until it is opened, and admins can filter History by store (All stores / Amara / Zeann), with business-wide events shown only under All stores. Reports are admin-only: staff never see the Reports route or navigation entry (REQ-REP-004). The admin dashboard's Current stock and Received stock lists preview at most five rows with "View all" buttons leading to Inventory and Receiving respectively (DEC-046).
-- **Store paint.** The whole admin area wears the selected store's theme — Amara brown, Zeann blue; the All-stores default keeps the fixed navy combined theme (DEC-044). Admin sales surfaces (sales list, New Sale catalog) carry the admin-only store switch so a store change does not require visiting More (DEC-046).
+- **Store paint.** The whole admin area wears the selected store's theme — Amara brown, Zeann blue (DEC-044). The combined "All stores" store selection was removed per client request (DEC-048): the admin store switch (More page and the sales/receiving surfaces) offers only Amara and Zeann, and the admin context defaults to Zeann. Admin sales surfaces (sales list, New Sale catalog) carry the admin-only store switch so a store change does not require visiting More (DEC-046).
 - **Constraints.** "Other useful summaries" stay flexible within agreed scope (REQ-DASH-007); exact report columns and formats are Confirmation Required and are never defined here beyond the implemented sale-line columns.
 
 ### 7.8 Users / Staff
