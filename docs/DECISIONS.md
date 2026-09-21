@@ -127,6 +127,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-039 | Hosted production wipe to owner-only clean slate | Accepted | 2026-09-21 |
 | DEC-040 | Admin store switch relocated to the More page | Accepted | 2026-09-21 |
 | DEC-041 | Admin default store context is All stores | Accepted | 2026-09-21 |
+| DEC-042 | Production owner login uses an email handle | Accepted | 2026-09-21 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -704,6 +705,16 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Context:** After DEC-040 relocated the admin switch to the More page, the default context was still one store (Amara). The client wants admins to see both stores combined by default.
 - **Decision:** The admin store context supports the value `all` (both stores combined, the default) in addition to Amara and Zeann. Read surfaces show combined data with a Store column while `all` is active; write flows that must target one store (sale checkout, receiving record, payment) are disabled with a pointing hint until a concrete store is chosen. Staff remain locked to their assigned store. The header store badge is hidden while `all` is active (the dual-logos banner already communicates the business-wide view).
 - **Related documents:** `src/store/`, `src/features/shared/StoreControl.tsx`.
+
+### DEC-042 — Production owner login uses an email handle
+
+- **ID:** DEC-042
+- **Title:** Production owner login uses an email handle
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** The client supplied the production owner credential as an email-shaped username. Login was resolved through the `username@zafone.local` convention, so an email handle broken the mapping. The username field must accept an email-shaped handle, and the hosted owner account (email, password, username) had to be rotated.
+- **Decision:** `usernameEmail` treats an input containing `@` as a full email used as-is; bare usernames keep the `@zafone.local` convention. The hosted owner account was updated in one transaction (email handle + rotated password + matching `auth.identities` identity data + profile username) with existing sessions/refresh tokens revoked (the DEC-036 password-reset semantics). Dev seed and tests keep the fake dev credentials so no production password is committed; the credential SQL was run from a scratch file that was never checked in.
+- **Related documents:** `src/services/supabaseClient.ts`, `docs/SECURITY.md` §6.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

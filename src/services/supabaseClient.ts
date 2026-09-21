@@ -28,7 +28,13 @@ function makeClient(): SupabaseClient | null {
 
 export const supabase: SupabaseClient | null = makeClient()
 
-/** Email handle convention for username login: username@zafone.local (Assumed, DEC-034). */
+/**
+ * Email handle for username login. A value that already contains `@` is
+ * treated as a full email and used as-is (the owner logs in with their email
+ * handle); bare usernames keep the `username@zafone.local` convention
+ * (Assumed, DEC-034).
+ */
 export function usernameEmail(username: string): string {
-  return `${username.trim().toLowerCase()}@zafone.local`
+  const trimmed = username.trim().toLowerCase()
+  return trimmed.includes('@') ? trimmed : `${trimmed}@zafone.local`
 }
