@@ -35,11 +35,21 @@ const Hint = styled.p`
   color: ${({ theme }) => theme.color.text.muted};
 `
 
+const ItemList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space.md};
+`
+
 const ItemRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr 72px 104px 36px;
+  grid-template-columns: minmax(0, 1fr) minmax(64px, 0.35fr) minmax(96px, 0.4fr) auto;
   gap: ${({ theme }) => theme.space.sm};
   align-items: end;
+`
+
+const AddItemButton = styled(Button)`
+  margin-top: ${({ theme }) => theme.space.md};
 `
 
 const RemoveItemButton = styled(Button)`
@@ -180,66 +190,68 @@ export function ExistingCreditDialog({
         />
         <div>
           <Hint>Items the customer received.</Hint>
-          {items.map((item, index) => (
-            <ItemRow key={index}>
-              <Select
-                id={`existing-credit-item-${index}`}
-                label={index === 0 ? 'Item' : ''}
-                value={item.productId}
-                onChange={(event) => updateItem(index, { productId: event.target.value })}
-                options={products.map((product) => ({ value: product.id, label: product.name }))}
-                placeholder="Select an item"
-                aria-label={index === 0 ? undefined : `Item ${index + 1}`}
-                required
-              />
-              <TextField
-                id={`existing-credit-qty-${index}`}
-                label={index === 0 ? 'Qty' : ''}
-                type="number"
-                min="1"
-                step="1"
-                inputMode="numeric"
-                autoComplete="off"
-                value={item.quantity}
-                onChange={(event) => updateItem(index, { quantity: event.target.value })}
-                aria-label={index === 0 ? undefined : `Quantity ${index + 1}`}
-                required
-              />
-              <TextField
-                id={`existing-credit-price-${index}`}
-                label={index === 0 ? 'Price (₱)' : ''}
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                autoComplete="off"
-                value={item.price}
-                onChange={(event) => updateItem(index, { price: event.target.value })}
-                aria-label={index === 0 ? undefined : `Price ${index + 1}`}
-                required
-              />
-              {items.length > 1 && (
-                <RemoveItemButton
-                  type="button"
-                  variant="danger"
-                  size="sm"
-                  onClick={() => setItems((current) => current.filter((_, at) => at !== index))}
-                >
-                  Remove
-                </RemoveItemButton>
-              )}
-            </ItemRow>
-          ))}
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() =>
-              setItems((current) => [...current, { productId: '', quantity: '', price: '' }])
-            }
-          >
-            Add item
-          </Button>
+          <ItemList>
+            {items.map((item, index) => (
+              <ItemRow key={index}>
+                <Select
+                  id={`existing-credit-item-${index}`}
+                  label={index === 0 ? 'Item' : ''}
+                  value={item.productId}
+                  onChange={(event) => updateItem(index, { productId: event.target.value })}
+                  options={products.map((product) => ({ value: product.id, label: product.name }))}
+                  placeholder="Select an item"
+                  aria-label={index === 0 ? undefined : `Item ${index + 1}`}
+                  required
+                />
+                <TextField
+                  id={`existing-credit-qty-${index}`}
+                  label={index === 0 ? 'Qty' : ''}
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={item.quantity}
+                  onChange={(event) => updateItem(index, { quantity: event.target.value })}
+                  aria-label={index === 0 ? undefined : `Quantity ${index + 1}`}
+                  required
+                />
+                <TextField
+                  id={`existing-credit-price-${index}`}
+                  label={index === 0 ? 'Price (₱)' : ''}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  value={item.price}
+                  onChange={(event) => updateItem(index, { price: event.target.value })}
+                  aria-label={index === 0 ? undefined : `Price ${index + 1}`}
+                  required
+                />
+                {items.length > 1 && (
+                  <RemoveItemButton
+                    type="button"
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setItems((current) => current.filter((_, at) => at !== index))}
+                  >
+                    Remove
+                  </RemoveItemButton>
+                )}
+              </ItemRow>
+            ))}
+            <AddItemButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                setItems((current) => [...current, { productId: '', quantity: '', price: '' }])
+              }
+            >
+              Add item
+            </AddItemButton>
+          </ItemList>
         </div>
         <TextField
           id="existing-credit-payment"

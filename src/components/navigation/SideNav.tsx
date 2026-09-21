@@ -81,6 +81,9 @@ const Badge = styled.span`
 `
 
 export function SideNav({ items, badge }: SideNavProps) {
+  // The More page groups group destinations that are not in the sidebar list
+  // (account, store context, install, sign out) — reachable on desktop too.
+  const moreBase = items[0]?.to === '/admin' ? '/admin/more' : '/more'
   return (
     <Aside aria-label="Primary">
       <List>
@@ -97,6 +100,16 @@ export function SideNav({ items, badge }: SideNavProps) {
             </StyledNavLink>
           </li>
         ))}
+        <li key="more">
+          <StyledNavLink to={moreBase} end>
+            {({ isActive }) => (
+              <>
+                {!isActive && <Marker aria-hidden="true" />}
+                More
+              </>
+            )}
+          </StyledNavLink>
+        </li>
       </List>
     </Aside>
   )
