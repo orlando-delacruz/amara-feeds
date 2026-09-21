@@ -4,7 +4,7 @@ import { StoreBadge } from '@/components/ui/StoreBadge'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { storeBranding } from '@/store/storeBranding'
-import { concreteStoreId, isAllStores, storeNames } from '@/store/stores'
+import { concreteStoreId, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import { confirmAction } from '@/lib/swal'
 
@@ -198,7 +198,10 @@ export function TopBar({ sectionLabel, brand }: TopBarProps) {
         <SectionTag>{sectionLabel}</SectionTag>
         <Spacer />
         <Controls>
-          {!isAllStores(store) && <StoreBadge store={concreteStoreId(store)} />}
+          {/* Admin never wears a single-store badge in the header — the store
+             context (including a picked store) lives in More → Store context
+             and surfaces on the pages only. Staff keep their store badge. */}
+          {user?.role === 'staff' && <StoreBadge store={concreteStoreId(store)} />}
           {user && <UserName>{getDisplayName(user.name)}</UserName>}
           <SignOutButton type="button" onClick={() => void handleSignOut()}>
             Sign out

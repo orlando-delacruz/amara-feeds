@@ -36,9 +36,9 @@ describe('admin area theme', () => {
     renderAdminAt('/admin/sales', 'zeann')
 
     expect(await screen.findByRole('heading', { name: 'Sales' })).toBeInTheDocument()
-    // Data context is zeann…
-    expect(screen.getByLabelText('Current store: Zeann')).toBeInTheDocument()
-    // …and the paint is still navy.
+    // Admin never renders a single-store badge in the header.
+    expect(screen.queryByLabelText('Current store: Zeann')).not.toBeInTheDocument()
+    // The paint is still navy.
     expect(brandPillBackground()).toBe('rgb(1, 60, 104)')
   })
 
