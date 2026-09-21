@@ -91,9 +91,23 @@ export function MorePage() {
     <Stack>
       <PageHeader title="More" description="All destinations in one place." size="compact" />
       {user?.role === 'admin' ? (
-        <Section title="Store context" variant="flush">
-          <StoreControl />
-        </Section>
+        <>
+          <Section title="My Account" variant="flush">
+            <Group>
+              <GroupItem>
+                <ListRow
+                  leading={<Icon name="card" />}
+                  title="My Account"
+                  subtitle="Change your username or password"
+                  href="/admin/account"
+                />
+              </GroupItem>
+            </Group>
+          </Section>
+          <Section title="Store context" variant="flush">
+            <StoreControl />
+          </Section>
+        </>
       ) : undefined}
 
       <nav aria-label="More destinations">

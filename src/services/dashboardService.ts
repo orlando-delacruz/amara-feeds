@@ -37,10 +37,17 @@ async function fetchSalesForSummary(): Promise<SaleRow[]> {
   const { data, error } = await supabase
     .from('sales')
     .select('id, store_id, sale_date, total_minor, payment_method, payment_type')
+    // Encoded legacy credits never count as sales (DEC-049).
+    .eq('is_legacy', false)
   if (error) {
     throw serviceErrorFromSupabase(error)
   }
   return (data ?? []) as SaleRow[]
+}
+
+/** Sales summaries never include encoded legacy credits (DEC-049). */
+function liveSales(): Sale[] {
+  return getDb().sales.filter((sale) => !sale.isLegacy)
 }
 
 export async function getDailySalesByStore(date: string): Promise<DailySalesByStore[]> {
@@ -57,7 +64,7 @@ export async function getDailySalesByStore(date: string): Promise<DailySalesBySt
       }
     })
   }
-  const sales = getDb().sales.filter((sale) => sale.saleDate === date)
+  const sales = liveSales().filter((sale) => sale.saleDate === date)
   return storeIds.map((storeId) => {
     const storeSales = sales.filter((sale) => sale.storeId === storeId)
     return {
@@ -79,7 +86,7 @@ export async function getOverallDailySales(date: string): Promise<OverallDailySa
       saleCount: sales.length,
     }
   }
-  const sales = getDb().sales.filter((sale) => sale.saleDate === date)
+  const sales = liveSales().filter((sale) => sale.saleDate === date)
   return {
     date,
     totalMinor: sumMinor(sales.map((sale) => sale.totalMinor)),
@@ -109,7 +116,7 @@ export async function getSalesByStoreInRange(
       }
     })
   }
-  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, from, to))
+  const sales = liveSales().filter((sale) => saleDayInRange(sale, from, to))
   return storeIds.map((storeId) => {
     const storeSales = sales.filter((sale) => sale.storeId === storeId)
     return {
@@ -136,7 +143,7 @@ export async function getOverallSalesInRange(
       saleCount: sales.length,
     }
   }
-  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, from, to))
+  const sales = liveSales().filter((sale) => saleDayInRange(sale, from, to))
   return {
     startDate: from,
     endDate: to,
@@ -161,7 +168,7 @@ export async function getWeeklySalesByStore(date: string): Promise<PeriodSalesBy
       }
     })
   }
-  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, startDate, date))
+  const sales = liveSales().filter((sale) => saleDayInRange(sale, startDate, date))
   return storeIds.map((storeId) => {
     const storeSales = sales.filter((sale) => sale.storeId === storeId)
     return {
@@ -186,7 +193,7 @@ export async function getOverallWeeklySales(date: string): Promise<OverallPeriod
       saleCount: sales.length,
     }
   }
-  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, startDate, date))
+  const sales = liveSales().filter((sale) => saleDayInRange(sale, startDate, date))
   return {
     startDate,
     endDate: date,
@@ -211,7 +218,7 @@ export async function getMonthlySalesByStore(date: string): Promise<PeriodSalesB
       }
     })
   }
-  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, startDate, date))
+  const sales = liveSales().filter((sale) => saleDayInRange(sale, startDate, date))
   return storeIds.map((storeId) => {
     const storeSales = sales.filter((sale) => sale.storeId === storeId)
     return {
@@ -236,7 +243,7 @@ export async function getOverallMonthlySales(date: string): Promise<OverallPerio
       saleCount: sales.length,
     }
   }
-  const sales = getDb().sales.filter((sale) => saleDayInRange(sale, startDate, date))
+  const sales = liveSales().filter((sale) => saleDayInRange(sale, startDate, date))
   return {
     startDate,
     endDate: date,
@@ -312,8 +319,8 @@ export async function getSalesByPaymentMethodInRange(
   const sales =
     isSupabaseConfigured && supabase
       ? inRangeRows(await fetchSalesForSummary(), from, to)
-      : getDb()
-          .sales.filter((sale) => saleDayInRange(sale, from, to))
+      : liveSales()
+          .filter((sale) => saleDayInRange(sale, from, to))
           .map((sale) => ({
             id: sale.id,
             store_id: sale.storeId,
@@ -339,7 +346,7 @@ export async function getCurrentStock(): Promise<StockSummaryRow[]> {
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase
       .from('stock_levels')
-      .select('store_id, product_id, quantity, admin_approved, products(name)')
+      .select('store_id, product_id, quantity, admin_approved, price_minor, products(name)')
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
@@ -349,6 +356,7 @@ export async function getCurrentStock(): Promise<StockSummaryRow[]> {
       productName: (row.products as { name?: string } | null)?.name ?? 'Unknown',
       quantity: row.quantity,
       adminApproved: row.admin_approved ?? false,
+      priceMinor: row.price_minor ?? undefined,
     }))
   }
   const db = getDb()
@@ -358,6 +366,7 @@ export async function getCurrentStock(): Promise<StockSummaryRow[]> {
     productName: db.products.find((product) => product.id === level.productId)?.name ?? 'Unknown',
     quantity: level.quantity,
     adminApproved: level.adminApproved ?? false,
+    priceMinor: level.priceMinor,
   }))
 }
 

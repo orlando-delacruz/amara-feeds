@@ -52,13 +52,27 @@ export async function listReceiving(
 }
 
 /**
- * Returns the automatic selling price per product for a store, taken from the
- * selling price of that product's most recent receiving record at the store.
- * Products never received at the store are omitted (they have no price).
+ * Returns the selling price per product for a store. A stock row's current
+ * price (editable inventory, DEC-049) wins; rows without one fall back to
+ * the latest priced receiving record (the automatic-price rule). Products
+ * with neither are omitted.
  */
 export async function listStorePrices(storeId: StoreId): Promise<Record<string, Money>> {
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase
+    const { data: stock, error: stockError } = await supabase
+      .from('stock_levels')
+      .select('product_id, price_minor')
+      .eq('store_id', storeId)
+    if (stockError) {
+      throw serviceErrorFromSupabase(stockError)
+    }
+    const prices: Record<string, Money> = {}
+    for (const row of stock ?? []) {
+      if (row.price_minor !== null) {
+        prices[row.product_id] = row.price_minor as Money
+      }
+    }
+    const { data: receipts, error } = await supabase
       .from('receiving_records')
       .select('product_id, selling_price_minor, received_at')
       .eq('store_id', storeId)
@@ -67,20 +81,23 @@ export async function listStorePrices(storeId: StoreId): Promise<Record<string, 
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
-    const prices: Record<string, Money> = {}
-    for (const row of data ?? []) {
+    for (const row of receipts ?? []) {
       if (prices[row.product_id] === undefined) {
         prices[row.product_id] = row.selling_price_minor as Money
       }
     }
     return prices
   }
-  const records = getDb()
-    .receiving.filter(
-      (record) => record.storeId === storeId && record.sellingPriceMinor !== undefined,
-    )
-    .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
+  const db = getDb()
   const prices: Record<string, Money> = {}
+  for (const level of db.stock.filter((row) => row.storeId === storeId)) {
+    if (level.priceMinor !== undefined) {
+      prices[level.productId] = level.priceMinor
+    }
+  }
+  const records = db.receiving
+    .filter((record) => record.storeId === storeId && record.sellingPriceMinor !== undefined)
+    .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
   for (const record of records) {
     if (prices[record.productId] === undefined) {
       prices[record.productId] = record.sellingPriceMinor as Money
@@ -162,5 +179,14 @@ export async function createReceiving(input: NewReceivingInput): Promise<Receivi
   }
   getDb().receiving.push(record)
   applyStockDelta(input.storeId, input.productId, input.quantity)
+  // Receiving maintains the stock row's current selling price (DEC-049).
+  if (input.sellingPriceMinor !== undefined) {
+    const level = getDb().stock.find(
+      (row) => row.storeId === input.storeId && row.productId === input.productId,
+    )
+    if (level) {
+      level.priceMinor = input.sellingPriceMinor
+    }
+  }
   return { ...record }
 }

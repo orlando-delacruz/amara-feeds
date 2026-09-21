@@ -49,6 +49,8 @@ export interface Sale {
   totalMinor: Money
   /** assumed: staff member who recorded the sale; staff cannot modify another staff's records */
   recordedByUserId: UserId
+  /** Encoded legacy credit rows (DEC-049): excluded from sales lists and summaries. */
+  isLegacy?: boolean
   createdAt: string
 }
 

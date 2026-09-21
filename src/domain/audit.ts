@@ -18,7 +18,12 @@ export type AuditAction =
   | 'stock.updated'
   | 'stock.deleted'
   | 'stock.approved'
+  | 'sale.recorded'
+  | 'sale.deleted'
   | 'credit.imported'
+  | 'customer.updated'
+  | 'customer.deleted'
+  | 'account.updated'
   | 'staff.added'
   | 'staff.updated'
 

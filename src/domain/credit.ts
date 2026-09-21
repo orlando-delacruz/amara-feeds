@@ -1,4 +1,4 @@
-import type { CreditId, CustomerId, PaymentTermsId, SaleId } from './ids'
+import type { CreditId, CustomerId, PaymentTermsId, ProductId, SaleId } from './ids'
 import type { StoreId } from './store'
 import type { Money } from '@/lib/money'
 import type { Payment } from './payment'
@@ -27,7 +27,16 @@ export interface CreditObligation {
   createdAt: string
 }
 
+export interface CreditItem {
+  productId: ProductId
+  productName: string
+  quantity: number
+  unitPriceMinor: Money
+}
+
 export interface CreditHistory {
   credit: CreditObligation
   payments: Payment[]
+  /** Item details from the originating (or encoded legacy) sale. */
+  items: CreditItem[]
 }

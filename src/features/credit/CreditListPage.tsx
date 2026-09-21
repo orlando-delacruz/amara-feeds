@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listCredits, listCustomers } from '@/services'
+import { listCredits, listCustomers, listProducts } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { DateText } from '@/components/ui/DateText'
@@ -33,6 +33,7 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
   const { store } = useStore()
   const credits = useAsyncData(() => listCredits())
   const customers = useAsyncData(() => listCustomers())
+  const products = useAsyncData(() => listProducts())
   const isAdmin = user?.role === 'admin'
 
   const customerNames = useMemo(
@@ -125,6 +126,7 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
       <ExistingCreditDialog
         open={existingOpen}
         customers={customers.data ?? []}
+        products={products.data ?? []}
         defaultStoreId={concreteStoreId(store)}
         onClose={() => setExistingOpen(false)}
         onCreated={() => {

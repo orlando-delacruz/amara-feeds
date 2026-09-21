@@ -50,12 +50,16 @@ export async function listSales(
   } = {},
 ): Promise<Sale[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase.from('sales').select(
-      `id, store_id, sale_date, customer_id, payment_type, payment_method,
+    let query = supabase
+      .from('sales')
+      .select(
+        `id, store_id, sale_date, customer_id, payment_type, payment_method,
          delivery_fee_minor, delivery_rider_id, delivery_vehicle_id, discount_minor,
          total_minor, recorded_by_user_id, created_at,
          sale_lines(id, product_id, quantity, unit_price_minor)`,
-    )
+      )
+      // Encoded legacy credits live only under Credit (DEC-049).
+      .eq('is_legacy', false)
     if (filter.storeId) {
       query = query.eq('store_id', filter.storeId)
     }
@@ -104,6 +108,7 @@ export async function listSales(
   return getDb()
     .sales.filter(
       (sale) =>
+        !sale.isLegacy &&
         (!filter.storeId || sale.storeId === filter.storeId) &&
         (!filter.customerId || sale.customerId === filter.customerId) &&
         (!filter.date || saleDay(sale) === filter.date) &&
@@ -119,6 +124,46 @@ export async function getSale(id: SaleId): Promise<Sale> {
     throw new ServiceError('not_found', 'Sale not found.')
   }
   return cloneSale(sale)
+}
+
+/**
+ * Admin-only sale deletion (client revision): corrects staff mistakes. The
+ * database function restores stock per line, refuses sales whose credit has
+ * payments, and removes the unpaid credit atomically.
+ */
+export async function deleteSale(id: SaleId): Promise<void> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('delete_sale', { p_sale_id: id })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return
+  }
+  const db = getDb()
+  const sale = db.sales.find((item) => item.id === id)
+  if (!sale) {
+    throw new ServiceError('not_found', 'Sale not found.')
+  }
+  const credit = db.credits.find((credit) => credit.saleId === id)
+  if (credit && db.payments.some((payment) => payment.creditId === credit.id)) {
+    throw new ServiceError('validation', 'This sale has recorded payments and cannot be deleted.')
+  }
+  if (sale.isLegacy) {
+    throw new ServiceError('validation', 'Encoded credits are managed in Credit, not Sales.')
+  }
+  // Restore stock per line, mirroring the database function.
+  for (const line of sale.lines) {
+    const level = db.stock.find(
+      (row) => row.storeId === sale.storeId && row.productId === line.productId,
+    )
+    if (level) {
+      level.quantity += line.quantity
+    }
+  }
+  if (credit) {
+    db.credits.splice(db.credits.indexOf(credit), 1)
+  }
+  db.sales.splice(db.sales.indexOf(sale), 1)
 }
 
 export async function createSale(input: NewSaleInput): Promise<Sale> {

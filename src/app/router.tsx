@@ -19,6 +19,7 @@ import { SaleListPage } from '@/features/sales/SaleListPage'
 import { RequireRole } from '@/features/session/guards'
 import { SignInPage } from '@/features/session/SignInPage'
 import { useHomePath } from '@/features/session/useHomePath'
+import { MyAccountPage } from '@/features/account/MyAccountPage'
 import { StaffListPage } from '@/features/users/StaffListPage'
 import { AdminLayout } from './layouts/AdminLayout'
 import { StaffLayout } from './layouts/StaffLayout'
@@ -70,6 +71,7 @@ export function AppRoutes() {
           <Route path="vehicles" element={<VehiclesPage />} />
           <Route path="expenses" element={<ExpensesPage />} />
           <Route path="more" element={<MorePage />} />
+          <Route path="account" element={<MyAccountPage />} />
           <Route path="users" element={<StaffListPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

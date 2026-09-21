@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listCustomers, listSales, listUsers } from '@/services'
+import { deleteSale, listCustomers, listSales, listUsers } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { DatePicker } from '@/components/ui/DatePicker'
@@ -11,9 +11,11 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
-import { useAsyncData } from '@/features/shared'
+import { useAsyncData, useAlertMutation } from '@/features/shared'
 import { StoreControl } from '@/features/shared'
 import { getDisplayName } from '@/features/session/displayName'
+import { confirmAction, notifySuccess } from '@/lib/swal'
+import { useSession } from '@/features/session/useSession'
 import { todayIso } from '@/lib/dates'
 import { formatDate } from '@/lib/format'
 import { concreteStoreId, isAllStores, storeNames, storeLabel } from '@/store/stores'
@@ -26,6 +28,8 @@ interface SaleListPageProps {
 export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
   const navigate = useNavigate()
   const { store } = useStore()
+  const { user } = useSession()
+  const isAdmin = user?.role === 'admin'
   const [date, setDate] = useState(todayIso())
   // 'All stores' lists both stores' sales combined.
   const allMode = isAllStores(store)
@@ -36,6 +40,27 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
   )
   const customers = useAsyncData(() => listCustomers())
   const users = useAsyncData(() => listUsers())
+  const remove = useAlertMutation(
+    (saleId: string) => deleteSale(saleId),
+    'Could not delete the sale.',
+  )
+
+  async function requestDelete(saleId: string) {
+    const confirmed = await confirmAction({
+      title: 'Delete this sale?',
+      text: 'The sold quantities return to the current stock of the same store. A sale with recorded payments cannot be deleted.',
+      confirmLabel: 'Delete',
+      danger: true,
+    })
+    if (!confirmed) {
+      return
+    }
+    const deleted = await remove.run(saleId)
+    if (deleted) {
+      void notifySuccess('Sale deleted.', 'The stock was restored to this store.')
+      sales.reload()
+    }
+  }
 
   const customerNames = useMemo(
     () => new Map((customers.data ?? []).map((customer) => [customer.id, customer.name])),
@@ -86,6 +111,7 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
               { key: 'total', header: 'Total' },
               { key: 'recordedBy', header: 'Recorded by' },
               { key: 'createdAt', header: 'Recorded' },
+              ...(isAdmin ? ([{ key: 'actions', header: 'Actions' }] as const) : []),
             ]}
             rows={sales.data.map((sale) => ({
               customer: sale.customerId
@@ -97,6 +123,20 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
               total: <MoneyText amountMinor={sale.totalMinor} />,
               recordedBy: userNames.get(sale.recordedByUserId) ?? 'Not available',
               createdAt: <DateText value={sale.createdAt} />,
+              ...(isAdmin
+                ? {
+                    actions: (
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        disabled={remove.pending}
+                        onClick={() => void requestDelete(sale.id)}
+                      >
+                        Delete
+                      </Button>
+                    ),
+                  }
+                : {}),
             }))}
           />
         )}

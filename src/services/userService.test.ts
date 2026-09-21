@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createUser, listUsers, serviceErrorFromSupabase, signIn, updateUser } from './userService'
+import {
+  createUser,
+  listUsers,
+  serviceErrorFromSupabase,
+  signIn,
+  updateOwnAccount,
+  updateUser,
+} from './userService'
 import { resetDb } from './mocks/db'
 
 describe('serviceErrorFromSupabase', () => {
@@ -137,5 +144,66 @@ describe('userService', () => {
     const disabled = await updateUser(created.id, { active: false })
     expect(disabled.active).toBe(false)
     expect((await listUsers({ active: true })).some((user) => user.id === created.id)).toBe(false)
+  })
+
+  describe('updateOwnAccount (My Account, DEC-049)', () => {
+    it('changes the username after verifying the current password', async () => {
+      const created = await createUser({
+        name: 'Self Service',
+        role: 'staff',
+        storeId: 'amara',
+        username: 'selfsvc',
+        password: 'oldpass123',
+      })
+      const result = await updateOwnAccount({
+        userId: created.id,
+        currentPassword: 'oldpass123',
+        username: 'NewSelf',
+      })
+      expect(result.username).toBe('newself')
+      expect((await listUsers()).some((user) => user.username === 'newself')).toBe(true)
+    })
+
+    it('refuses a wrong current password and a taken username', async () => {
+      const created = await createUser({
+        name: 'Self Service',
+        role: 'staff',
+        storeId: 'amara',
+        username: 'selfsvc2',
+        password: 'oldpass123',
+      })
+      await expect(
+        updateOwnAccount({
+          userId: created.id,
+          currentPassword: 'nope',
+          username: 'renamed',
+        }),
+      ).rejects.toMatchObject({ code: 'validation' })
+      // Taking a seeded username is refused.
+      await expect(
+        updateOwnAccount({
+          userId: created.id,
+          currentPassword: 'oldpass123',
+          username: 'alice',
+        }),
+      ).rejects.toMatchObject({ code: 'conflict' })
+    })
+
+    it('changes the password', async () => {
+      const created = await createUser({
+        name: 'Self Service',
+        role: 'staff',
+        storeId: 'amara',
+        username: 'selfsvc3',
+        password: 'oldpass123',
+      })
+      await updateOwnAccount({
+        userId: created.id,
+        currentPassword: 'oldpass123',
+        newPassword: 'newpass123',
+      })
+      const signedIn = await signIn({ username: 'selfsvc3', password: 'newpass123' })
+      expect(signedIn.username).toBe('selfsvc3')
+    })
   })
 })

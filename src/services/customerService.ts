@@ -96,3 +96,70 @@ export async function createCustomer(input: NewCustomerInput): Promise<Customer>
   getDb().customers.push(customer)
   return { ...customer }
 }
+
+export interface UpdateCustomerInput {
+  name: string
+  contact?: string
+  address?: string
+}
+
+export async function updateCustomer(
+  id: CustomerId,
+  input: UpdateCustomerInput,
+): Promise<Customer> {
+  const name = input.name.trim()
+  if (!name) {
+    throw new ServiceError('validation', 'Customer name is required.')
+  }
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('update_customer', {
+      p_customer_id: id,
+      p_name: name,
+      p_contact: input.contact?.trim() || null,
+      p_address: input.address?.trim() || null,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return {
+      id,
+      name,
+      contact: input.contact?.trim() || undefined,
+      address: input.address?.trim() || undefined,
+      createdAt: new Date().toISOString(),
+    }
+  }
+  const customer = getDb().customers.find((item) => item.id === id)
+  if (!customer) {
+    throw new ServiceError('not_found', 'Customer not found.')
+  }
+  customer.name = name
+  customer.contact = input.contact?.trim() || undefined
+  customer.address = input.address?.trim() || undefined
+  return { ...customer }
+}
+
+export async function deleteCustomer(id: CustomerId): Promise<void> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('delete_customer', { p_customer_id: id })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return
+  }
+  const db = getDb()
+  const index = db.customers.findIndex((item) => item.id === id)
+  if (index === -1) {
+    throw new ServiceError('not_found', 'Customer not found.')
+  }
+  const referenced =
+    db.sales.some((sale) => sale.customerId === id) ||
+    db.credits.some((credit) => credit.customerId === id)
+  if (referenced) {
+    throw new ServiceError(
+      'conflict',
+      'This customer has recorded sales or credit records and cannot be deleted.',
+    )
+  }
+  db.customers.splice(index, 1)
+}

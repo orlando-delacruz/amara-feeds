@@ -40,8 +40,8 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.2 Customer — Confirmed
 
-- **Concept:** one shared customer identity usable across both stores, never duplicated per store. The implemented record carries name, an optional contact, and an optional address.
-- **Source:** REQ-CUST-001, REQ-STORE-003; `docs/PROJECT.md` §2.
+- **Concept:** one shared customer identity usable across both stores, never duplicated per store. The implemented record carries name, an optional contact, and an optional address. Authorized users can edit incorrect details; deletion is refused for any customer referenced by sales or credit records, so no historical transaction can break (DEC-049).
+- **Source:** REQ-CUST-001, REQ-STORE-003; `docs/PROJECT.md` §2; customer edit/delete per client request (DEC-049).
 - **Boundary:** exact identity fields are Confirmation Required beyond the implemented name, contact, and address; no per-store customer copies exist in this model.
 
 ### 4.3 Product / Item — Confirmed
@@ -52,9 +52,9 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.4 Sale — Confirmed
 
-- **Concept:** a store-specific completed sale recording customer (optional), purchased items with quantities, business sale date, payment type (cash or charge), mode of payment, an optional one-time discount, and delivery details when applicable. Net total = items + delivery fee − discount.
-- **Source:** REQ-SALE-001–007; `docs/PROJECT.md` §4.
-- **Boundary:** the business sale date defaults to today, may be backdated, and drives credit due dates (independent of creation time); exact payment-method vocabulary and discount policy are Confirmation Required; editing, cancellation, and reversal behavior are Confirmation Required; no additional sale attributes defined here.
+- **Concept:** a store-specific completed sale recording customer (optional), purchased items with quantities, business sale date, payment type (cash or charge), mode of payment, an optional one-time discount, and delivery details when applicable. Net total = items + delivery fee − discount. Admins can delete a sale to correct mistakes (client revision, DEC-049): deletion restores the sale's deducted stock, refuses sales whose credit has recorded payments, and removes the unpaid credit atomically; encoded legacy credit rows (`is_legacy`) are managed under Credit, not Sales.
+- **Source:** REQ-SALE-001–007; `docs/PROJECT.md` §4; sale deletion per client request (DEC-049).
+- **Boundary:** the business sale date defaults to today, may be backdated, and drives credit due dates (independent of creation time); exact payment-method vocabulary and discount policy are Confirmation Required; sale editing and reversal (beyond deletion) are Confirmation Required; no additional sale attributes defined here.
 
 ### 4.5 Purchased items (sale lines) — Confirmed
 
@@ -64,8 +64,8 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.6 Credit obligation — Confirmed
 
-- **Concept:** a shared outstanding obligation arising from a charge sale, carrying the originating store, selected payment terms with an automatically calculated due date, remaining balance, and outstanding/settled state. Encoded existing balances (client change, DEC-048) are balance-only obligations with no originating sale and no payment terms — an admin-set due date and origin store only — and never affect stock; they are settled through the normal payment flow.
-- **Source:** REQ-CRED-001–004, REQ-CRED-006; `docs/PROJECT.md` §4; existing-credit encoding per client request (DEC-048).
+- **Concept:** a shared outstanding obligation arising from a charge sale, carrying the originating store, selected payment terms with an automatically calculated due date, remaining balance, and outstanding/settled state. Encoded existing balances (client change, DEC-049) carry complete transaction details: they are backed by a legacy sales row (`is_legacy`, excluded from sales lists, dashboards, and reports) whose sale lines record the item details — customer, date, item, quantity, price, total — plus an optional initial partial payment. Encoding never affects stock; the balance settles through the normal payment flow (partial payments, fully-paid status, remaining balance).
+- **Source:** REQ-CRED-001–004, REQ-CRED-006; `docs/PROJECT.md` §4; existing-credit encoding per client request (DEC-048, revised DEC-049).
 - **Boundary:** exact term options, calculation rules, and status vocabulary beyond outstanding/settled are Confirmation Required.
 
 ### 4.7 Payment — Confirmed
@@ -76,8 +76,8 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.8 Inventory / Stock — Confirmed
 
-- **Concept:** the per-store quantity of a product/item held by Amara or Zeann, increased by receiving and decreased by successful sales. Each stock row carries an admin-approval state (client change, DEC-048, amending DEC-032): once an admin approves a row, store staff can no longer manually edit or delete it — only admins can — while receiving into an approved row stays allowed (the normal workflow, not a manual edit).
-- **Source:** REQ-INV-001–002; `docs/PROJECT.md` §2; approved-inventory lock per client request (DEC-048).
+- **Concept:** the per-store quantity of a product/item held by Amara or Zeann, increased by receiving and decreased by successful sales; each row also carries the store's current selling price (falling back to the latest priced receiving record when unset) and an admin-approval state (client changes, DEC-048/DEC-049): approved rows are edit/delete-locked for staff — only admins can edit quantity or price — while receiving into an approved row stays allowed. Deleting a sale restores its deducted stock.
+- **Source:** REQ-INV-001–002; `docs/PROJECT.md` §2; approved-inventory lock and price editing per client request (DEC-048, DEC-049).
 - **Boundary:** exact stock calculations, negative-stock rules, adjustment workflows, and reversal behavior are Confirmation Required.
 
 ### 4.9 Receiving record — Confirmed

@@ -264,6 +264,69 @@ export function assertActiveRecorder(userId: UserId): void {
   }
 }
 
+export interface UpdateOwnAccountInput {
+  /** Mock-path caller id; the Supabase path uses the authenticated session. */
+  userId: UserId
+  currentPassword: string
+  username?: string
+  newPassword?: string
+}
+
+/**
+ * Self-service account change ("My Account", DEC-049): the current password
+ * is verified, the username syncs the auth identity server-side, and a
+ * password change keeps the caller's current session alive.
+ */
+export async function updateOwnAccount(
+  input: UpdateOwnAccountInput,
+): Promise<{ username: string }> {
+  if (isSupabaseConfigured && supabase) {
+    const { data, error } = await supabase.rpc('update_own_account', {
+      p_current_password: input.currentPassword,
+      p_username: input.username?.trim().toLowerCase() || null,
+      p_new_password: input.newPassword ?? null,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return { username: (data?.username as string) ?? '' }
+  }
+  const user = getDb().users.find((item) => item.id === input.userId)
+  if (!user) {
+    throw new ServiceError('not_found', 'User not found.')
+  }
+  if (!user.active) {
+    throw new ServiceError('validation', 'This account is disabled. Contact the admin.')
+  }
+  if (user.password !== input.currentPassword) {
+    throw new ServiceError('validation', 'Your current password is incorrect.')
+  }
+  let username = user.username
+  if (input.username !== undefined) {
+    const next = input.username.trim().toLowerCase()
+    if (!next) {
+      throw new ServiceError('validation', 'Username is required.')
+    }
+    if (next !== user.username.toLowerCase()) {
+      const taken = getDb().users.some(
+        (item) => item.id !== user.id && item.username.toLowerCase() === next,
+      )
+      if (taken) {
+        throw new ServiceError('conflict', 'That username is already taken.')
+      }
+      username = next
+      user.username = next
+    }
+  }
+  if (input.newPassword !== undefined) {
+    if (input.newPassword.length < 4) {
+      throw new ServiceError('validation', 'Password must be at least 4 characters.')
+    }
+    user.password = input.newPassword
+  }
+  return { username }
+}
+
 /**
  * Maps a supabase-js/PostgREST error into a ServiceError with user-safe copy.
  * Our atomic functions raise business messages with errcode P0001; those copy

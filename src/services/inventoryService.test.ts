@@ -43,6 +43,24 @@ describe('inventoryService', () => {
       expect(await getStock('amara', 'prod-new')).toMatchObject({ quantity: 5 })
     })
 
+    it('sets the current selling price when provided (DEC-049)', async () => {
+      await updateStock('amara', 'prod-1', {
+        quantity: 20,
+        priceMinor: 118000,
+        actorUserId: actor.userId,
+        actorRole: actor.role,
+      })
+      const priced = (await listStock({ storeId: 'amara', productId: 'prod-1' }))[0]
+      expect(priced?.priceMinor).toBe(118000)
+      // Omitting the price leaves it untouched.
+      await updateStock('amara', 'prod-1', {
+        quantity: 18,
+        actorUserId: actor.userId,
+        actorRole: actor.role,
+      })
+      expect(await getStock('amara', 'prod-1')).toMatchObject({ quantity: 18, priceMinor: 118000 })
+    })
+
     it('rejects non-integer and negative quantities', async () => {
       await expect(
         updateStock('amara', 'prod-1', {

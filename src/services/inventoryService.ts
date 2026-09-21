@@ -1,5 +1,6 @@
 import type { ProductId, StockLevel, UserRole } from '@/domain'
 import type { StoreId } from '@/domain'
+import type { Money } from '@/lib/money'
 import { getDb } from './mocks/db'
 import { logAuditEvent } from './auditService'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
@@ -12,7 +13,7 @@ export async function listStock(
   if (isSupabaseConfigured && supabase) {
     let query = supabase
       .from('stock_levels')
-      .select('store_id, product_id, quantity, admin_approved')
+      .select('store_id, product_id, quantity, admin_approved, price_minor')
     if (filter.storeId) {
       query = query.eq('store_id', filter.storeId)
     }
@@ -28,6 +29,7 @@ export async function listStock(
       productId: row.product_id,
       quantity: row.quantity,
       adminApproved: row.admin_approved ?? false,
+      priceMinor: row.price_minor ?? undefined,
     }))
   }
   return getDb()
@@ -59,6 +61,8 @@ export function applyStockDelta(storeId: StoreId, productId: ProductId, delta: n
 export interface UpdateStockInput {
   /** New absolute quantity for the row. */
   quantity: number
+  /** New current selling price; omitted leaves the existing price untouched. */
+  priceMinor?: Money
   actorUserId: string
   actorRole: UserRole
 }
@@ -70,8 +74,9 @@ export interface UpdateStockResult {
 }
 
 /**
- * Manual stock correction. Sets the absolute quantity for a product at a
- * store; rows are created when the row never existed or was deleted.
+ * Manual stock correction. Sets the absolute quantity (and optionally the
+ * store's current selling price) for a product at a store; rows are created
+ * when the row never existed or was deleted.
  */
 export async function updateStock(
   storeId: StoreId,
@@ -94,18 +99,27 @@ export async function updateStock(
       p_store_id: storeId,
       p_product_id: productId,
       p_quantity: input.quantity,
+      p_price_minor: input.priceMinor ?? null,
     })
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
     return {
-      level: { storeId, productId, quantity: input.quantity },
+      level: {
+        storeId,
+        productId,
+        quantity: input.quantity,
+        ...(input.priceMinor !== undefined ? { priceMinor: input.priceMinor } : {}),
+      },
       previousQuantity: previous?.quantity ?? 0,
     }
   }
   const db = getDb()
   if (!Number.isInteger(input.quantity) || input.quantity < 0) {
     throw new ServiceError('validation', 'Quantity must be a whole number of 0 or more.')
+  }
+  if (input.priceMinor !== undefined && input.priceMinor < 0) {
+    throw new ServiceError('validation', 'Price cannot be negative.')
   }
   const level = getStockRow(storeId, productId)
   const previousQuantity = level?.quantity ?? 0
@@ -115,11 +129,27 @@ export async function updateStock(
   }
   if (!level) {
     if (input.quantity === 0) {
-      return { level: { storeId, productId, quantity: 0 }, previousQuantity }
+      return {
+        level: {
+          storeId,
+          productId,
+          quantity: 0,
+          ...(input.priceMinor !== undefined ? { priceMinor: input.priceMinor } : {}),
+        },
+        previousQuantity,
+      }
     }
-    db.stock.push({ storeId, productId, quantity: input.quantity })
+    db.stock.push({
+      storeId,
+      productId,
+      quantity: input.quantity,
+      ...(input.priceMinor !== undefined ? { priceMinor: input.priceMinor } : {}),
+    })
   } else {
     level.quantity = input.quantity
+    if (input.priceMinor !== undefined) {
+      level.priceMinor = input.priceMinor
+    }
   }
 
   await logAuditEvent({
@@ -128,11 +158,20 @@ export async function updateStock(
     actorRole: input.actorRole,
     storeId,
     subject: db.products.find((product) => product.id === productId)?.name ?? 'Item',
-    detail: `Adjusted from ${previousQuantity} to ${input.quantity}`,
+    detail:
+      `Adjusted from ${previousQuantity} to ${input.quantity}` +
+      (input.priceMinor !== undefined
+        ? ` · price set to ${(input.priceMinor / 100).toFixed(2)}`
+        : ''),
   })
 
   return {
-    level: { storeId, productId, quantity: input.quantity },
+    level: {
+      storeId,
+      productId,
+      quantity: input.quantity,
+      ...(input.priceMinor !== undefined ? { priceMinor: input.priceMinor } : {}),
+    },
     previousQuantity,
   }
 }
@@ -210,8 +249,19 @@ export async function approveStock(
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
-    const row = getStockRow(storeId, productId)
-    return { storeId, productId, quantity: row?.quantity ?? 0, adminApproved: true }
+    const { data } = await supabase
+      .from('stock_levels')
+      .select('quantity, price_minor')
+      .eq('store_id', storeId)
+      .eq('product_id', productId)
+      .maybeSingle()
+    return {
+      storeId,
+      productId,
+      quantity: data?.quantity ?? 0,
+      priceMinor: data?.price_minor ?? undefined,
+      adminApproved: true,
+    }
   }
   const row = getStockRow(storeId, productId)
   if (!row) {

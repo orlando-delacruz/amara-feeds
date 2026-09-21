@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createSale, listSales } from './saleService'
+import { createSale, deleteSale, listSales } from './saleService'
 import { getStock } from './inventoryService'
-import { listCredits, previewDueDate } from './creditService'
+import { createExistingCredit, listCredits, previewDueDate } from './creditService'
+import { recordPayment } from './paymentService'
 import { resetDb } from './mocks/db'
 import { todayIso } from '@/lib/dates'
 
@@ -122,5 +123,76 @@ describe('saleService', () => {
     await expect(createSale({ ...base, saleDate: 'not-a-date' })).rejects.toMatchObject({
       code: 'validation',
     })
+  })
+
+  describe('deleteSale (DEC-049)', () => {
+    it('deletes a cash sale and restores the stock it deducted', async () => {
+      const sale = await createSale({
+        storeId: 'amara',
+        paymentType: 'cash',
+        lines: [{ productId: 'prod-1', quantity: 3, unitPriceMinor: 115000 }],
+        recordedByUserId: 'user-1',
+      })
+      expect(await getStock('amara', 'prod-1')).toMatchObject({ quantity: 17 })
+
+      await deleteSale(sale.id)
+
+      expect(await getStock('amara', 'prod-1')).toMatchObject({ quantity: 20 })
+      expect((await listSales({ storeId: 'amara' })).some((item) => item.id === sale.id)).toBe(
+        false,
+      )
+    })
+
+    it('refuses to delete a sale whose credit has payments', async () => {
+      const sale = await createSale({
+        storeId: 'amara',
+        paymentType: 'charge',
+        customerId: 'cust-1',
+        termsId: 'terms-15',
+        lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 115000 }],
+        recordedByUserId: 'user-1',
+      })
+      const obligation = (await listCredits({ customerId: 'cust-1' })).find(
+        (credit) => credit.saleId === sale.id,
+      )
+      await recordPayment({
+        creditId: obligation!.id,
+        storeId: 'amara',
+        amountMinor: 100,
+        method: 'Cash',
+        recordedByUserId: 'user-1',
+      })
+      await expect(deleteSale(sale.id)).rejects.toMatchObject({ code: 'validation' })
+      expect(await getStock('amara', 'prod-1')).toMatchObject({ quantity: 19 })
+    })
+  })
+
+  it('hides encoded legacy credits from the sales list (DEC-049)', async () => {
+    await createExistingCredit({
+      customerId: 'cust-1',
+      originStoreId: 'amara',
+      date: '2026-09-10',
+      dueDate: '2026-10-01',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 90000 }],
+      recordedByUserId: 'user-3',
+    })
+    const sales = await listSales({ storeId: 'amara' })
+    expect(sales.every((sale) => !sale.isLegacy)).toBe(true)
+    expect(
+      (await listCredits({ customerId: 'cust-1' })).some(
+        (credit) => credit.saleId !== undefined && credit.termsId === undefined,
+      ),
+    ).toBe(true)
+  })
+
+  it('prices new sales from the stock-row price when set (DEC-049)', async () => {
+    // Seed rows have no stock price — the latest receipt answers.
+    const sale = await createSale({
+      storeId: 'amara',
+      paymentType: 'cash',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 0 }],
+      recordedByUserId: 'user-1',
+    })
+    expect(sale.totalMinor).toBe(115000)
   })
 })

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import { approveStock, deleteStock, getCurrentStock } from '@/services'
+import { approveStock, deleteStock, getCurrentStock, listStorePrices } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -14,6 +14,7 @@ import { isAllStores, storeLabel, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import { EditStockDialog } from './EditStockDialog'
 import type { ProductId, StoreId } from '@/domain'
+import type { Money } from '@/lib/money'
 
 interface Row {
   storeId: StoreId
@@ -21,6 +22,7 @@ interface Row {
   productName: string
   quantity: number
   adminApproved?: boolean
+  priceMinor?: Money
 }
 
 const RowActions = styled.div`
@@ -51,6 +53,17 @@ export function InventoryPage() {
     const stock = await getCurrentStock()
     return allMode ? stock : stock.filter((row) => row.storeId === store)
   }, store)
+  // Effective selling prices: stock-row price wins, latest receipt fills gaps.
+  const storePrices = useAsyncData(
+    () =>
+      allMode
+        ? Promise.resolve<Record<string, Money>>({})
+        : listStorePrices(store as 'amara' | 'zeann'),
+    store,
+  )
+  function effectivePrice(row: Row): Money | undefined {
+    return row.priceMinor ?? storePrices.data?.[row.productId]
+  }
   const remove = useAlertMutation(
     (input: { storeId: StoreId; productId: ProductId }) =>
       deleteStock(input.storeId, input.productId, {
@@ -184,7 +197,7 @@ export function InventoryPage() {
       </AsyncBoundary>
       <EditStockDialog
         key={editing?.productId ?? 'none'}
-        row={editing}
+        row={editing ? { ...editing, priceMinor: effectivePrice(editing) } : null}
         actorUserId={user?.id}
         actorRole={user?.role ?? 'staff'}
         onClose={() => setEditing(null)}

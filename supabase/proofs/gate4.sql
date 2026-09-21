@@ -406,4 +406,158 @@ select quantity = 18 as admin_still_edits from public.stock_levels
 rollback;
 select 'pass: approved inventory admin-edit-only, receiving unaffected' as proof;
 
+-- --- 19. Existing credit with item details; stock untouched ------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select quantity = 20 as stock_before from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+select public.record_existing_credit(
+  'aaaaaaaa-0000-0000-0000-000000000003', 'amara', current_date - 10, current_date + 15,
+  '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":2,"unit_price_minor":100000}]',
+  50000, 'Cash'
+) as encoded \gset
+select balance_minor = 150000 and status = 'outstanding' and terms_id is null
+  as encoded_balance from public.credit_obligations
+ where id = (:'encoded'::jsonb->>'credit_id')::uuid;
+select quantity = 20 as stock_untouched_by_encoding from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+select s.is_legacy and s.total_minor = 200000 as legacy_sale_rows
+  from public.sales s where s.id = (:'encoded'::jsonb->>'sale_id')::uuid;
+select count(*) = 1 as legacy_sale_has_lines from public.sale_lines
+ where sale_id = (:'encoded'::jsonb->>'sale_id')::uuid;
+select exists (
+  select 1 from public.payments p
+   where p.credit_id = (:'encoded'::jsonb->>'credit_id')::uuid and p.amount_minor = 50000
+) as initial_payment_recorded;
+rollback;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.record_existing_credit(
+      'aaaaaaaa-0000-0000-0000-000000000003', 'amara', current_date, current_date + 15,
+      '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":1,"unit_price_minor":100000}]',
+      null, null);
+    raise exception 'FAIL: staff encoded existing credit';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff credit encoding blocked'; else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: encoded credit carries items + payment, stock untouched' as proof;
+
+-- --- 20. delete_sale: stock restored; paid sales refused; admin-only ----
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+select public.record_sale('amara', current_date, null, 'cash', 'Cash', 0, null, null, 0, null,
+  '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":2}]'
+) as cash_sale \gset
+select :'cash_sale'::jsonb->>'sale_id' as proof_sale_id \gset
+select quantity = 18 as stock_after_sale from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+set local app.proof_sale_id = :'proof_sale_id';
+do $$
+declare sid uuid := nullif(current_setting('app.proof_sale_id', true), '')::uuid;
+begin
+  begin
+    perform public.delete_sale(sid);
+    raise notice 'admin deleted the sale';
+  exception when others then
+    raise exception 'FAIL: admin delete failed: %', sqlerrm;
+  end;
+end $$;
+select quantity = 20 as stock_restored_after_delete from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+rollback;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+set local request.jwt.claim.role = 'authenticated';
+select public.record_sale('zeann', current_date, 'aaaaaaaa-0000-0000-0000-000000000002',
+  'charge', null, 0, null, null, 0, 'terms-7',
+  '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000002","quantity":1}]'
+) as charge_sale \gset
+select :'charge_sale'::jsonb->>'sale_id' as proof_sale_id \gset
+select public.record_payment(
+  (select id from public.credit_obligations
+    where sale_id = (:'charge_sale'::jsonb->>'sale_id')::uuid),
+  'zeann', 100, 'Cash');
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+set local app.proof_sale_id = :'proof_sale_id';
+do $$
+declare sid uuid := nullif(current_setting('app.proof_sale_id', true), '')::uuid;
+begin
+  begin
+    perform public.delete_sale(sid);
+    raise exception 'FAIL: paid sale deleted';
+  exception when others then
+    if sqlerrm like '%recorded payments%' then raise notice 'sale with payments cannot be deleted';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: sale delete restores stock, refuses paid, admin-only' as proof;
+
+-- --- 21. Customer edit + guarded delete --------------------------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+select public.create_customer('Proof Temp Customer', null, null) as temp_cust \gset
+select public.update_customer((:'temp_cust'::jsonb->>'customer_id')::uuid, 'Proof Renamed', '0917', 'Address');
+select name = 'Proof Renamed' and contact = '0917' as customer_renamed
+  from public.customers where id = (:'temp_cust'::jsonb->>'customer_id')::uuid;
+select public.delete_customer((:'temp_cust'::jsonb->>'customer_id')::uuid);
+select count(*) = 0 as temp_customer_gone from public.customers
+ where id = (:'temp_cust'::jsonb->>'customer_id')::uuid;
+do $$
+begin
+  begin
+    perform public.delete_customer('aaaaaaaa-0000-0000-0000-000000000001');
+    raise exception 'FAIL: referenced customer deleted';
+  exception when others then
+    if sqlerrm like '%recorded sales%' then raise notice 'referenced customer delete blocked'; else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: customer edit works, referenced delete refused' as proof;
+
+-- --- 22. update_own_account: password-verified self-service -------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.update_own_account('wrong-password', 'ownerx', null);
+    raise exception 'FAIL: wrong current password accepted';
+  exception when others then
+    if sqlerrm like '%current password is incorrect%' then raise notice 'wrong current password refused';
+    else raise; end if;
+  end;
+end $$;
+select public.update_own_account('admin123', 'owner2', 'brandnew123');
+select username = 'owner2' as username_updated from public.profiles where id = auth.uid();
+reset role;
+select crypt('brandnew123', encrypted_password) = encrypted_password as new_password_valid,
+       email = 'owner2@zafone.local' as auth_email_synced
+  from auth.users where id = '33333333-3333-3333-3333-333333333333';
+rollback;
+select 'pass: own-account change verified, identity synced' as proof;
+
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

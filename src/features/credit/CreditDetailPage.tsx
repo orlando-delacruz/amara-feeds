@@ -202,6 +202,23 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
               </DetailGrid>
             </Card>
 
+            <RecordList
+              caption="Items received"
+              columns={[
+                { key: 'item', header: 'Item' },
+                { key: 'quantity', header: 'Qty' },
+                { key: 'price', header: 'Price' },
+                { key: 'total', header: 'Line total' },
+              ]}
+              rows={(history.data?.items ?? []).map((item) => ({
+                item: item.productName,
+                quantity: String(item.quantity),
+                price: <MoneyText amountMinor={item.unitPriceMinor} />,
+                total: <MoneyText amountMinor={item.quantity * item.unitPriceMinor} />,
+              }))}
+              emptyMessage="No item details recorded for this credit."
+            />
+
             {settled ? (
               <Alert variant="success">This credit is fully paid and settled.</Alert>
             ) : (

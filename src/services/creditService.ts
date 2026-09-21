@@ -1,12 +1,17 @@
 import type {
   CreditHistory,
   CreditId,
+  CreditItem,
   CreditObligation,
   CreditStatus,
   CustomerId,
+  Payment,
   PaymentTerms,
   PaymentTermsId,
+  ProductId,
+  Sale,
   SaleId,
+  UserId,
 } from '@/domain'
 import type { StoreId } from '@/domain'
 import type { Money } from '@/lib/money'
@@ -126,6 +131,21 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
       .select('id, credit_id, store_id, amount_minor, method, recorded_by_user_id, paid_at')
       .eq('credit_id', id)
       .order('paid_at', { ascending: false })
+    // Item details come from the originating sale (a charge sale or an
+    // encoded legacy credit row) — "similarly to the Sales details".
+    let items: CreditItem[] = []
+    if (credit.sale_id) {
+      const { data: lines } = await supabase
+        .from('sale_lines')
+        .select('product_id, quantity, unit_price_minor, products(name)')
+        .eq('sale_id', credit.sale_id)
+      items = (lines ?? []).map((line) => ({
+        productId: line.product_id,
+        productName: (line.products as { name?: string } | null)?.name ?? 'Unknown item',
+        quantity: line.quantity,
+        unitPriceMinor: line.unit_price_minor as Money,
+      }))
+    }
     return {
       credit: {
         id: credit.id,
@@ -148,13 +168,22 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
         recordedByUserId: row.recorded_by_user_id,
         paidAt: row.paid_at,
       })),
+      items,
     }
   }
   const credit = await getCredit(id)
   const payments = getDb()
     .payments.filter((payment) => payment.creditId === id)
     .map((payment) => ({ ...payment }))
-  return { credit, payments }
+  const sale = credit.saleId ? getDb().sales.find((item) => item.id === credit.saleId) : undefined
+  const items: CreditItem[] = (sale?.lines ?? []).map((line) => ({
+    productId: line.productId,
+    productName:
+      getDb().products.find((product) => product.id === line.productId)?.name ?? 'Unknown item',
+    quantity: line.quantity,
+    unitPriceMinor: line.unitPriceMinor,
+  }))
+  return { credit, payments, items }
 }
 
 export interface CreateObligationInput {
@@ -187,47 +216,81 @@ export function createObligationFromSale(input: CreateObligationInput): CreditOb
   return { ...obligation }
 }
 
+export interface CreateExistingCreditItem {
+  productId: ProductId
+  quantity: number
+  unitPriceMinor: Money
+}
+
 export interface CreateExistingCreditInput {
   customerId: CustomerId
   originStoreId: StoreId
-  amountMinor: Money
+  /** Transaction date (when the customer received the items). */
+  date: string
   /** Admin-set due date (legacy balances carry no terms). */
   dueDate: string
+  lines: CreateExistingCreditItem[]
+  initialPaymentMinor?: Money
+  initialPaymentMethod?: string
+  recordedByUserId: UserId
 }
 
 /**
- * Encodes a customer's pre-system credit balance (client change): a
- * balance-only obligation with no sale and no stock/receiving effect. The
- * database function is admin-only and writes the `credit.imported` audit
- * event; payments against it ride the normal payment flow.
+ * Encodes a customer's pre-system credit balance with complete transaction
+ * details (client revision): a legacy sales row carries the item lines
+ * (excluded from sales lists and summaries), the credit obligation links to
+ * it, and an optional initial partial payment rides the normal payment flow.
+ * Encoding never touches inventory — stock moves only through real sales.
+ * The database function is admin-only and writes the `credit.imported` audit
+ * event.
  */
 export async function createExistingCredit(
   input: CreateExistingCreditInput,
 ): Promise<CreditObligation> {
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.rpc('create_existing_credit', {
+    const { data, error } = await supabase.rpc('record_existing_credit', {
       p_customer_id: input.customerId,
       p_store_id: input.originStoreId,
-      p_amount_minor: input.amountMinor,
+      p_date: input.date,
       p_due_date: input.dueDate,
+      p_lines: input.lines.map((line) => ({
+        product_id: line.productId,
+        quantity: line.quantity,
+        unit_price_minor: line.unitPriceMinor,
+      })),
+      p_initial_payment_minor: input.initialPaymentMinor ?? null,
+      p_initial_payment_method: input.initialPaymentMethod?.trim() || null,
     })
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
+    const totalMinor = input.lines.reduce(
+      (total, line) => total + line.quantity * line.unitPriceMinor,
+      0,
+    )
     return {
       id: data?.credit_id as string,
       customerId: input.customerId,
       originStoreId: input.originStoreId,
+      saleId: data?.sale_id as string,
       termsId: undefined,
       dueDate: input.dueDate,
-      originalAmountMinor: input.amountMinor,
-      balanceMinor: input.amountMinor,
-      status: 'outstanding',
+      originalAmountMinor: totalMinor,
+      balanceMinor: (data?.balance_minor as Money) ?? totalMinor,
+      status: (data?.status as CreditStatus) ?? 'outstanding',
       createdAt: new Date().toISOString(),
     }
   }
-  if (input.amountMinor <= 0) {
-    throw new ServiceError('validation', 'Credit amount must be greater than zero.')
+  if (input.lines.length === 0) {
+    throw new ServiceError('validation', 'At least one item is required.')
+  }
+  for (const line of input.lines) {
+    if (line.quantity <= 0) {
+      throw new ServiceError('validation', 'Item quantity must be greater than zero.')
+    }
+    if (line.unitPriceMinor < 0) {
+      throw new ServiceError('validation', 'Item price cannot be negative.')
+    }
   }
   if (!input.dueDate) {
     throw new ServiceError('validation', 'A due date is required.')
@@ -236,17 +299,59 @@ export async function createExistingCredit(
   if (!customer) {
     throw new ServiceError('not_found', 'Customer not found.')
   }
+  const totalMinor = input.lines.reduce(
+    (total, line) => total + line.quantity * line.unitPriceMinor,
+    0,
+  )
+  if (input.initialPaymentMinor !== undefined && input.initialPaymentMinor > totalMinor) {
+    throw new ServiceError('validation', 'The initial payment cannot exceed the credit amount.')
+  }
+
+  const createdAt = new Date().toISOString()
+  const sale: Sale = {
+    id: nextId('sale'),
+    storeId: input.originStoreId,
+    saleDate: input.date,
+    customerId: input.customerId,
+    paymentType: 'charge',
+    lines: input.lines.map((line) => ({ ...line })),
+    totalMinor,
+    recordedByUserId: input.recordedByUserId,
+    isLegacy: true,
+    createdAt,
+  }
+  getDb().sales.push(sale)
+
   const obligation: CreditObligation = {
     id: nextId('cred'),
     customerId: input.customerId,
     originStoreId: input.originStoreId,
+    saleId: sale.id,
     termsId: undefined,
     dueDate: input.dueDate,
-    originalAmountMinor: input.amountMinor,
-    balanceMinor: input.amountMinor,
+    originalAmountMinor: totalMinor,
+    balanceMinor: totalMinor,
     status: 'outstanding',
-    createdAt: new Date().toISOString(),
+    createdAt,
   }
   getDb().credits.push(obligation)
+
+  if (input.initialPaymentMinor !== undefined && input.initialPaymentMinor > 0) {
+    obligation.balanceMinor -= input.initialPaymentMinor
+    if (obligation.balanceMinor === 0) {
+      obligation.status = 'settled'
+    }
+    const payment: Payment = {
+      id: nextId('pay'),
+      creditId: obligation.id,
+      storeId: input.originStoreId,
+      amountMinor: input.initialPaymentMinor,
+      ...(input.initialPaymentMethod?.trim() ? { method: input.initialPaymentMethod.trim() } : {}),
+      recordedByUserId: input.recordedByUserId,
+      paidAt: createdAt,
+    }
+    getDb().payments.push(payment)
+  }
+
   return { ...obligation }
 }

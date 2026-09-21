@@ -72,7 +72,7 @@ Pre-deployment checklist: application journeys (sale, payment, receiving, produc
 
 Post-deployment smoke test against production: sign in as staff and admin; record a sale and confirm store context and stock effect; record a payment and confirm shared history; submit and approve a product; open dashboard summaries with export and printing; confirm mobile usability; install the app to a home screen (Android/iOS per the in-app tutorial) and confirm standalone launch, the install tutorial's once-per-device behavior, and the offline banner with no network; review console/network output for errors. A failed smoke test blocks launch; success means operational and verified — never guaranteed business outcomes.
 
-The service worker (`sw.js`) must remain reachable at the site root over HTTPS; it precaches the app shell, never Supabase API traffic, and prompts installed clients to refresh when a new deploy lands (DEC-043).
+The service worker (`sw.js`) must remain reachable at the site root over HTTPS; it precaches the app shell, never Supabase API traffic, and prompts installed clients to refresh when a new deploy lands (DEC-043). The update prompt must appear once per deploy and clear after Refresh — a prompt that reappears after refreshing is a defect, not a pending update.
 
 ## 11. Post-Deployment Monitoring
 
