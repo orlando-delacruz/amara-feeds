@@ -115,10 +115,11 @@ export async function signIn(input: { username: string; password: string }): Pro
       .select('id, username, name, role, store_id, active')
       .eq('id', data.user.id)
       .maybeSingle()
-    if (profileError || !profile) {
-      throw new ServiceError('validation', 'This account is disabled. Contact the admin.')
+    if (profileError) {
+      // A failed profile read is not the same as a disabled account.
+      throw new ServiceError('validation', 'Something went wrong. Please try again.')
     }
-    if (!profile.active) {
+    if (!profile || !profile.active) {
       throw new ServiceError('validation', 'This account is disabled. Contact the admin.')
     }
     return profileToUser(profile)
@@ -289,7 +290,13 @@ export function serviceErrorFromSupabase(error: { message: string; code?: string
     return new ServiceError('validation', message)
   }
   if (code === '23505' || /duplicate key/i.test(message)) {
-    return new ServiceError('conflict', message)
+    // Unique-violation messages carry raw constraint names — never surface
+    // them (docs/SECURITY.md §7). The only unique business key is the
+    // username; anything else gets a generic conflict.
+    if (/username/i.test(message)) {
+      return new ServiceError('conflict', 'That username is already taken.')
+    }
+    return new ServiceError('conflict', 'That record already exists.')
   }
 
   // Never surface raw database internals to users (docs/SECURITY.md §7, §11).

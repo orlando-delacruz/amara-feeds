@@ -15,7 +15,11 @@ export type PaymentType = 'cash' | 'charge'
 export interface SaleLine {
   productId: ProductId
   quantity: number
-  /** assumed: price captured at sale time; exact product pricing is Confirmation Required */
+  /**
+   * Display/preview price. The authoritative price is derived server-side
+   * from the product's most recent priced receiving record at the selling
+   * store (confirmed automatic-price rule) and returned with the saved sale.
+   */
   unitPriceMinor: Money
 }
 

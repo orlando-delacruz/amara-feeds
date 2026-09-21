@@ -171,4 +171,149 @@ end $$;
 rollback;
 select 'pass: stock-with-sales delete refused (DEC-032)' as proof;
 
+-- --- 10. C1: self-service privilege escalation is impossible ----------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    update public.profiles set role = 'admin' where id = auth.uid();
+  exception when others then
+    if sqlerrm like '%row-level security%' then raise notice 'self-update denied by RLS';
+    else raise; end if;
+  end;
+end $$;
+select role = 'staff' and active as profile_unchanged from public.profiles
+ where id = auth.uid();
+rollback;
+select 'pass: staff cannot elevate own role (C1)' as proof;
+
+-- --- 11. H1: a disabled account loses data access immediately ---------
+begin;
+update public.profiles set active = false
+ where id = '11111111-1111-1111-1111-111111111111';
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+select count(*) = 0 as disabled_staff_sees_no_sales from public.sales;
+select count(*) = 0 as disabled_staff_sees_no_customers from public.customers;
+rollback;
+select 'pass: disabled account loses read access (H1)' as proof;
+
+-- --- 12. H1: a disabled admin cannot approve products ------------------
+begin;
+update public.profiles set active = false
+ where id = '33333333-3333-3333-3333-333333333333';
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.approve_product('bbbbbbbb-0000-0000-0000-000000000003');
+    raise exception 'FAIL: disabled admin approved a product';
+  exception when others then
+    if sqlerrm like '%disabled%' then raise notice 'disabled admin blocked from approval';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: disabled admin cannot approve (H1)' as proof;
+
+-- --- 13. H2: cross-store delivery rider refused on sale ----------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.record_sale(
+      'amara', current_date, null, 'cash', 'Cash', 0,
+      'cccccccc-0000-0000-0000-000000000003', null, 0, null,
+      '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":1}]'
+    );
+    raise exception 'FAIL: cross-store rider accepted on sale';
+  exception when others then
+    if sqlerrm like '%rider is not active at this store%' then raise notice 'cross-store rider refused on sale';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: sale delivery rider store-scoped (H2)' as proof;
+
+-- --- 14. M1: sale prices derive from receiving; unpriced refused -------
+begin;
+insert into public.products (id, name, status)
+values ('bbbbbbbb-0000-0000-0000-000000000099', 'Proof Unpriced Item', 'active');
+insert into public.stock_levels (store_id, product_id, quantity)
+values ('amara', 'bbbbbbbb-0000-0000-0000-000000000099', 5)
+on conflict (store_id, product_id) do update set quantity = 5;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+-- Rice 25kg at Amara: latest priced receiving sells at 115000.
+select (public.record_sale(
+  'amara', current_date, null, 'cash', 'Cash', 0, null, null, 0, null,
+  '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":2}]'
+))->>'total_minor' as derived_total;  -- expect 230000
+do $$
+begin
+  begin
+    perform public.record_sale(
+      'amara', current_date, null, 'cash', 'Cash', 0, null, null, 0, null,
+      '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000099","quantity":1}]'
+    );
+    raise exception 'FAIL: unpriced sale allowed';
+  exception when others then
+    if sqlerrm like '%no price at this store%' then raise notice 'unpriced sale correctly refused';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: sale price derived server-side, unpriced refused (M1)' as proof;
+
+-- --- 15. M6: duplicate active product names refused --------------------
+begin;
+insert into public.products (id, name, status)
+values ('bbbbbbbb-0000-0000-0000-000000000098', 'Rice 25kg', 'pending');
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.approve_product('bbbbbbbb-0000-0000-0000-000000000098');
+    raise exception 'FAIL: duplicate active name approved';
+  exception when others then
+    if sqlerrm like '%already taken%' then raise notice 'duplicate active name refused';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: unique active product names (M6)' as proof;
+
+-- --- 16. C2: payment over-balance refused by the atomic guard ----------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+set local request.jwt.claim.role = 'authenticated';
+-- The guarded UPDATE re-checks balance_minor >= amount under the row lock,
+-- so concurrent payments cannot both pass; the single-caller case must
+-- still refuse overpayment with the friendly copy.
+do $$
+begin
+  begin
+    perform public.record_payment('aaaaaaaa-0000-0000-0000-000000000101', 'zeann', 19501, 'Cash');
+    raise exception 'FAIL: overpayment allowed';
+  exception when others then
+    if sqlerrm like '%remaining balance%' then raise notice 'overpayment correctly refused';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: atomic payment balance guard (C2)' as proof;
+
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

@@ -23,6 +23,7 @@ This file is the authoritative source for security requirements, principles, bou
 
 - Staff have access according to their assigned store (REQ-USER-002); store-specific sales and inventory remain appropriately restricted to their store context.
 - Admin can oversee both stores, including approvals, dashboards, reports, and business-wide review (REQ-USER-003).
+- Disabling an account removes its access immediately: every data policy requires the caller's profile to be active, live sessions are revoked on disable, and disabled callers are refused by the server-side operations. Disabled accounts cannot be self-reactivated (no self-service profile writes).
 - Customers are shared across Amara and Zeann; shared customer records are visible across stores per the user's permissions, never duplicated per store.
 - Credit/collection is shared across stores; cross-store payments are permitted while remaining traceable to both the credit-origin store and the payment store.
 - Enforcement is server-side at the data layer (Row Level Security boundary per `docs/TECH-STACK.md`); hiding controls or filtering data in the frontend is not an authorization boundary.
@@ -30,7 +31,7 @@ This file is the authoritative source for security requirements, principles, bou
 
 ## 4. Data-Access Principles
 
-- Row Level Security is an important enforcement boundary for store assignment and admin-wide access; frontend filtering is never relied on for security. Implemented (DEC-035): RLS is enabled on every exposed table; policies read the caller's `profiles` row via a `SECURITY DEFINER` helper (`current_profile`, only ever the caller's own row) wrapped in `(select …)` for single evaluation; mutations run through `SECURITY DEFINER` functions with in-body `auth.uid()` scope checks and `authenticated`-only execute grants.
+- Row Level Security is an important enforcement boundary for store assignment and admin-wide access; frontend filtering is never relied on for security. Implemented (DEC-035, hardened per DEC-047): RLS is enabled on every exposed table; policies read the caller's `profiles` row via a `SECURITY DEFINER` helper (`current_profile`, only ever the caller's own row) wrapped in `(select …)` for single evaluation, and every policy additionally requires the caller's profile to be active. Users never write their own profile row directly (no self-service role, store, or activation changes): all profile mutations run through admin-only `SECURITY DEFINER` functions with in-body `auth.uid()` scope checks; mutations run through `SECURITY DEFINER` functions with in-body `auth.uid()` scope checks and `authenticated`-only execute grants.
 - Every write is authenticated, authorized, and validated at the data layer.
 - Shared records (customers, credit, payment history) are readable across stores per permissions with origin/payment-store attribution intact; store-specific records (sales, inventory, receiving) are scoped to their store.
 - Principles only — no SQL policies, table names, grants, or database rules are defined here.
@@ -39,11 +40,11 @@ This file is the authoritative source for security requirements, principles, bou
 
 Security considerations for confirmed operations, enforced beyond the UI:
 
-- **Sales:** recorded within the staff user's store context; a sale belongs to one store.
+- **Sales:** recorded within the staff user's store context; a sale belongs to one store. Unit prices are derived server-side from the store's automatic pricing and are never accepted from the client; delivery rider/vehicle references are validated as active at the selling store.
 - **Automatic stock deduction:** a successful sale save deducts the selling store's stock atomically; partial writes (sale without deduction) are never valid outcomes.
 - **Receiving stock:** store-specific receipts with store, item, quantity, supplier, and purchase/cost price; stock increases only through confirmed receiving and sale flows.
 - **Credit creation:** charge sales create shared obligations with originating store and selected-terms due date; terms options beyond the confirmed workflow are Confirmation Required.
-- **Partial payments:** supported until the credit is fully paid, with balance and status updated on every payment.
+- **Partial payments:** supported until the credit is fully paid, with balance and status updated on every payment; the balance decrement is guarded at the data layer so concurrent payments can never exceed the remaining balance.
 - **Cross-store payments:** permitted through either store; origin store, payment store, history, balance, and status are all preserved and traceable.
 - **Product approval:** staff submissions enter pending state and become active only through admin approval; approval is never bypassed or replaced by validation.
 - **Staff accounts/store assignment:** individual accounts bound to one store determine operational context; assignment changes are privileged operations.
@@ -124,7 +125,7 @@ No payment, notification, analytics, or other third-party service is selected; n
 | --- | --- | --- | --- |
 | 1 | Authentication flow detail (session, provisioning, recovery, timeouts) | **Confirmation Required** | Foundation confirmed; detail not established. |
 | 2 | Exact role and permission model | **Confirmation Required** | Only store assignment and product approval confirmed. |
-| 3 | Data-access policies | **Assumed baseline implemented** | RLS boundary confirmed; policies implemented per DEC-035 (store scope, shared reads, admin-wide, no `auth.role()`). Exact rule changes Confirmation Required. |
+| 3 | Data-access policies | **Assumed baseline implemented** | RLS boundary confirmed; policies implemented per DEC-035, hardened per DEC-047 (active-caller predicate everywhere, no self-service profile writes, atomic payment guard). Exact rule changes Confirmation Required. |
 | 4 | Per-input validation and security controls | **Confirmation Required** | Principles only. |
 | 5 | Exact customer, product, payment, and receiving fields | **Confirmation Required** | No extra personal data without justification. |
 | 6 | Retention behavior | **Confirmation Required** | No periods defined. |

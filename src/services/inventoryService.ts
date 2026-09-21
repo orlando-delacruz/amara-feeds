@@ -76,6 +76,17 @@ export async function updateStock(
   input: UpdateStockInput,
 ): Promise<UpdateStockResult> {
   if (isSupabaseConfigured && supabase) {
+    // Read the current row first: adjust_stock does not return the previous
+    // quantity, and the caller uses it for its from→to feedback.
+    const { data: previous, error: previousError } = await supabase
+      .from('stock_levels')
+      .select('quantity')
+      .eq('store_id', storeId)
+      .eq('product_id', productId)
+      .maybeSingle()
+    if (previousError) {
+      throw serviceErrorFromSupabase(previousError)
+    }
     const { error } = await supabase.rpc('adjust_stock', {
       p_store_id: storeId,
       p_product_id: productId,
@@ -86,7 +97,7 @@ export async function updateStock(
     }
     return {
       level: { storeId, productId, quantity: input.quantity },
-      previousQuantity: input.quantity,
+      previousQuantity: previous?.quantity ?? 0,
     }
   }
   const db = getDb()

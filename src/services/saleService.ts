@@ -1,4 +1,4 @@
-import type { CustomerId, NewSaleInput, Sale, SaleId } from '@/domain'
+import type { CustomerId, NewSaleInput, ProductId, Sale, SaleId } from '@/domain'
 import type { StoreId } from '@/domain'
 import type { Money } from '@/lib/money'
 import { todayIso } from '@/lib/dates'
@@ -17,6 +17,27 @@ function cloneSale(sale: Sale): Sale {
 
 function saleDay(sale: Sale): string {
   return sale.saleDate
+}
+
+/**
+ * Mirrors the server-side price rule (record_sale): the selling price of the
+ * product's most recent priced receiving record at the store. The client
+ * never sets prices — cart prices are display-only.
+ */
+function derivedLinePrice(storeId: StoreId, productId: ProductId): Money {
+  const record = getDb()
+    .receiving.filter(
+      (entry) =>
+        entry.storeId === storeId &&
+        entry.productId === productId &&
+        entry.sellingPriceMinor !== undefined,
+    )
+    .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))[0]
+  if (!record || record.sellingPriceMinor === undefined) {
+    const name = getDb().products.find((product) => product.id === productId)?.name ?? 'Item'
+    throw new ServiceError('validation', `${name} has no price at this store yet.`)
+  }
+  return record.sellingPriceMinor
 }
 
 export async function listSales(
@@ -116,15 +137,23 @@ export async function createSale(input: NewSaleInput): Promise<Sale> {
       // Pass a real array: postgrest-js serializes it as a JSON array, which
       // PostgREST casts to the jsonb array `record_sale` expects (a stringified
       // JSON value arrives as a jsonb scalar and breaks jsonb_array_length).
+      // Prices are never sent: record_sale derives them from the store's most
+      // recent priced receiving record and returns the authoritative lines.
       p_lines: input.lines.map((line) => ({
         product_id: line.productId,
         quantity: line.quantity,
-        unit_price_minor: line.unitPriceMinor,
       })),
     })
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
+    const serverLines = ((data?.lines as Array<Record<string, unknown>> | undefined) ?? []).map(
+      (line) => ({
+        productId: line.product_id as string,
+        quantity: line.quantity as number,
+        unitPriceMinor: line.unit_price_minor as Money,
+      }),
+    )
     return {
       id: data?.sale_id as string,
       storeId: input.storeId,
@@ -132,7 +161,7 @@ export async function createSale(input: NewSaleInput): Promise<Sale> {
       customerId: input.customerId,
       paymentType: input.paymentType,
       paymentMethod: input.paymentMethod?.trim() || undefined,
-      lines: input.lines.map((line) => ({ ...line })),
+      lines: serverLines,
       delivery: input.delivery,
       discountMinor: input.discountMinor,
       totalMinor: (data?.total_minor as Money) ?? 0,
@@ -148,9 +177,6 @@ export async function createSale(input: NewSaleInput): Promise<Sale> {
   for (const line of input.lines) {
     if (line.quantity <= 0) {
       throw new ServiceError('validation', 'Item quantity must be greater than zero.')
-    }
-    if (line.unitPriceMinor < 0) {
-      throw new ServiceError('validation', 'Item price cannot be negative.')
     }
   }
   if (input.paymentMethod !== undefined && input.paymentMethod.trim().length === 0) {
@@ -170,7 +196,11 @@ export async function createSale(input: NewSaleInput): Promise<Sale> {
   }
 
   const createdAt = new Date().toISOString()
-  const lines = input.lines.map((line) => ({ ...line }))
+  const lines = input.lines.map((line) => ({
+    productId: line.productId,
+    quantity: line.quantity,
+    unitPriceMinor: derivedLinePrice(input.storeId, line.productId),
+  }))
   const itemsMinor = lines.reduce((total, line) => total + line.quantity * line.unitPriceMinor, 0)
   const deliveryFeeMinor = input.delivery?.feeMinor ?? 0
   const discountMinor: Money = input.discountMinor ?? 0
@@ -181,6 +211,11 @@ export async function createSale(input: NewSaleInput): Promise<Sale> {
     throw new ServiceError('validation', 'Discount cannot be more than the sale amount.')
   }
   const totalMinor = itemsMinor + deliveryFeeMinor - discountMinor
+  // A zero-amount charge sale would create an outstanding credit that can
+  // never be paid (payments require a positive amount).
+  if (input.paymentType === 'charge' && totalMinor === 0) {
+    throw new ServiceError('validation', 'A charge sale needs an amount greater than zero.')
+  }
 
   const sale: Sale = {
     id: nextId('sale'),

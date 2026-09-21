@@ -122,13 +122,21 @@ export function AuditTrailPage() {
               { key: 'store', header: 'Store' },
               { key: 'at', header: 'When' },
             ]}
-            rows={visible.map((event) => ({
-              action: AUDIT_ACTION_LABELS[event.action],
-              subject: `${event.subject}${event.detail ? ` — ${event.detail}` : ''}`,
-              actor: `${userNames.get(event.actorUserId) ?? 'Not available'} · ${event.actorRole === 'admin' ? 'Admin' : 'Staff'}`,
-              store: event.storeId ? <StoreBadge store={event.storeId} /> : 'Both stores',
-              at: <DateText value={event.createdAt} />,
-            }))}
+            rows={visible.map((event) => {
+              const actorName = userNames.get(event.actorUserId)
+              // Staff cannot read other profiles (RLS), so the only unresolved
+              // case is an admin actor — admin viewers resolve every name.
+              const actor = actorName
+                ? `${actorName} · ${event.actorRole === 'admin' ? 'Admin' : 'Staff'}`
+                : 'Admin'
+              return {
+                action: AUDIT_ACTION_LABELS[event.action],
+                subject: `${event.subject}${event.detail ? ` — ${event.detail}` : ''}`,
+                actor,
+                store: event.storeId ? <StoreBadge store={event.storeId} /> : 'Both stores',
+                at: <DateText value={event.createdAt} />,
+              }
+            })}
           />
         )}
       </AsyncBoundary>

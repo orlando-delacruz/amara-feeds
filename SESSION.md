@@ -6,49 +6,51 @@ This root-level file is the session handoff: a new chat session reads it first t
 
 - **Project:** ZAF ONE — business management web app for the **Amara and Zeann** two-store business, mobile-primary.
 - **Constraints:** ₱10,000 budget, target **September 30, 2026**, scope limited to the core version (`docs/PROJECT.md`, `docs/REQUIREMENTS.md`).
-- **Where the project is now: Phase 4–6 are built and live.** The hosted Supabase project is linked and is the real backend; all services run against it (the in-memory mock remains only for unit tests/preview).
+- **Where the project is now: Phases 4–6 built and live; the app is an installable PWA (DEC-043).** The hosted Supabase project is linked and is the real backend; all services run against it (the in-memory mock remains only for unit tests/preview).
 
 ## 2. Live environment (key facts)
 
-- **Supabase project (production):** `https://fsfmecmmpaljwurfqsto.supabase.co`, ref `fsfmecmmpaljwurfqsto`. Linked; migrations `00001–00006` applied. Migrations are the schema source of truth (`supabase/migrations/`).
+- **Supabase project (production):** `https://fsfmecmmpaljwurfqsto.supabase.co`, ref `fsfmecmmpaljwurfqsto`. Linked; migrations `00001–00006` applied. Migrations are the schema source of truth (`supabase/migrations/`). No DB changes were made this session.
 - **`.env` (gitignored)** holds `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`. Without them the app falls back to the in-memory mock (tests/preview path).
-- **YouTube-auth note:** client Supabase access token expires **2026-09-21** — after that, CLI work needs a fresh `npx supabase login` or a new personal access token.
+- **Auth note:** client Supabase access token expired **2026-09-21** — CLI work against hosted now needs a fresh `npx supabase login` or a new personal access token.
 - **Owner login (production):** `jhoann@admin.com` (+ password held by the client — **never committed**, DEC-042). The login field accepts an email-shaped handle directly; bare usernames still map to `username@zafone.local`.
 - Shared-credit model is **confirmed and kept**: credit stays with its origin store; cross-store payments are recorded with payment-store attribution (client confirmed — no "transfer" behavior).
+- PWA facts: SW only over HTTPS (Vercel OK); **SW is disabled in dev** (`devOptions.enabled: false`) — PWA behavior must be verified via `vite preview` or a deployed build.
 
-## 3. Work completed in this session (2026-09-20 → 21)
+## 3. Work completed (2026-09-20 → 21, two sessions)
 
-### Database + backend (DEC-034, DEC-035)
-- Supabase project initialized; imperative migrations `00001` (schema, FKs, stores/terms reference rows), `00002` (RLS everywhere via `SECURITY DEFINER` `current_profile()` helper + `to authenticated` predicates; no `auth.role()`/`user_metadata`), `00003` (atomic `SECURITY DEFINER` functions with in-body `auth.uid()` store checks: `record_sale`, `record_receiving`, `record_payment`, product submit/approve/reject, `adjust_stock`/`delete_stock`, rider/vehicle guarded delete, `create_customer`, `create_expense`, `create_staff`), `00004` (dev-parity seed + 3 auth users), `00005` (`create_staff` search_path fix incl. `extensions`; admin-only `update_staff` — rename, username sync, store reassign, enable/disable, password reset with session revocation), `00006` (pending-seed parity for the demo item).
-- **Gate 4 SQL proofs** in `supabase/proofs/gate4.sql` — all 9 pass (anon reaches nothing, store-scoped reads, shared cross-store reads, cross-store update denied, direct writes denied, sale atomic + oversell refused, payment settles + overpayment refused, approval gating, stock-delete guard). `db advisors` clean.
-- Hosted push fixed along the way: `00004` needed `set search_path = public, extensions` (pgcrypto) and **GoTrue-safe auth.users inserts** (token columns as `''`, one `auth.identities` row per user — otherwise GoTrue throws `Database error querying schema`).
+### Database + backend (DEC-034, DEC-035) — previous session
+- Migrations `00001` (schema, FKs, stores/terms rows), `00002` (RLS everywhere via `SECURITY DEFINER` `current_profile()` + `to authenticated` predicates), `00003` (atomic RPCs: `record_sale`, `record_receiving`, `record_payment`, product submit/approve/reject, `adjust_stock`/`delete_stock`, guarded deletes, `create_customer`, `create_expense`, `create_staff`), `00004` (dev-parity seed + auth users), `00005` (`create_staff` search_path fix; admin `update_staff` incl. password reset with session revocation), `00006` (pending-seed parity).
+- **Gate 4 SQL proofs** in `supabase/proofs/gate4.sql` — all 9 pass. `db advisors` clean.
+- Services dual-mode (supabase + mock fallback); `SessionProvider` restores the real Auth session; `serviceErrorFromSupabase` never surfaces raw SQLSTATEs; `p_lines` passed as a real JSON array (DEC-036).
+- **DEC-037** sellable-only catalog; **DEC-039** hosted wiped to owner-only clean slate (`supabase/cleanup/wipe-business-data.sql`); **DEC-040/041** admin store switch on the More page, default All stores; **DEC-042** owner login `jhoann@admin.com`.
 
-### Frontend integration
-- `@supabase/supabase-js` + `src/services/supabaseClient.ts`; every service runs against Supabase when env vars are set, mock fallback otherwise; `isSupabaseConfigured` is forced false under Vitest (tests stay mock-only).
-- `SessionProvider` restores the real Auth session; `signIn` authenticates via Supabase Auth with the email convention.
-- All services carry supabase branches: customers, products, inventory (`update_stock`/`delete_stock` RPCs), receiving, sales (nested `sale_lines` read), credit, payments, riders, vehicles, expenses (incl. `getDeliveryNetSummary`), users (`listUsers`/`updateUser` → `update_staff`), audit (`audit_events` table), dashboard summaries.
-- **Integration-hardening fixes (DEC-036):** `record_sale` receives `p_lines` as a real JSON array (stringified value arrived as jsonb scalar → 22023); staff pages run on real `profiles` (were silently mock); `serviceErrorFromSupabase` classifies `P0001` business copy and never surfaces raw SQLSTATEs; password fields gained a show/hide eye toggle; sale catalog and checkout gained distinct loading/error states.
+### PWA (DEC-043) — this session
+- `vite-plugin-pwa` (devDependency, Workbox `generateSW`): web manifest (standalone, brand navy `#013c68`), precached app shell with `navigateFallback` → `index.html`, Google-Fonts-only runtime caching, **Supabase API traffic never cached**.
+- `src/features/pwa/`: `installSupport.ts` (pure platform detection incl. iPadOS heuristic, standalone detection, dismissal flag `zaf.pwa.tutorial-dismissed`, `beforeinstallprompt` capture via `useSyncExternalStore`), `usePwaInstall.ts`, `InstallTutorialModal.tsx` (custom `Dialog` — Android steps + native "Install now" when captured; iOS Safari Share → Add to Home Screen), `InstallTutorialGate.tsx` (auto-opens once per device on signed-out→signed-in transition; any close-without-install persists dismissal), `OfflineBanner.tsx`.
+- "Get the app" entry on the More page (mobile, non-standalone only). Prompt-style updates: `registerSW({ onNeedRefresh })` in `main.tsx` → themed confirm → reload.
+- Icons in `public/` (pwa-192/512, maskable ×2, apple-touch-icon) generated by `scripts/generate-pwa-icons.mjs` (sharp installed ad hoc with `--no-save`, not a committed dependency).
+- Docs: DEC-043 + register; `TECH-STACK.md` §2/§3; `DEPLOYMENT.md` §10/§12 (smoke test includes install + offline banner; SW reachable at root); `UI-UX.md` §9.1.
 
-### Product/UX decisions this session
-- **DEC-032:** manual stock edit (absolute qty) + delete with sales-history guard, audited.
-- **DEC-033:** sign-in brand copy "ZAF ONE / Zeann & Amara Feeds Supply / One System • One Team • One Goal".
-- **DEC-037:** catalog lists only sellable items (priced = received at that store); approved-but-unstocked products stay hidden; seed parity via `00006`.
-- **DEC-038:** SweetAlert2 for ALL action feedback — success/failure modals everywhere (sign-in failure incl.), themed confirm modals replacing the removed `ConfirmDialog` (stock/rider/vehicle delete, approve/reject, staff enable/disable), sign-out confirmation on More page + TopBar. Inline page load/empty/error states and field validation unchanged. Test double in `src/test/swalMock.ts` (`__awaitSwal(title)` assertions). Known cosmetica: the wrong-password 400 in DevTools is the browser's network log for the expected failed auth request — not suppressible from app code.
-- **DEC-039:** hosted data wiped to owner-only clean slate (one-time FK-safe script `supabase/cleanup/wipe-business-data.sql`; kept `stores`, `payment_terms`; local dev seed untouched).
-- **DEC-040/041:** admin Amara/Zeann switch relocated to the **More page** ("Store context" section, admin-only) and defaults to **All stores** — combined admin views with a Store column on inventory/riders/vehicles/expenses/receiving-history/sales-list; write flows needing a concrete store (checkout, receiving record, payment) are disabled with a pointing hint until one is chosen. Admin header never renders a single-store badge. Staff unchanged (store-locked, no switch).
-- **DEC-042 (owner credential):** production owner login now uses the email handle `jhoann@admin.com` (password held by the client). `usernameEmail` passes email-shaped inputs through as-is. Client already confirmed it works in-browser after a fresh build.
+### UX refinements (DEC-044/045/046) — this session
+- **DEC-044:** the whole admin shell wears the selected store's theme (Amara brown, Zeann blue); "All stores" keeps the fixed navy combined theme. `StoreThemeProvider` accepts an `allStores` fallback (`adminAllStoresFallback` in `storeThemes.ts`); browser chrome follows. Header still never shows a single-store badge. Amends DEC-031.
+- **DEC-045:** charge sales store no mode of payment. Cart gains an optional "Down payment (₱)" field; entering one reveals Mode of payment (required). Save = `createSale` (no method) → find obligation by sale id → `recordPayment` via the existing payment flow (payment history + reduced balance; no schema change). Payment-step failure keeps the sale and shows a retry-from-credit-page popup. Client-side validation mirrors the server (0 ≤ dp ≤ net total).
+- **DEC-046:** admin dashboard Current/Received stock lists cap at 5 rows with "View all" → Inventory / Receiving; admin-only `StoreControl` quick switch also on the sales list and New Sale catalog (More stays central); catalog product cards show "On hand: N" (from `listStock`, display-only — DB still refuses oversell); adding a customer from the cart closes the dialog, selects the customer, and fires "Customer added." popup.
 
 ## 4. Verification baseline (current)
 
-- `typecheck`, `format:check`, `build`: pass. `lint`: exactly **1 pre-existing error** (DatePicker `react-hooks/set-state-in-effect`).
-- `test:run`: **242/246** — the only failures are the 4 documented pre-existing ones (DatePicker ×3, SaleListPage ×1). MorePage sign-out occasionally flakes under full parallel runs (passes in isolation).
-- Hosted: Gate-4 proofs + REST checks verified (owner sign-in, RLS scoping, sale→stock, staff create/update, wipe state).
+- `typecheck`, `format:check`, `build`: pass (build emits `manifest.webmanifest` + `sw.js`, 11 precache entries). `lint`: exactly **1 pre-existing error** (DatePicker `react-hooks/set-state-in-effect`).
+- `test:run`: **275/279** — the only failures are the 4 documented pre-existing ones (DatePicker ×3, SaleListPage ×1 `user.clear`). MorePage sign-out occasionally flakes under full parallel runs (passes in isolation).
+- Preview smoke passed (index/manifest/sw/deep-links 200; SW serves precache + routes). `vite preview` (or deploy) required for PWA behavior — SW is off in dev.
+- Hosted: unchanged since the DEC-039 wipe; Gate-4 proofs + REST checks verified previously. No new business data created on hosted.
 
 ## 5. Next steps / open items
 
-- **Phase 3 walkthrough** (owed per DEC-034 deferral) before Phase 7; Phase 7 real-system validation; Phase 8 hardening + Vercel deploy (needs `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` in Vercel env).
+- **Phase 3 walkthrough** (owed per DEC-034 deferral) — plan agreed with client: run against **hosted** with sample data, agent-driven data-layer/REST checks + a manual mobile/desktop browser script for the client, fix-as-found, then wipe back to the clean slate via the DEC-039 script. Not started yet.
+- **PWA real-device verification (manual, pending):** Android Chrome install + native prompt, iOS Safari Add to Home Screen, standalone launch, tutorial once-per-device behavior, offline banner, update prompt — against a deployed build.
+- Phase 7 real-system validation; Phase 8 hardening + Vercel deploy (needs `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` in Vercel env; SW must stay reachable at root over HTTPS).
+- Down-payment write is two sequential writes (sale, then payment) — not one transaction; documented retry path covers the gap (DEC-045).
 - Confirmation Required items remain flagged in `docs/DATA-MODEL.md` §11 / `API.md`; adopted-baseline assumptions have revisit triggers in DEC-034.
-- No new business data has been created on hosted as of 2026-09-21.
 
 ## 6. Relevant files (navigation map)
 
@@ -56,10 +58,11 @@ This root-level file is the session handoff: a new chat session reads it first t
 - DB access: `src/services/supabaseClient.ts`; store context: `src/store/` (`StoreProvider` defaults admin to `all`, staff locked).
 - Services: `src/services/*Service.ts` (dual-mode), errors mapping in `userService.serviceErrorFromSupabase`, `useAlertMutation` for popup-on-fail.
 - Session: `src/features/session/` (email-shaped login handles; `SessionProvider` marks wiped profiles unsigned-out via `.maybeSingle()`).
-- Feedback: `src/lib/swal.ts` (+ `src/test/swalMock.ts`), `useAlertMutation` hook.
-- Sales catalog: `src/features/sales/NewSalePage.tsx` (sellable-only, store-required hints); inventory edit/delete: `src/features/inventory/`.
+- Feedback: `src/lib/swal.ts` (+ `src/test/swalMock.ts` — **calls accumulate per file**, use `.at(-1)` when several tests fire the same title), `useAlertMutation` hook.
+- PWA: `src/features/pwa/`, `vite.config.ts` (VitePWA config), `src/main.tsx` (registerSW), `index.html` (iOS metas), `scripts/generate-pwa-icons.mjs`, More page "Get the app" entry.
+- Theme/admin paint: `src/theme/storeThemes.ts` (`adminAllStoresFallback`), `src/theme/StoreThemeProvider.tsx`, `src/app/layouts/AdminLayout.tsx` (paint follows store context).
+- Sales: `src/features/sales/NewSalePage.tsx` (StoreControl + "On hand"), `SaleListPage.tsx` (StoreControl), `SaleCartPage.tsx` (down-payment flow, add-customer popup); dashboard: `src/features/dashboard/AdminDashboardPage.tsx` (5-row caps + View all).
 - Admin store switch: `src/features/more/MorePage.tsx` (More → Store context).
-- Theme/admin paint: `src/app/layouts/` (AdminLayout fixed navy; TopBar hides badge for admins).
 
 ## 7. Recent decision register (one-liners)
 
@@ -76,5 +79,9 @@ This root-level file is the session handoff: a new chat session reads it first t
 | DEC-040 | Admin store switch relocated to the More page | Accepted |
 | DEC-041 | Admin default store context is All stores | Accepted |
 | DEC-042 | Production owner login uses an email handle | Accepted |
+| DEC-043 | Installable PWA with post-login install tutorial | Accepted |
+| DEC-044 | Admin paint follows the store context | Accepted |
+| DEC-045 | Charge-sale down payments ride the payment flow | Accepted |
+| DEC-046 | Dashboard, sales, and checkout UX refinements | Accepted |
 
 Full records in `docs/DECISIONS.md`.

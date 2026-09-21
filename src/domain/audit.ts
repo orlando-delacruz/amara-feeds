@@ -13,9 +13,12 @@ export type AuditAction =
   | 'product.rejected'
   | 'rider.added'
   | 'rider.status-changed'
+  | 'vehicle.added'
   | 'expense.recorded'
   | 'stock.updated'
   | 'stock.deleted'
+  | 'staff.added'
+  | 'staff.updated'
 
 export interface AuditEvent {
   id: AuditId

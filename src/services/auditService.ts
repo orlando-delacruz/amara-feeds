@@ -14,9 +14,12 @@ export const AUDIT_ACTION_LABELS: Record<AuditEvent['action'], string> = {
   'product.rejected': 'Product rejected',
   'rider.added': 'Rider added',
   'rider.status-changed': 'Rider status changed',
+  'vehicle.added': 'Vehicle added',
   'expense.recorded': 'Expense recorded',
   'stock.updated': 'Stock adjusted',
   'stock.deleted': 'Stock deleted',
+  'staff.added': 'Staff account added',
+  'staff.updated': 'Staff account updated',
 }
 
 /** Frontend-only session log. Derived seed history comes from stored records. */
@@ -43,11 +46,15 @@ export async function listAuditEvents(
 ): Promise<AuditEvent[]> {
   if (isSupabaseConfigured && supabase) {
     // Real audit trail: the atomic functions write audit_events; RLS already
-    // scopes rows to the caller's visibility. Filtering by date/store here is
-    // convenience only (the same scope RLS applies regardless).
+    // scopes rows to the caller's visibility. actor_role is denormalized on
+    // the row (trigger-maintained) because profile reads are RLS-scoped.
+    // Filtering by date/store here is convenience only (the same scope RLS
+    // applies regardless).
     let query = supabase
       .from('audit_events')
-      .select('id, action, actor_user_id, store_id, related_user_id, subject, detail, created_at')
+      .select(
+        'id, action, actor_user_id, actor_role, store_id, related_user_id, subject, detail, created_at',
+      )
     if (filter.storeId) {
       query = query.eq('store_id', filter.storeId)
     }
@@ -64,7 +71,7 @@ export async function listAuditEvents(
       id: row.id,
       action: row.action as AuditEvent['action'],
       actorUserId: row.actor_user_id,
-      actorRole: 'staff',
+      actorRole: (row.actor_role ?? 'staff') as AuditEvent['actorRole'],
       storeId: row.store_id ?? undefined,
       relatedUserId: row.related_user_id ?? undefined,
       subject: row.subject,
@@ -129,6 +136,18 @@ export async function listAuditEvents(
         subject: rider.name,
         detail: rider.active ? 'Active rider' : 'Inactive rider',
         createdAt: rider.createdAt,
+      })),
+    ...db.vehicles
+      .filter((vehicle) => vehicle.createdByUserId)
+      .map((vehicle): AuditEvent => ({
+        id: `audit-${vehicle.id}`,
+        action: 'vehicle.added',
+        actorUserId: vehicle.createdByUserId ?? '',
+        actorRole: roleOf(db.users, vehicle.createdByUserId ?? ''),
+        storeId: vehicle.storeId,
+        subject: vehicle.label,
+        detail: vehicle.active ? 'Active vehicle' : 'Inactive vehicle',
+        createdAt: vehicle.createdAt,
       })),
     ...db.expenses.map((expense): AuditEvent => ({
       id: `audit-${expense.id}`,

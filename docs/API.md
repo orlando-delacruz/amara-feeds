@@ -45,7 +45,7 @@ Status labels follow `TEMPLATE-GUIDE.md`: Confirmed, Conditional, Confirmation R
 Candidate operation groups, described conceptually — never field names or schema keys:
 
 - **Customer operations:** find or select an existing shared customer; add a new shared customer during a sale or from the customer area. Customer selection is optional for sales.
-- **Sale operations:** record a store-specific sale with optional customer, purchased items and quantities, cash-or-charge payment type, and delivery details when applicable (delivery fee plus rider and vehicle selected from the store's managed lists).
+- **Sale operations:** record a store-specific sale with optional customer, purchased items and quantities, cash-or-charge payment type, and delivery details when applicable (delivery fee plus rider and vehicle selected from the store's managed lists and validated as active at the same store). Unit prices are never client-supplied: the server derives each item's price from the store's automatic pricing (the selling price of the item's most recent receiving record at that store) and returns the authoritative priced lines and total.
 - **Credit operations:** raise a shared credit obligation from a charge sale under selected payment terms with an automatically calculated due date.
 - **Payment operations:** record full or partial payments against shared credit through either store, preserving the payment store within the shared history.
 - **Inventory operations:** read store-specific stock; stock changes only through sale deduction and receiving operations, never direct edits.
@@ -94,7 +94,7 @@ Authenticated, authorized admin operations within confirmed scope: access protec
 
 - **Structured application data:** all reads and writes pass through authenticated, authorized, validated data-platform operations; anonymous callers never reach operational data.
 - **Authentication foundation:** individual staff and admin identity via Supabase Auth; role and store assignment come from the `profiles` table (implemented per `docs/SECURITY.md` and DEC-035), not from client-editable identity metadata.
-- **Database-side integrity/enforcement:** atomic sale-with-deduction, payment-with-balance-update, approval-gated activation, and store-scoped access execute at the data layer where appropriate; exact mechanisms (transactions, functions, policies, triggers) are implementation detail, not defined here.
+- **Database-side integrity/enforcement:** atomic sale-with-deduction, concurrency-safe payment-with-balance-update (the balance guard re-checks against the current row value, so simultaneous payments can never overpay), approval-gated activation, and store-scoped access execute at the data layer where appropriate; exact mechanisms (transactions, functions, policies, triggers) are implementation detail, not defined here.
 - **File storage:** no managed file/media storage is confirmed; none is defined here.
 
 ## 11. Error Handling and Failure Boundaries
