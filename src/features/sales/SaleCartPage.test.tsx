@@ -1,14 +1,20 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
-import { resetDb } from '@/services/mocks/db'
-import { __awaitSwal } from '@/test/swalMock'
+import { getDb, resetDb } from '@/services/mocks/db'
+import { recordPayment } from '@/services/paymentService'
+import { __awaitSwal, __swalCalls } from '@/test/swalMock'
 import { renderWithProviders } from '@/test/render'
 import type { CartLine } from '@/features/sales/CartContext'
 import type { StoreContextId } from '@/store/stores'
 import type { User } from '@/domain'
+
+vi.mock('@/services/paymentService', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/services/paymentService')>()
+  return { ...actual, recordPayment: vi.fn(actual.recordPayment) }
+})
 
 const staffUser: User = {
   id: 'user-1',
@@ -160,6 +166,103 @@ describe('SaleCartPage', () => {
 
     expect(await screen.findByText('Rosa Abad')).toBeInTheDocument()
     expect(screen.getByLabelText('Address')).toHaveValue('45 Rizal Ave.')
+  })
+
+  it('confirms the add-customer flow with a popup and returns to the cart (DEC-046)', async () => {
+    const user = userEvent.setup()
+    renderCart()
+
+    await user.click(await screen.findByRole('button', { name: 'Add new customer' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Add customer' })
+    await user.type(within(dialog).getByLabelText(/^Name/), 'Rosa Abad')
+    await user.click(within(dialog).getByRole('button', { name: 'Add customer' }))
+
+    await __awaitSwal('Customer added.')
+    // The dialog closed; the cart form (not a dialog) holds the new customer.
+    expect(screen.queryByRole('dialog', { name: 'Add customer' })).not.toBeInTheDocument()
+    expect(await screen.findByText('Rosa Abad')).toBeInTheDocument()
+  })
+
+  it('hides mode of payment for charge sales and restores it for cash (DEC-045)', async () => {
+    const user = userEvent.setup()
+    renderCart()
+
+    await user.selectOptions(await screen.findByLabelText('Payment type'), 'charge')
+    expect(screen.queryByLabelText(/Mode of payment/)).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Payment type'), 'cash')
+    expect(screen.getByLabelText(/Mode of payment/)).toBeInTheDocument()
+  })
+
+  it('reveals mode of payment only when a charge down payment is entered (DEC-045)', async () => {
+    const user = userEvent.setup()
+    renderCart()
+
+    await user.selectOptions(await screen.findByLabelText('Payment type'), 'charge')
+    expect(screen.queryByLabelText(/Mode of payment/)).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText(/Down payment/), '100')
+    expect(screen.getByLabelText(/Mode of payment/)).toBeInTheDocument()
+  })
+
+  it('blocks a down payment larger than the net total (DEC-045)', async () => {
+    const user = userEvent.setup()
+    renderCart()
+
+    await user.selectOptions(await screen.findByLabelText('Payment type'), 'charge')
+    await user.type(screen.getByLabelText(/Down payment/), '99999')
+    await user.click(screen.getByRole('button', { name: 'Save sale' }))
+
+    expect(
+      await screen.findByText('Down payment cannot be more than the net total.'),
+    ).toBeInTheDocument()
+  })
+
+  it('records a charge sale with a down payment through the payment flow (DEC-045)', async () => {
+    const user = userEvent.setup()
+    renderCart()
+
+    await user.selectOptions(await screen.findByLabelText('Payment type'), 'charge')
+    await user.selectOptions(screen.getByLabelText(/Customer \(optional\)/), 'cust-1')
+    await user.selectOptions(screen.getByLabelText(/^Payment terms/), 'terms-15')
+    await user.type(screen.getByLabelText(/Down payment/), '100')
+    await user.click(screen.getByRole('button', { name: 'Save sale' }))
+
+    // swal calls accumulate across the file: take this test's popup, not an
+    // earlier cash sale's.
+    await __awaitSwal('Sale recorded.')
+    const popup = __swalCalls()
+      .filter((call) => call.title === 'Sale recorded.')
+      .at(-1)
+    expect(String(popup?.text)).toMatch(/down payment was recorded/)
+
+    // The payment landed on the obligation with a reduced balance.
+    const db = getDb()
+    const obligation = db.credits.find((credit) => credit.saleId === db.sales.at(-1)?.id)
+    expect(obligation).toBeDefined()
+    const payment = db.payments.find((entry) => entry.creditId === obligation?.id)
+    expect(payment?.amountMinor).toBe(10000)
+    expect(obligation?.balanceMinor).toBe(249500 - 10000)
+  })
+
+  it('keeps the sale and surfaces a retry path when the down payment fails (DEC-045)', async () => {
+    vi.mocked(recordPayment).mockRejectedValueOnce(new Error('network gone'))
+    const user = userEvent.setup()
+    renderCart()
+
+    await user.selectOptions(await screen.findByLabelText('Payment type'), 'charge')
+    await user.selectOptions(screen.getByLabelText(/Customer \(optional\)/), 'cust-1')
+    await user.selectOptions(screen.getByLabelText(/^Payment terms/), 'terms-15')
+    await user.type(screen.getByLabelText(/Down payment/), '100')
+    await user.click(screen.getByRole('button', { name: 'Save sale' }))
+
+    const popup = await __awaitSwal('Sale recorded, but the down payment was not saved.')
+    expect(String(popup?.text)).toMatch(/credit page/)
+    expect(
+      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
+    ).toBeInTheDocument()
+    // The sale itself was recorded (seed has four).
+    expect(getDb().sales).toHaveLength(5)
   })
 
   it('removes an item from the cart', async () => {

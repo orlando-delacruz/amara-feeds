@@ -1,12 +1,16 @@
+import { useState } from 'react'
 import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
+import { Icon } from '@/components/ui/icons'
 import { ListRow } from '@/components/ui/ListRow'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Section } from '@/components/ui/Section'
 import { Stack } from '@/components/ui/Stack'
 import { navItemsForRole } from '@/components/navigation/navItems'
 import { NavIcon } from '@/components/navigation/icons'
+import { InstallTutorialModal } from '@/features/pwa/InstallTutorialModal'
+import { usePwaInstall } from '@/features/pwa/usePwaInstall'
 import { useSession } from '@/features/session/useSession'
 import { useHistoryUnread } from '@/features/history/useHistoryUnread'
 import { confirmAction } from '@/lib/swal'
@@ -44,11 +48,30 @@ const TrailingBadge = styled.span`
   text-align: center;
 `
 
+const EntryButton = styled.button`
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: ${({ theme }) => theme.radius.md};
+
+  &:hover {
+    background-color: ${({ theme }) => theme.color.surface.subtle};
+  }
+`
+
 export function MorePage() {
   const { user, signOut } = useSession()
   const navigate = useNavigate()
   const overflow = navItemsForRole(user?.role ?? 'staff').filter((item) => !item.primary)
   const hasUnread = useHistoryUnread(user ?? undefined)
+  const { entryEligible } = usePwaInstall()
+  const [installOpen, setInstallOpen] = useState(false)
+  const showInstallEntry = entryEligible()
 
   async function handleSignOut() {
     const confirmed = await confirmAction({
@@ -90,9 +113,27 @@ export function MorePage() {
           ))}
         </Group>
       </nav>
+      {showInstallEntry ? (
+        <Section title="Get the app" variant="flush">
+          <Group>
+            <GroupItem>
+              <EntryButton type="button" onClick={() => setInstallOpen(true)}>
+                <ListRow
+                  leading={<Icon name="download" />}
+                  title="Install ZAF ONE"
+                  subtitle="Add the app to your home screen"
+                />
+              </EntryButton>
+            </GroupItem>
+          </Group>
+        </Section>
+      ) : undefined}
+
       <Button variant="secondary" fullWidth type="button" onClick={() => void handleSignOut()}>
         Sign out
       </Button>
+
+      <InstallTutorialModal open={installOpen} onClose={() => setInstallOpen(false)} />
     </Stack>
   )
 }

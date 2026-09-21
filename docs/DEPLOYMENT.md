@@ -70,7 +70,9 @@ Recommended sequence: implement → review → local verification → preview �
 
 Pre-deployment checklist: application journeys (sale, payment, receiving, product approval, dashboard review) verified on preview; auth and authorization verified at the data layer; migrations reviewed; configuration and secrets verified present-but-unexposed; no placeholder content; accessibility and performance checks done.
 
-Post-deployment smoke test against production: sign in as staff and admin; record a sale and confirm store context and stock effect; record a payment and confirm shared history; submit and approve a product; open dashboard summaries with export and printing; confirm mobile usability; review console/network output for errors. A failed smoke test blocks launch; success means operational and verified — never guaranteed business outcomes.
+Post-deployment smoke test against production: sign in as staff and admin; record a sale and confirm store context and stock effect; record a payment and confirm shared history; submit and approve a product; open dashboard summaries with export and printing; confirm mobile usability; install the app to a home screen (Android/iOS per the in-app tutorial) and confirm standalone launch, the install tutorial's once-per-device behavior, and the offline banner with no network; review console/network output for errors. A failed smoke test blocks launch; success means operational and verified — never guaranteed business outcomes.
+
+The service worker (`sw.js`) must remain reachable at the site root over HTTPS; it precaches the app shell, never Supabase API traffic, and prompts installed clients to refresh when a new deploy lands (DEC-043).
 
 ## 11. Post-Deployment Monitoring
 
@@ -78,7 +80,7 @@ Proportionally to project size, watch for failed sign-ins, failed or inconsisten
 
 ## 12. Rollback, Recovery, and Failure Considerations
 
-- Restore a known-good version on blocking issues: revert the change, redeploy the known-good version, correct configuration.
+- Restore a known-good version on blocking issues: revert the change, redeploy the known-good version, correct configuration. Installed PWA clients receive the reverted build through the same service-worker update prompt; a broken service worker itself can additionally require clearing site data on affected devices.
 - Data changes need extra care: application rollback does not reverse data changes; production data is never deleted or reset as a first response.
 - Supabase platform issues: degrade gracefully where practical — no false success on failed operations, admin errors without exposed internals, enforcement never silently bypassed; platform outages never present the core surface as healthy when it is not.
 

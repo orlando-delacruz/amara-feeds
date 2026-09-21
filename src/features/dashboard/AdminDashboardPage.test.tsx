@@ -1,7 +1,8 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { resetDb } from '@/services/mocks/db'
+import { MemoryRouter } from 'react-router-dom'
+import { getDb, resetDb } from '@/services/mocks/db'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 import { AdminDashboardPage } from './AdminDashboardPage'
@@ -18,7 +19,12 @@ describe('AdminDashboardPage', () => {
   beforeEach(() => resetDb())
 
   it('shows today sales by default across both stores', async () => {
-    renderWithProviders(<AdminDashboardPage />, { user: adminUser })
+    renderWithProviders(
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>,
+      { user: adminUser },
+    )
     expect(await screen.findByText('Overall daily sales')).toBeInTheDocument()
     expect(screen.getByText('₱2,590.00')).toBeInTheDocument()
     expect(screen.getAllByText('Amara').length).toBeGreaterThan(0)
@@ -29,7 +35,12 @@ describe('AdminDashboardPage', () => {
 
   it('switches between Today, Weekly, and Monthly sales tabs', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<AdminDashboardPage />, { user: adminUser })
+    renderWithProviders(
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>,
+      { user: adminUser },
+    )
     await screen.findByText('Overall daily sales')
 
     await user.click(screen.getByRole('radio', { name: 'Weekly' }))
@@ -44,5 +55,45 @@ describe('AdminDashboardPage', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Today' }))
     expect(await screen.findByText('Overall daily sales')).toBeInTheDocument()
+  })
+
+  it('caps stock lists at five rows with View all shortcuts (DEC-046)', async () => {
+    // Inflate both lists past the five-row preview limit.
+    const db = getDb()
+    for (let i = 0; i < 7; i++) {
+      db.stock.push({ storeId: 'amara', productId: `prod-x${i}`, quantity: 9 })
+      db.receiving.push({
+        id: `recv-x${i}`,
+        storeId: 'amara',
+        productId: `prod-x${i}`,
+        quantity: 3,
+        supplier: 'Bulk Co',
+        costPriceMinor: 1000,
+        sellingPriceMinor: 1200,
+        recordedByUserId: 'user-1',
+        receivedAt: new Date().toISOString(),
+      })
+    }
+
+    renderWithProviders(
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>,
+      { user: adminUser },
+    )
+    await screen.findByText('Overall daily sales')
+
+    const currentSection = screen
+      .getByRole('heading', { name: 'Current stock' })
+      .closest('section') as HTMLElement
+    // jsdom renders the wide DataTable: a header row plus the five preview rows.
+    expect(within(currentSection).getAllByRole('row')).toHaveLength(6)
+    expect(within(currentSection).getByRole('button', { name: 'View all' })).toBeInTheDocument()
+
+    const receivedSection = screen
+      .getByRole('heading', { name: 'Received stock' })
+      .closest('section') as HTMLElement
+    expect(within(receivedSection).getAllByRole('row')).toHaveLength(6)
+    expect(within(receivedSection).getByRole('button', { name: 'View all' })).toBeInTheDocument()
   })
 })

@@ -36,6 +36,7 @@ Status labels (see `TEMPLATE-GUIDE.md`): **Selected** — confirmed direction. *
 | Excel export library | write-excel-file | Selected (DEC-024) | Browser-lazy `.xlsx` of the admin report sale lines |
 | PDF export library | None | Rejected (DEC-024) | Superseded by the Excel export; jsPDF/jspdf-autotable removed |
 | Feedback popups | sweetalert2 | Selected (DEC-038) | Themed modals for action feedback and confirmations; replaces the app's ConfirmDialog |
+| PWA tooling | vite-plugin-pwa | Selected (DEC-043) | Web manifest, precached app-shell service worker, prompt-style updates; install tutorial in `src/features/pwa/` |
 | Analytics | None | Not Selected | No confirmed requirement |
 | Notifications / email | None | Not Selected | No confirmed requirement |
 
@@ -130,6 +131,12 @@ Status labels (see `TEMPLATE-GUIDE.md`): **Selected** — confirmed direction. *
 - **What:** Playwright, for critical paths only.
 - **For:** sale save with stock deduction, cross-store payment recording, and product approval — only if budget and schedule permit.
 - **Why:** E2E is the only way to observe the confirmed acceptance behaviors end to end, but full E2E coverage would exceed the core scope; trigger and scope decisions are recorded in `docs/DECISIONS.md` when made.
+
+### PWA tooling — Selected (DEC-043)
+
+- **What:** `vite-plugin-pwa` (Workbox `generateSW`) producing the web manifest and a precached app-shell service worker with `navigateFallback` to `index.html`.
+- **For:** installability on Android/iOS home screens, standalone launch, offline shell, and prompt-style updates; the post-login install tutorial and offline banner live in `src/features/pwa/`.
+- **Why:** a service worker is unavoidable for installability, and the plugin keeps manifest/SW generation declarative instead of hand-maintained. Supabase API traffic is never cached — business data stays network-authoritative; the offline banner surfaces missing connectivity. Read-only offline data and offline read-write with sync stay out of scope unless separately requested.
 
 ## 4. Environment and Configuration Boundaries
 

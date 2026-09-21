@@ -42,6 +42,22 @@ describe('SaleListPage', () => {
     expect(screen.getAllByText('Cash').length).toBeGreaterThan(0)
   })
 
+  it('offers admins a quick store switch that re-scopes the list (DEC-046)', async () => {
+    const user = userEvent.setup()
+    renderAt('/admin/sales', adminUser)
+    expect(await screen.findByText(/Sales recorded at All stores/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: 'Zeann' }))
+
+    expect(await screen.findByText(/Sales recorded at Zeann/)).toBeInTheDocument()
+  })
+
+  it('does not show the store switch to staff', async () => {
+    renderAt('/sales')
+    expect(await screen.findByText('Maria Santos')).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'Zeann' })).not.toBeInTheDocument()
+  })
+
   it('shows who recorded each sale', async () => {
     renderAt('/sales')
     await screen.findByText('Maria Santos')

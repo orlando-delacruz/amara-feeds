@@ -128,6 +128,10 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-040 | Admin store switch relocated to the More page | Accepted | 2026-09-21 |
 | DEC-041 | Admin default store context is All stores | Accepted | 2026-09-21 |
 | DEC-042 | Production owner login uses an email handle | Accepted | 2026-09-21 |
+| DEC-043 | Installable PWA with post-login install tutorial | Accepted | 2026-09-21 |
+| DEC-044 | Admin paint follows the store context | Accepted | 2026-09-21 |
+| DEC-045 | Charge-sale down payments ride the payment flow | Accepted | 2026-09-21 |
+| DEC-046 | Dashboard, sales, and checkout UX refinements | Accepted | 2026-09-21 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -715,6 +719,48 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Context:** The client supplied the production owner credential as an email-shaped username. Login was resolved through the `username@zafone.local` convention, so an email handle broken the mapping. The username field must accept an email-shaped handle, and the hosted owner account (email, password, username) had to be rotated.
 - **Decision:** `usernameEmail` treats an input containing `@` as a full email used as-is; bare usernames keep the `@zafone.local` convention. The hosted owner account was updated in one transaction (email handle + rotated password + matching `auth.identities` identity data + profile username) with existing sessions/refresh tokens revoked (the DEC-036 password-reset semantics). Dev seed and tests keep the fake dev credentials so no production password is committed; the credential SQL was run from a scratch file that was never checked in.
 - **Related documents:** `src/services/supabaseClient.ts`, `docs/SECURITY.md` §6.
+
+### DEC-043 — Installable PWA with post-login install tutorial
+
+- **ID:** DEC-043
+- **Title:** Installable PWA with post-login install tutorial
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** The client requested the mobile-primary app become installable as a PWA, with a tutorial modal after login explaining how to install on Android or iOS. The app is Supabase-direct — all business data is remote — so offline read/write and data caching were never in scope; only installability, a standalone app shell, and discoverable install guidance were requested.
+- **Decision:** `vite-plugin-pwa` (Workbox `generateSW`) is adopted: web manifest (standalone display, brand navy theme), precached app shell with `navigateFallback` to `index.html`, and Google-Fonts-only runtime caching. **Supabase API traffic is never cached** — business data stays network-authoritative; a small in-app offline banner (online/offline listeners) makes the missing network explicit instead of endless loading states. Updates are prompt-style: a new deploy asks via a themed confirm popup before the installed app reloads. The install tutorial is a **custom in-app modal** (shared `Dialog` component, not SweetAlert2 — DEC-038 governs action feedback, this is multi-step instructional content): Android shows Chrome menu steps plus the native `beforeinstallprompt` "Install now" shortcut when captured; iOS shows the Safari Share → Add to Home Screen steps (no programmatic prompt exists). Trigger policy: the modal auto-opens once per device on the signed-out→signed-in transition (any close without installing stores a `localStorage` dismissal flag; a session restore on a not-yet-dismissed device may re-show until answered). A "Get the app" entry on the More page re-opens the tutorial on demand on mobile browsers (hidden when standalone/installed). Desktop browsers are excluded from both trigger and entry. Icons (`pwa-192/512`, maskable variants, `apple-touch-icon`) are generated once by `scripts/generate-pwa-icons.mjs` (sharp used ad hoc, not a committed dependency).
+- **Consequences:** `vite-plugin-pwa` added as a devDependency; `sw.js` + `manifest.webmanifest` in every build; `docs/TECH-STACK.md` records the selection. Service workers only run over HTTPS — Vercel satisfies this. Read-only offline data and offline read-write with sync remain out of scope; revisit only on an explicit client request.
+- **Related documents:** `docs/TECH-STACK.md` §2/§3, `docs/DEPLOYMENT.md` §10, `src/features/pwa/`, `vite.config.ts`, `scripts/generate-pwa-icons.mjs`.
+
+### DEC-044 — Admin paint follows the store context
+
+- **ID:** DEC-044
+- **Title:** Admin paint follows the store context
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** The client asked for the admin dashboard to wear the Amara brown theme when Amara is the store context and the Zeann blue theme when Zeann is. This supersedes the DEC-031 rule that the admin shell keeps a fixed combined theme ("the filter changes data, never paint") whenever a concrete store is selected.
+- **Decision:** The whole admin shell (buttons, header, nav) wears the selected store's theme via the shared `StoreThemeProvider`, which now accepts an all-stores fallback: a concrete store context applies that store's brand theme and browser chrome (Amara brown, Zeann blue); the "All stores" default keeps the fixed navy combined theme. The header still never renders a single-store badge (DEC-041 unchanged).
+- **Related documents:** `src/theme/StoreThemeProvider.tsx`, `src/app/layouts/AdminLayout.tsx`, `docs/UI-UX.md` §9.1.
+
+### DEC-045 — Charge-sale down payments ride the payment flow
+
+- **ID:** DEC-045
+- **Title:** Charge-sale down payments ride the payment flow
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** The client asked that charge sales not require a mode of payment (the customer buys on credit), then raised the case where a customer hands over an initial/down payment at the sale. A down payment is semantically a payment against the credit obligation, and the existing payment model already supports partial payments with method and store attribution.
+- **Decision:** Charge sales store no mode of payment. The cart gains an optional "Down payment (₱)" field for charge sales; when a down payment greater than zero is entered, the Mode of payment appears (required — something is being paid now). On save, the sale is recorded first (no payment method stored), then the down payment is recorded through the existing `record_payment` flow against the obligation created for that sale (found by sale id) — a proper payment-history entry with a reduced balance. No schema change. Failure handling is honest: if the payment step fails after the sale succeeds, an error popup says the sale was recorded and directs to the credit page to retry; the sale is never rolled back or lost.
+- **Consequences:** Two sequential writes (sale, then payment) are not one transaction — the retry path covers the gap. Client-side validation mirrors the server (down payment ≥ 0, ≤ net total; method required when a down payment is taken).
+- **Related documents:** `src/features/sales/SaleCartPage.tsx`, `src/services/paymentService.ts`, `docs/DATA-MODEL.md` (no change).
+
+### DEC-046 — Dashboard, sales, and checkout UX refinements
+
+- **ID:** DEC-046
+- **Title:** Dashboard, sales, and checkout UX refinements
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** Client refinement requests after live use: dashboard stock lists grow unbounded; admins must visit More just to switch stores on sales pages; the sale catalog hides how much stock is on hand; adding a customer from the cart gives no completion feedback.
+- **Decision:** (1) The admin dashboard's Current stock and Received stock lists preview at most five rows, each with a "View all" button navigating to Inventory and Receiving respectively (both respect the active store context). (2) The admin-only `StoreControl` quick switch also renders on the admin sales list and the New Sale catalog — More remains the central switch (DEC-040 context), sales surfaces gain a shortcut. (3) Sale-catalog product cards show the on-hand quantity for the selling store ("On hand: N"; a priced product with no stock row shows 0). Display only — oversell is still refused atomically by the database. (4) Adding a customer from the cart closes the dialog, selects the new customer, and confirms with the "Customer added." popup — after OK the user is back on the cart.
+- **Related documents:** `src/features/dashboard/AdminDashboardPage.tsx`, `src/features/sales/SaleListPage.tsx`, `src/features/sales/NewSalePage.tsx`, `src/features/sales/SaleCartPage.tsx`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

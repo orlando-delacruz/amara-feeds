@@ -3,12 +3,14 @@ import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import {
   createSale,
+  listCredits,
   listCustomers,
   listPaymentTerms,
   listProducts,
   listRiders,
   listVehicles,
   previewDueDate,
+  recordPayment,
 } from '@/services'
 import { PAYMENT_METHOD_PRESETS } from '@/domain'
 import { Alert } from '@/components/ui/Alert'
@@ -24,14 +26,14 @@ import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
 import { AddCustomerDialog } from '@/features/customers/AddCustomerDialog'
 import { useAsyncData, useAlertMutation } from '@/features/shared'
-import { notifySuccess } from '@/lib/swal'
+import { notifyError, notifySuccess } from '@/lib/swal'
 import { useSession } from '@/features/session/useSession'
 import { useCart } from '@/features/sales/useCart'
 import { toMinor } from '@/lib/money'
 import { todayIso } from '@/lib/dates'
 import { concreteStoreId, isAllStores, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
-import type { PaymentType } from '@/domain'
+import type { PaymentType, StoreId } from '@/domain'
 
 const CartItem = styled.div`
   display: flex;
@@ -93,6 +95,8 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
   const [paymentType, setPaymentType] = useState<PaymentType>('cash')
   const [paymentMethod, setPaymentMethod] = useState('Cash')
   const [customPaymentMethod, setCustomPaymentMethod] = useState('')
+  const [downPayment, setDownPayment] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
   const [discount, setDiscount] = useState('')
   const [termsId, setTermsId] = useState('')
   const [deliveryFee, setDeliveryFee] = useState('')
@@ -127,17 +131,43 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
   const deliveryFeeMinor = deliveryFee ? toMinor(Number(deliveryFee)) : 0
   const discountMinor = discount ? toMinor(Number(discount)) : 0
   const totalMinor = itemsTotalMinor + deliveryFeeMinor - discountMinor
+  const downPaymentMinor = downPayment ? toMinor(Number(downPayment)) : 0
   const resolvedPaymentMethod =
     paymentMethod === 'Other' ? customPaymentMethod.trim() : paymentMethod
+  // Charge sales carry no payment method — the customer buys on credit. One
+  // appears only when a down payment is taken (that IS a payment, DEC-045).
+  const showPaymentMethod = paymentType === 'cash' || downPaymentMinor > 0
+
+  function validateChargeDownPayment(): string | null {
+    if (paymentType !== 'charge' || downPaymentMinor === 0) {
+      return null
+    }
+    if (downPaymentMinor < 0 || Number.isNaN(downPaymentMinor)) {
+      return 'Down payment cannot be negative.'
+    }
+    if (downPaymentMinor > totalMinor) {
+      return 'Down payment cannot be more than the net total.'
+    }
+    if (!resolvedPaymentMethod) {
+      return 'Select the mode of payment for the down payment.'
+    }
+    return null
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const validationError = validateChargeDownPayment()
+    if (validationError) {
+      setFormError(validationError)
+      return
+    }
+    setFormError(null)
     const sale = await save.run({
       storeId: contextStoreId,
       saleDate,
       customerId: customerId || undefined,
       paymentType,
-      paymentMethod: resolvedPaymentMethod,
+      paymentMethod: paymentType === 'charge' ? undefined : resolvedPaymentMethod,
       lines: cart.lines.map((line) => ({
         productId: line.productId,
         quantity: line.quantity,
@@ -154,10 +184,65 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
       termsId: paymentType === 'charge' ? termsId : undefined,
       recordedByUserId: user?.id ?? '',
     })
-    if (sale) {
-      cart.clear()
-      await notifySuccess('Sale recorded.', 'The stock has been updated for this store.')
-      navigate(basePath)
+    if (!sale) {
+      return
+    }
+    if (paymentType === 'charge' && downPaymentMinor > 0) {
+      const recorded = await recordDownPayment(sale.id, sale.customerId, sale.storeId)
+      if (!recorded) {
+        cart.clear()
+        navigate(basePath)
+        return
+      }
+    }
+    cart.clear()
+    const successText =
+      paymentType === 'charge' && downPaymentMinor > 0
+        ? 'Stock updated. The down payment was recorded against the customer’s credit.'
+        : 'The stock has been updated for this store.'
+    await notifySuccess('Sale recorded.', successText)
+    navigate(basePath)
+  }
+
+  /**
+   * Records a charge-sale down payment through the normal payment flow
+   * (DEC-045): the obligation created for the sale is found by its sale id,
+   * and the payment lands in the shared payment history with store
+   * attribution. Failure never loses the sale — the payment stays retryable
+   * from the credit page.
+   */
+  async function recordDownPayment(
+    saleId: string,
+    saleCustomerId: string | undefined,
+    saleStoreId: StoreId,
+  ): Promise<boolean> {
+    try {
+      if (!saleCustomerId) {
+        throw new Error('A charge sale requires a customer.')
+      }
+      const credits = await listCredits({
+        customerId: saleCustomerId,
+        originStoreId: saleStoreId,
+      })
+      const obligation = credits.find((credit) => credit.saleId === saleId)
+      if (!obligation) {
+        throw new Error('Credit obligation not found.')
+      }
+      await recordPayment({
+        creditId: obligation.id,
+        storeId: saleStoreId,
+        amountMinor: downPaymentMinor,
+        method: resolvedPaymentMethod,
+        recordedByUserId: user?.id ?? '',
+      })
+      return true
+    } catch (cause) {
+      console.error('[cart] down payment failed:', cause)
+      await notifyError(
+        'Sale recorded, but the down payment was not saved.',
+        'Record it from the customer’s credit page.',
+      )
+      return false
     }
   }
 
@@ -227,9 +312,10 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
         size="compact"
       />
       {save.error && <Alert variant="danger">{save.error}</Alert>}
+      {formError && <Alert variant="danger">{formError}</Alert>}
       {allMode && (
         <Alert variant="warning" title="Pick a store to record the sale">
-          Set Amara or Zeann in More → Store context, or return to the catalog to add items for that
+          Select Amara or Zeann on the sales page, or return to the catalog to add items for that
           store's sale.
         </Alert>
       )}
@@ -341,24 +427,38 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
                     Due date: <DateText value={duePreview.data} />
                   </p>
                 )}
+                <TextField
+                  id="sale-down-payment"
+                  label="Down payment (₱, optional)"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={downPayment}
+                  onChange={(event) => setDownPayment(event.target.value)}
+                  hint="Anything the customer pays now is recorded against their credit."
+                />
               </>
             )}
-            <Select
-              id="sale-payment-method"
-              label="Mode of payment"
-              options={paymentMethodOptions}
-              value={paymentMethod}
-              onChange={(event) => setPaymentMethod(event.target.value)}
-              required
-            />
-            {paymentMethod === 'Other' && (
-              <TextField
-                id="sale-payment-method-custom"
-                label="Specify payment method"
-                value={customPaymentMethod}
-                onChange={(event) => setCustomPaymentMethod(event.target.value)}
-                required
-              />
+            {showPaymentMethod && (
+              <>
+                <Select
+                  id="sale-payment-method"
+                  label="Mode of payment"
+                  options={paymentMethodOptions}
+                  value={paymentMethod}
+                  onChange={(event) => setPaymentMethod(event.target.value)}
+                  required
+                />
+                {paymentMethod === 'Other' && (
+                  <TextField
+                    id="sale-payment-method-custom"
+                    label="Specify payment method"
+                    value={customPaymentMethod}
+                    onChange={(event) => setCustomPaymentMethod(event.target.value)}
+                    required
+                  />
+                )}
+              </>
             )}
           </Section>
 
@@ -407,10 +507,16 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
               <p>Location: {storeNames[concreteStoreId(store)]}</p>
               <p>
                 Payment: {paymentType === 'charge' ? 'Charge' : 'Cash'}
-                {` · ${resolvedPaymentMethod || 'No payment method'}`}
+                {showPaymentMethod && ` · ${resolvedPaymentMethod || 'No payment method'}`}
                 {paymentType === 'charge' &&
                   termsId &&
                   ` · ${termOptions.find((t) => t.value === termsId)?.label ?? ''}`}
+                {paymentType === 'charge' && downPaymentMinor > 0 && (
+                  <>
+                    {' · Down payment: '}
+                    <MoneyText amountMinor={downPaymentMinor} />
+                  </>
+                )}
               </p>
               <p>
                 Items total: <MoneyText amountMinor={itemsTotalMinor} />
@@ -437,8 +543,12 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
         open={customerDialogOpen}
         onClose={() => setCustomerDialogOpen(false)}
         onCreated={(customer) => {
+          // Select the new customer, close the dialog, and confirm with a
+          // popup — after OK the user is back on the cart (DEC-046).
           setCustomerId(customer.id)
+          setCustomerDialogOpen(false)
           customers.reload()
+          void notifySuccess('Customer added.')
         }}
         createdByUserId={user?.id}
       />

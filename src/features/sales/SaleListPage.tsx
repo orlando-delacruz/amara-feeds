@@ -12,6 +12,7 @@ import { RecordList } from '@/components/ui/RecordList'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { useAsyncData } from '@/features/shared'
+import { StoreControl } from '@/features/shared'
 import { getDisplayName } from '@/features/session/displayName'
 import { todayIso } from '@/lib/dates'
 import { formatDate } from '@/lib/format'
@@ -54,6 +55,8 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
         actions={<Button onClick={() => navigate(`${basePath}/new`)}>New sale</Button>}
         size="compact"
       />
+      {/* Quick store switch for admins (DEC-046); staff render nothing. */}
+      <StoreControl />
       <FilterBar>
         <DatePicker id="sales-date" label="Date" value={date} onChange={setDate} />
       </FilterBar>

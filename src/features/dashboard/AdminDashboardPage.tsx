@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import styled from 'styled-components'
+import { useNavigate } from 'react-router-dom'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
+import { Button } from '@/components/ui/Button'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { RecordList } from '@/components/ui/RecordList'
 import { Section } from '@/components/ui/Section'
@@ -15,6 +17,9 @@ import type { StoreId } from '@/domain'
 import { useBusinessSummaries } from './useBusinessSummaries'
 import { RouteBoard } from './RouteBoard'
 import { BalanceStateChip } from './BalanceState'
+
+/** Dashboard lists preview five rows; the full list lives on its page. */
+const DASHBOARD_LIST_LIMIT = 5
 
 const LiveryHalf = styled.span<{ $store: StoreId }>`
   flex: 1;
@@ -115,6 +120,7 @@ const DayCaption = styled.span`
 `
 
 export function AdminDashboardPage() {
+  const navigate = useNavigate()
   const date = todayIso()
   const summaries = useBusinessSummaries(date)
   const data = summaries.data
@@ -239,7 +245,15 @@ export function AdminDashboardPage() {
               </Stack>
             </Section>
 
-            <Section title="Current stock" variant="flush">
+            <Section
+              title="Current stock"
+              variant="flush"
+              action={
+                <Button variant="subtle" size="sm" onClick={() => navigate('/admin/inventory')}>
+                  View all
+                </Button>
+              }
+            >
               <RecordList
                 caption="Current stock"
                 variant="grouped"
@@ -248,7 +262,7 @@ export function AdminDashboardPage() {
                   { key: 'product', header: 'Product' },
                   { key: 'quantity', header: 'Quantity' },
                 ]}
-                rows={data.stock.map((row) => ({
+                rows={data.stock.slice(0, DASHBOARD_LIST_LIMIT).map((row) => ({
                   store: storeNames[row.storeId],
                   product: row.productName,
                   quantity: String(row.quantity),
@@ -256,7 +270,15 @@ export function AdminDashboardPage() {
               />
             </Section>
 
-            <Section title="Received stock" variant="flush">
+            <Section
+              title="Received stock"
+              variant="flush"
+              action={
+                <Button variant="subtle" size="sm" onClick={() => navigate('/admin/receiving')}>
+                  View all
+                </Button>
+              }
+            >
               <RecordList
                 caption="Received stock"
                 variant="grouped"
@@ -266,7 +288,7 @@ export function AdminDashboardPage() {
                   { key: 'quantity', header: 'Quantity' },
                   { key: 'cost', header: 'Cost price' },
                 ]}
-                rows={data.received.map((row) => ({
+                rows={data.received.slice(0, DASHBOARD_LIST_LIMIT).map((row) => ({
                   store: storeNames[row.storeId],
                   product: row.productName,
                   quantity: String(row.quantity),

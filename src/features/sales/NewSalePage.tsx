@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
-import { listProducts, listStorePrices } from '@/services'
+import { listProducts, listStorePrices, listStock } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
@@ -12,6 +12,7 @@ import { Stack } from '@/components/ui/Stack'
 
 import { TextField } from '@/components/ui/TextField'
 import { useAsyncData } from '@/features/shared'
+import { StoreControl } from '@/features/shared'
 import { useCart } from '@/features/sales/useCart'
 import { BasketFab } from '@/features/sales/BasketFab'
 import { concreteStoreId, isAllStores, storeNames } from '@/store/stores'
@@ -62,6 +63,14 @@ const ProductPrice = styled.p`
   min-height: 1.5em;
 `
 
+const ProductStock = styled.p`
+  margin: 0;
+  font-size: ${({ theme }) => theme.font.size.sm};
+  font-weight: ${({ theme }) => theme.font.weight.semibold};
+  color: ${({ theme }) => theme.color.text.secondary};
+  font-variant-numeric: tabular-nums;
+`
+
 const QtyField = styled(TextField)`
   min-height: ${({ theme }) => theme.touch.minTarget};
 `
@@ -84,6 +93,8 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
   const allMode = isAllStores(store)
   const contextStoreId = concreteStoreId(store)
   const prices = useAsyncData(() => listStorePrices(contextStoreId), store)
+  // On-hand quantity per product at the selling store (DEC-046).
+  const stock = useAsyncData(() => listStock({ storeId: contextStoreId }), store)
 
   // Only sellable items: products priced at this store (i.e. received there).
   // An approved product without a receipt has no stock and no price — it stays
@@ -107,6 +118,10 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
     cart.addLine({ productId, quantity, unitPriceMinor: price })
   }
 
+  const stockByProduct = new Map(
+    (stock.data ?? []).map((level) => [level.productId, level.quantity]),
+  )
+
   return (
     <Stack>
       <PageHeader
@@ -120,10 +135,11 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
         size="compact"
       />
       {quantityError && <Alert variant="danger">{quantityError}</Alert>}
+      {/* Quick store switch for admins (DEC-046); staff render nothing. */}
+      <StoreControl />
       {allMode && (
         <Alert variant="info" title="Pick a store to start a sale">
-          Set Amara or Zeann in More → Store context to load that store's catalog and record the
-          sale there.
+          Select Amara or Zeann above to load that store's catalog and record the sale there.
         </Alert>
       )}
       <TextField
@@ -144,6 +160,7 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
         onRetry={() => {
           products.reload()
           prices.reload()
+          stock.reload()
         }}
         skeleton={<ListSkeleton rows={3} />}
         empty={
@@ -166,12 +183,14 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
           {visibleProducts.map((product: Product) => {
             const price = prices.data?.[product.id] as Money
             const quantity = quantities[product.id] ?? '1'
+            const onHand = stockByProduct.get(product.id) ?? 0
             return (
               <ProductCard key={product.id}>
                 <ProductName>{product.name}</ProductName>
                 <ProductPrice>
                   Price per bag: <MoneyText amountMinor={price} />
                 </ProductPrice>
+                <ProductStock>On hand: {onHand}</ProductStock>
                 <QtyField
                   id={`sale-quantity-${product.id}`}
                   label="Quantity"

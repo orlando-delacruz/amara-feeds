@@ -150,4 +150,25 @@ describe('NewSalePage', () => {
 
     expect(await screen.findByRole('button', { name: 'Save sale' })).toBeInTheDocument()
   })
+
+  it('shows the on-hand quantity on each product card (DEC-046)', async () => {
+    renderNewSale()
+
+    const rice = await productCard('Rice 25kg')
+    expect(within(rice).getByText('On hand: 20')).toBeInTheDocument()
+    const sugar = await productCard('Sugar 1kg')
+    expect(within(sugar).getByText('On hand: 50')).toBeInTheDocument()
+  })
+
+  it('gives admins a quick store switch on the catalog with per-store stock (DEC-046)', async () => {
+    const user = userEvent.setup()
+    renderNewSale('/admin/sales/new', adminUser)
+
+    // All-stores default: catalog is parked until a store is chosen.
+    expect(await screen.findByText('Pick a store to start a sale')).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: 'Zeann' }))
+
+    const rice = await productCard('Rice 25kg')
+    expect(within(rice).getByText('On hand: 12')).toBeInTheDocument()
+  })
 })

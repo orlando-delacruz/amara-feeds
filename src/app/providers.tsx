@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { User } from '@/domain'
 import { CartProvider } from '@/features/sales/CartProvider'
 import type { CartLine } from '@/features/sales/CartContext'
+import { InstallTutorialGate } from '@/features/pwa/InstallTutorialGate'
 import { SessionProvider } from '@/features/session/SessionProvider'
 import { StoreProvider } from '@/store/StoreProvider'
 import type { StoreContextId } from '@/store/stores'
@@ -30,7 +31,10 @@ export function AppProviders({
       <GlobalStyle />
       <SessionProvider initialUser={initialUser}>
         <StoreProvider initialStore={initialStore}>
-          <CartProvider initialLines={initialCartLines}>{children}</CartProvider>
+          <CartProvider initialLines={initialCartLines}>
+            <InstallTutorialGate />
+            {children}
+          </CartProvider>
         </StoreProvider>
       </SessionProvider>
     </ThemeProvider>

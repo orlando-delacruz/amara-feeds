@@ -5,6 +5,15 @@ import { AppRoutes } from '@/app/router'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 
+const ANDROID_UA =
+  'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36'
+const DESKTOP_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+
+function setUserAgent(ua: string) {
+  Object.defineProperty(window.navigator, 'userAgent', { value: ua, configurable: true })
+}
+
 const staffUser: User = {
   id: 'user-1',
   name: 'Alice',
@@ -71,6 +80,26 @@ describe('MorePage', () => {
     renderMore('/dashboard', staffUser)
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /More/ })).toHaveAttribute('href', '/more')
+  })
+
+  it('offers the install tutorial on a mobile browser via a Get-the-app entry', async () => {
+    setUserAgent(ANDROID_UA)
+    try {
+      const user = userEvent.setup()
+      renderMore('/more', staffUser)
+      expect(await screen.findByText('Install ZAF ONE')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: /Install ZAF ONE/ }))
+      expect(await screen.findByRole('dialog', { name: 'Install ZAF ONE' })).toBeInTheDocument()
+      expect(screen.getByText('On Android (Chrome)')).toBeInTheDocument()
+    } finally {
+      setUserAgent(DESKTOP_UA)
+    }
+  })
+
+  it('hides the install entry on desktop', async () => {
+    renderMore('/more', staffUser)
+    expect(await screen.findByRole('heading', { name: 'More' })).toBeInTheDocument()
+    expect(screen.queryByText('Install ZAF ONE')).not.toBeInTheDocument()
   })
 
   it('signs out from the More page and returns to sign-in', async () => {

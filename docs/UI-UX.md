@@ -108,9 +108,9 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.1 Sales
 
-- **Sequence.** Browse the product catalog (all active products, shown in alphabetical order with a search filter) on the entry page → type a quantity per product and confirm with "Add to cart", staying on the catalog while the floating basket badge counts the total → open the floating basket to reach the Cart page → the Cart page lists the accumulated items (duplicate products merge quantities) with a "New item" action back to the catalog → optional customer selection or creation (the selected customer's address is shown) → sale date (defaults to today, backdatable) → payment type (cash or charge; terms selection and automatic due date for charge) → mode of payment (Cash, GCash, Maya, Bank Transfer, Check, or Other with a free-text value) → optional discount → delivery details when applicable → review (items, delivery fee, discount, net) → save → success or failure feedback.
+- **Sequence.** Browse the product catalog (all active products, shown in alphabetical order with a search filter) on the entry page → type a quantity per product and confirm with "Add to cart", staying on the catalog while the floating basket badge counts the total → open the floating basket to reach the Cart page → the Cart page lists the accumulated items (duplicate products merge quantities) with a "New item" action back to the catalog → optional customer selection or creation (the selected customer's address is shown; creating one from the cart closes the dialog, selects the customer, and confirms with a popup before returning to the cart) → sale date (defaults to today, backdatable) → payment type (cash or charge; terms selection and automatic due date for charge) → mode of payment (Cash, GCash, Maya, Bank Transfer, Check, or Other with a free-text value; charge sales hide it — an optional down payment brings it back, required, and the payment is recorded against the customer's credit on save, DEC-045) → optional discount → delivery details when applicable → review (items, delivery fee, discount, net) → save → success or failure feedback.
 - **Requirements.** Customer selection stays optional (REQ-CUST-002); payment type is cash or charge (REQ-SALE-003); delivery supports fee, rider, and vehicle (REQ-SALE-004); store-specific sales stay distinguishable (REQ-SALE-005); business date, mode of payment, and discount are captured with the net total as items + fee − discount (REQ-SALE-006, REQ-SALE-007).
-- **Constraints.** The unit price is automatic per store (the selling price of the product's most recent receiving record); no manual price entry. Products never received at the store show "No price" and cannot be added. A successful save triggers the confirmed stock deduction behavior (REQ-INV-002). No editing or cancellation rules are defined here.
+- **Constraints.** The unit price is automatic per store (the selling price of the product's most recent receiving record); no manual price entry. Catalog cards show the on-hand quantity for the selling store ("On hand: N", DEC-046); products never received at the store stay hidden (DEC-037). A successful save triggers the confirmed stock deduction behavior (REQ-INV-002). No editing or cancellation rules are defined here.
 
 ### 7.2 Customers
 
@@ -142,7 +142,8 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.7 Dashboard / Reports
 
-- **Behavior.** Admin users consume sales by store, overall sales, outstanding credit, payments, current stock, received stock, and a "Sales by mode of payment" breakdown over a selected **From/To** date range (REQ-DASH-001 through REQ-DASH-006); the Excel export covers the same range and includes the mode of payment per sale (REQ-REP-001). Staff dashboards show today's sales, stock, outstanding credit, and weekly sales. The History destination shows an unread indicator until it is opened, and admins can filter History by store (All stores / Amara / Zeann), with business-wide events shown only under All stores. Reports are admin-only: staff never see the Reports route or navigation entry (REQ-REP-004).
+- **Behavior.** Admin users consume sales by store, overall sales, outstanding credit, payments, current stock, received stock, and a "Sales by mode of payment" breakdown over a selected **From/To** date range (REQ-DASH-001 through REQ-DASH-006); the Excel export covers the same range and includes the mode of payment per sale (REQ-REP-001). Staff dashboards show today's sales, stock, outstanding credit, and weekly sales. The History destination shows an unread indicator until it is opened, and admins can filter History by store (All stores / Amara / Zeann), with business-wide events shown only under All stores. Reports are admin-only: staff never see the Reports route or navigation entry (REQ-REP-004). The admin dashboard's Current stock and Received stock lists preview at most five rows with "View all" buttons leading to Inventory and Receiving respectively (DEC-046).
+- **Store paint.** The whole admin area wears the selected store's theme — Amara brown, Zeann blue; the All-stores default keeps the fixed navy combined theme (DEC-044). Admin sales surfaces (sales list, New Sale catalog) carry the admin-only store switch so a store change does not require visiting More (DEC-046).
 - **Constraints.** "Other useful summaries" stay flexible within agreed scope (REQ-DASH-007); exact report columns and formats are Confirmation Required and are never defined here beyond the implemented sale-line columns.
 
 ### 7.8 Users / Staff
@@ -189,6 +190,14 @@ Mobile is the primary experience.
 - Admin functionality remains usable on smaller screens where applicable.
 
 No breakpoints or pixel dimensions are defined here.
+
+### 9.1 Install experience (PWA, DEC-043)
+
+- After signing in on a mobile browser, a one-time tutorial modal explains how to install the app: Android (Chrome menu, with the native install prompt when the browser offers it) or iOS (Safari Share → Add to Home Screen).
+- Dismissing the tutorial ("Maybe later") stops it from auto-opening again on that device; a "Get the app" entry on the More page re-opens it on demand.
+- Desktop browsers see neither the tutorial nor the More-page entry; an already-installed (standalone) app never shows them either.
+- When offline, a slim banner states that business data updates when the connection returns; no success is faked while offline.
+- When a new version is deployed, installed apps ask before reloading into the update; postponing applies it on the next visit.
 
 ## 10. Accessibility UX
 

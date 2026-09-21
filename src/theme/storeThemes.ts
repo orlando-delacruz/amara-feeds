@@ -1,4 +1,5 @@
 import type { StoreId } from '@/domain/store'
+import { adminBrowserChrome } from './browserChrome'
 import { tokens, type Theme } from './tokens'
 
 /**
@@ -108,4 +109,10 @@ export const signInTheme: Theme = {
       glow: 'rgba(81, 91, 116, 0.2)',
     },
   },
+}
+
+/** Fixed-navy combined theme + chrome for the admin "all stores" view (DEC-031/DEC-044). */
+export const adminAllStoresFallback = {
+  theme: adminTheme,
+  chrome: adminBrowserChrome,
 }
