@@ -5,13 +5,12 @@ import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { DateText } from '@/components/ui/DateText'
-import { FilterBar } from '@/components/ui/FilterBar'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
-import { StoreControl, useAsyncData, useAlertMutation, useMutation } from '@/features/shared'
+import { useAsyncData, useAlertMutation, useMutation } from '@/features/shared'
 import { confirmAction, notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
@@ -49,7 +48,7 @@ const RowActions = styled.div`
 `
 
 export function RidersPage() {
-  const { store, canSwitchStore } = useStore()
+  const { store } = useStore()
   const { user } = useSession()
   const [name, setName] = useState('')
   const [editing, setEditing] = useState<Rider | null>(null)
@@ -114,11 +113,6 @@ export function RidersPage() {
         description={`Delivery riders at ${storeNames[store]}.`}
         size="compact"
       />
-      {canSwitchStore && (
-        <FilterBar>
-          <StoreControl />
-        </FilterBar>
-      )}
       <Card>
         <form onSubmit={handleSubmit} noValidate>
           <Fields>

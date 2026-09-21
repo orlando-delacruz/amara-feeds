@@ -3,12 +3,11 @@ import styled from 'styled-components'
 import { deleteStock, getCurrentStock } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
-import { FilterBar } from '@/components/ui/FilterBar'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
-import { StoreControl, useAsyncData, useAlertMutation } from '@/features/shared'
+import { useAsyncData, useAlertMutation } from '@/features/shared'
 import { confirmAction, notifySuccess } from '@/lib/swal'
 import { useSession } from '@/features/session/useSession'
 import { storeNames } from '@/store/stores'
@@ -31,7 +30,7 @@ const RowActions = styled.div`
 `
 
 export function InventoryPage() {
-  const { store, canSwitchStore } = useStore()
+  const { store } = useStore()
   const { user } = useSession()
   const [editing, setEditing] = useState<Row | null>(null)
   const { data, loading, error, reload } = useAsyncData(async () => {
@@ -100,11 +99,6 @@ export function InventoryPage() {
         description={`Current stock for ${storeNames[store]}. Stock changes automatically on sales and receiving.`}
         size="compact"
       />
-      {canSwitchStore && (
-        <FilterBar>
-          <StoreControl />
-        </FilterBar>
-      )}
       <AsyncBoundary
         loading={loading}
         error={error}

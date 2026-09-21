@@ -57,13 +57,11 @@ describe('RidersPage', () => {
   })
 
   it('lets an admin review riders per store', async () => {
-    const actor = userEvent.setup()
+    // The Amara/Zeann switch moved to the admin More page (store context now
+    // chosen once); per-store review is exercised through the store context.
     renderRiders('/admin/riders', adminUser)
-    await screen.findByText('Jojo Ramos')
-
-    await actor.click(screen.getByRole('radio', { name: 'Zeann' }))
-    expect(await screen.findByText('Paolo Lim')).toBeInTheDocument()
-    expect(screen.queryByText('Jojo Ramos')).not.toBeInTheDocument()
+    expect(await screen.findByText('Jojo Ramos')).toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'Zeann' })).not.toBeInTheDocument()
   })
 
   it('renames a rider from its row', async () => {

@@ -13,7 +13,6 @@ import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { DateText } from '@/components/ui/DateText'
-import { FilterBar } from '@/components/ui/FilterBar'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
@@ -22,7 +21,7 @@ import { Select } from '@/components/ui/Select'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
-import { StoreControl, useAsyncData, useAlertMutation } from '@/features/shared'
+import { useAsyncData, useAlertMutation } from '@/features/shared'
 import { notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
@@ -79,7 +78,7 @@ const emptyForm: ExpenseFormState = {
 }
 
 export function ExpensesPage() {
-  const { store, canSwitchStore } = useStore()
+  const { store } = useStore()
   const { user } = useSession()
   const [form, setForm] = useState<ExpenseFormState>(emptyForm)
   const [formError, setFormError] = useState<string | null>(null)
@@ -150,11 +149,6 @@ export function ExpensesPage() {
         size="compact"
       />
       {formError && <Alert variant="danger">{formError}</Alert>}
-      {canSwitchStore && (
-        <FilterBar>
-          <StoreControl />
-        </FilterBar>
-      )}
       <Card>
         <form onSubmit={handleSubmit} noValidate>
           <Fields>

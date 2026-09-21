@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { ListRow } from '@/components/ui/ListRow'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { Section } from '@/components/ui/Section'
 import { Stack } from '@/components/ui/Stack'
 import { navItemsForRole } from '@/components/navigation/navItems'
 import { NavIcon } from '@/components/navigation/icons'
 import { useSession } from '@/features/session/useSession'
 import { useHistoryUnread } from '@/features/history/useHistoryUnread'
 import { confirmAction } from '@/lib/swal'
+import { StoreControl } from '@/features/shared'
 
 const Group = styled.ul`
   display: flex;
@@ -65,6 +67,12 @@ export function MorePage() {
   return (
     <Stack>
       <PageHeader title="More" description="All destinations in one place." size="compact" />
+      {user?.role === 'admin' ? (
+        <Section title="Store context" variant="flush">
+          <StoreControl />
+        </Section>
+      ) : undefined}
+
       <nav aria-label="More destinations">
         <Group>
           {overflow.map((item) => (

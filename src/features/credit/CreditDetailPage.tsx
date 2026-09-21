@@ -22,7 +22,7 @@ import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { TextField } from '@/components/ui/TextField'
-import { StoreControl, useAsyncData, useAlertMutation } from '@/features/shared'
+import { useAsyncData, useAlertMutation } from '@/features/shared'
 import { notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
@@ -202,7 +202,6 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
               <Alert variant="success">This credit is fully paid and settled.</Alert>
             ) : (
               <>
-                <StoreControl />
                 <Card>
                   <form onSubmit={handlePay} noValidate>
                     <PaymentFields>

@@ -125,6 +125,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-037 | Catalog lists only sellable items; pending-seed parity | Accepted | 2026-09-21 |
 | DEC-038 | SweetAlert2 feedback system + logout confirmation | Accepted | 2026-09-21 |
 | DEC-039 | Hosted production wipe to owner-only clean slate | Accepted | 2026-09-21 |
+| DEC-040 | Admin store switch relocated to the More page | Accepted | 2026-09-21 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -682,6 +683,16 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Alternatives considered:** a migration — rejected; a `db reset`-rerunnable deletion would also strip dev-parity seed data from every future environment. A `db pull`-style deep reset — overkill for a pure data wipe.
 - **Consequences:** The hosted app is owner-only with empty business data. Product catalog is empty by design: new items enter through Receiving → "Add new item" (staff submit, admin approve). Staff accounts are re-created via the admin UI (`create_staff`).
 - **Related documents:** `supabase/cleanup/wipe-business-data.sql`, `docs/DATA-MODEL.md` §9, `docs/DEVELOPMENT.md` §12.
+
+### DEC-040 — Admin store switch relocated to the More page
+
+- **ID:** DEC-040
+- **Title:** Admin store switch relocated to the More page
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** The admin's Amara/Zeann switch (`StoreControl`) rendered directly under each admin page's header (credit detail, inventory, receiving, riders, vehicles, expenses), reading as per-page chrome the client wants out of that position. Removing it entirely would strip the admin's ability to view each store's separate data; the client chose a single central switch.
+- **Decision:** `StoreControl` is removed from all six page tops. The admin sets the store context once from the **More page** ("Store context" section, admin-only); every admin page and the header badge follow that context. Staff still see no switch (locked to their assigned store) — the relocated control renders for admins only. Behavior and scoping are otherwise unchanged.
+- **Related documents:** `src/features/more/MorePage.tsx`, `src/features/shared/StoreControl.tsx`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

@@ -50,6 +50,23 @@ describe('MorePage', () => {
     expect(screen.getByRole('link', { name: /Users/ })).toHaveAttribute('href', '/admin/users')
   })
 
+  it('gives admins the store-context switch on the More page', async () => {
+    const user = userEvent.setup()
+    renderMore('/admin/more', adminUser)
+    expect(await screen.findByText('Store context')).toBeInTheDocument()
+
+    // Switching here is the one place store context is set for admin pages.
+    await user.click(screen.getByRole('radio', { name: 'Zeann' }))
+    expect(screen.getByRole('radio', { name: 'Zeann' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('does not render the store-context switch for staff', async () => {
+    renderMore('/more', staffUser)
+    expect(await screen.findByRole('heading', { name: 'More' })).toBeInTheDocument()
+    expect(screen.queryByText('Store context')).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: 'Zeann' })).not.toBeInTheDocument()
+  })
+
   it('exposes More as a tab-bar link', async () => {
     renderMore('/dashboard', staffUser)
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
