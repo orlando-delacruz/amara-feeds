@@ -122,6 +122,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-034 | Phase 3 gate deferral and assumption adoption for database work | Accepted | 2026-09-20 |
 | DEC-035 | Supabase-direct integration: profiles-based authz and service swap | Accepted | 2026-09-20 |
 | DEC-036 | Staff management RPC fixes and admin update semantics | Accepted | 2026-09-21 |
+| DEC-037 | Catalog lists only sellable items; pending-seed parity | Accepted | 2026-09-21 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -645,6 +646,16 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Context:** Hosted testing surfaced three integration defects: `record_sale` rejected the client's `p_lines` (a JSON string for a `jsonb` param — PostgREST delivered a scalar, `jsonb_array_length` failed with 22023); `create_staff` raised `gen_salt(unknown) does not exist` (42883) because the function's `search_path = public` excluded the `extensions` schema where pgcrypto lives; and staff list/edit silently read the mock (`listUsers`/`updateUser` had no supabase branch), so staff management operated on fake data while everything else was real. Frontend-only `profiles` RLS also could not express admin edits of other accounts (own-row updates only) nor password resets (`auth.users`).
 - **Decision:** Migration 00005: `create_staff` gets `set search_path = public, extensions`; new admin-only `update_staff` (name, username→ synced auth email convention, store reassignment, enable/disable, optional password reset with revocation of the user's sessions and refresh tokens — Assumed, revisit trigger: session-revocation policy) implemented as `SECURITY DEFINER` with in-body admin checks. Services gain the missing supabase branches (`listUsers`, `getUser`, `updateUser` → `update_staff`, `getDeliveryNetSummary`). `serviceErrorFromSupabase` never surfaces raw SQLSTATEs — `P0001` business copy passes through classified by message; every other SQLSTATE collapses to a generic message with the detail logged. `p_lines` is passed as a real array (postgrest-js serializes JSON arrays to `jsonb` arrays; stringified values arrive as scalars). Password inputs gain a show/hide toggle in the shared `TextField`.
 - **Related documents:** `docs/SECURITY.md` §§5, 8, `src/services/`, `supabase/migrations/20260921022901_00005_staff_fixes.sql`.
+
+### DEC-037 — Catalog lists only sellable items; pending-seed parity
+
+- **ID:** DEC-037
+- **Title:** Catalog lists only sellable items; pending-seed parity
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** Hosted testing showed an approved pending product appearing in the sale catalog while absent from inventory. Verified against the hosted data: the seeded demo item (Cooking Oil 1L) was created pending with no receiving record and no stock, so approval made it catalog-visible (decoupled from stock) but inventory-invisible. Root questions decided with the client: (1) approval behavior — keep as-is, approval only activates the product and stock comes from receiving; (2) catalog behavior — the sale catalog should list only sellable items (product priced at the current store, i.e. actually received there); (3) seed parity — the demo pending item must behave like a real staff receipt.
+- **Decision:** `NewSalePage` filters the product list to items present in `listStorePrices(store)` (products with no price, therefore no stock, at the current store never render — no "No price" disabled card). The seed gains a receiving record + stock row for the pending demo item (DB `00006`, mock `seed.ts`) so approval-flow demos read correctly: stock exists before approval; approval makes it sellable in both catalog and inventory. Existing unstocked active products (e.g. prod-3 driven live by verification) resolve automatically once the receiving row exists — no manual data surgery.
+- **Related documents:** `src/features/sales/NewSalePage.tsx`, `src/services/mocks/seed.ts`, `supabase/migrations/20260921031853_00006_pending_seed_parity.sql`, `docs/DATA-MODEL.md` §§4.3, 4.8.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

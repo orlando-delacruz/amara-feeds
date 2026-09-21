@@ -130,15 +130,13 @@ describe('NewSalePage', () => {
     expect(await screen.findByRole('button', { name: 'Save sale' })).toBeInTheDocument()
   })
 
-  it('shows a disabled add button for products without a store receipt', async () => {
+  it('hides an approved product until it has a store price', async () => {
     const product = await createProduct({ name: 'Unpriced Item', createdByUserId: 'user-1' })
     await approveProduct(product.id)
 
     renderNewSale()
-    const card = await screen.findByRole('heading', { name: 'Unpriced Item' })
-    const container = card.closest('div') as HTMLElement
-    expect(await screen.findByText(/No price/)).toBeInTheDocument()
-    expect(within(container).getByRole('button', { name: 'Add to cart' })).toBeDisabled()
+    expect(await screen.findByText('Rice 25kg')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Unpriced Item' })).not.toBeInTheDocument()
   })
 
   it('lets an admin add to the cart and open it in the admin area', async () => {

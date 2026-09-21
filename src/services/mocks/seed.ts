@@ -58,6 +58,9 @@ export function createSeedData(): MockDatabase {
   const stock: StockLevel[] = [
     { storeId: 'amara', productId: 'prod-1', quantity: 20 },
     { storeId: 'amara', productId: 'prod-2', quantity: 50 },
+    // Pending demo item received like a real one (DEC-037): its stock exists
+    // before approval and appears in inventory right away.
+    { storeId: 'amara', productId: 'prod-3', quantity: 15 },
     { storeId: 'amara', productId: 'prod-4', quantity: 30 },
     { storeId: 'zeann', productId: 'prod-1', quantity: 12 },
     { storeId: 'zeann', productId: 'prod-2', quantity: 40 },
@@ -177,6 +180,19 @@ export function createSeedData(): MockDatabase {
       vehicleId: 'vehicle-3',
       recordedByUserId: 'user-2',
       receivedAt: today,
+    },
+    {
+      id: 'recv-7',
+      storeId: 'amara',
+      productId: 'prod-3',
+      quantity: 15,
+      supplier: 'Local Market',
+      costPriceMinor: 8200,
+      sellingPriceMinor: 9800,
+      riderId: 'rider-1',
+      vehicleId: 'vehicle-1',
+      recordedByUserId: 'user-1',
+      receivedAt: yesterday,
     },
   ]
 

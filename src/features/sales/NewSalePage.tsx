@@ -81,7 +81,11 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
   const products = useAsyncData(() => listProducts({ status: 'active' }))
   const prices = useAsyncData(() => listStorePrices(store), store)
 
+  // Only sellable items: products priced at this store (i.e. received there).
+  // An approved product without a receipt has no stock and no price — it stays
+  // hidden from the catalog until stock is received (DEC-037).
   const visibleProducts = (products.data ?? [])
+    .filter((product) => prices.data?.[product.id] !== undefined)
     .filter((product) =>
       search.trim() ? product.name.toLowerCase().includes(search.trim().toLowerCase()) : true,
     )
@@ -135,10 +139,10 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
             ? null
             : visibleProducts.length === 0
               ? {
-                  title: search.trim() ? 'No items match your search' : 'No items available',
+                  title: search.trim() ? 'No items match your search' : 'No sellable items yet',
                   description: search.trim()
                     ? 'Try a different search term.'
-                    : 'Add items at your store to start selling.',
+                    : 'Receive stock at your store to start selling.',
                 }
               : null
         }
@@ -148,34 +152,30 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
         )}
         <CatalogGrid>
           {visibleProducts.map((product: Product) => {
-            const price = prices.data?.[product.id]
+            const price = prices.data?.[product.id] as Money
             const quantity = quantities[product.id] ?? '1'
             return (
               <ProductCard key={product.id}>
                 <ProductName>{product.name}</ProductName>
                 <ProductPrice>
-                  Price per bag:{' '}
-                  {price !== undefined ? <MoneyText amountMinor={price} /> : 'No price'}
+                  Price per bag: <MoneyText amountMinor={price} />
                 </ProductPrice>
-                {price !== undefined && (
-                  <QtyField
-                    id={`sale-quantity-${product.id}`}
-                    label="Quantity"
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={quantity}
-                    onChange={(event) =>
-                      setQuantities((current) => ({ ...current, [product.id]: event.target.value }))
-                    }
-                    required
-                  />
-                )}
+                <QtyField
+                  id={`sale-quantity-${product.id}`}
+                  label="Quantity"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={quantity}
+                  onChange={(event) =>
+                    setQuantities((current) => ({ ...current, [product.id]: event.target.value }))
+                  }
+                  required
+                />
                 <Button
                   variant="primary"
                   size="sm"
-                  disabled={price === undefined}
-                  onClick={() => price !== undefined && addToCart(product.id, product.name, price)}
+                  onClick={() => addToCart(product.id, product.name, price)}
                 >
                   Add to cart
                 </Button>
