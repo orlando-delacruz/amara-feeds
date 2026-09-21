@@ -106,15 +106,20 @@ export async function getCredit(id: CreditId): Promise<CreditObligation> {
 
 export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
   if (isSupabaseConfigured && supabase) {
+    // maybeSingle() + explicit not_found: a stale/deleted credit id resolves
+    // to the same ServiceError the mock path throws (never raw PGRST116).
     const { data: credit, error } = await supabase
       .from('credit_obligations')
       .select(
         'id, customer_id, origin_store_id, sale_id, terms_id, due_date, original_amount_minor, balance_minor, status, created_at',
       )
       .eq('id', id)
-      .single()
+      .maybeSingle()
     if (error) {
       throw serviceErrorFromSupabase(error)
+    }
+    if (!credit) {
+      throw new ServiceError('not_found', 'Credit not found.')
     }
     const { data: payments } = await supabase
       .from('payments')

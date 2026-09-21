@@ -93,9 +93,13 @@ export async function updateVehicle(id: string, patch: UpdateVehicleInput): Prom
       .update(updates)
       .eq('id', id)
       .select('id, label, store_id, active, created_by_user_id, created_at')
-      .single()
+      .maybeSingle()
     if (error) {
       throw serviceErrorFromSupabase(error)
+    }
+    // 0 rows = vehicle missing or blocked by RLS — same contract as the mock.
+    if (!data) {
+      throw new ServiceError('not_found', 'Vehicle not found.')
     }
     return {
       id: data.id,

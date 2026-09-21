@@ -93,9 +93,13 @@ export async function updateRider(id: string, patch: UpdateRiderInput): Promise<
       .update(updates)
       .eq('id', id)
       .select('id, name, store_id, active, created_by_user_id, created_at')
-      .single()
+      .maybeSingle()
     if (error) {
       throw serviceErrorFromSupabase(error)
+    }
+    // 0 rows = rider missing or blocked by RLS — same contract as the mock.
+    if (!data) {
+      throw new ServiceError('not_found', 'Rider not found.')
     }
     return {
       id: data.id,

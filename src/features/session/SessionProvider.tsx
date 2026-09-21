@@ -36,20 +36,29 @@ async function loadUserFromSession(): Promise<User | null> {
   if (!isSupabaseConfigured || !supabase) {
     return null
   }
-  const { data } = await supabase.auth.getSession()
-  const sessionUser = data.session?.user
-  if (!sessionUser) {
+  try {
+    const { data } = await supabase.auth.getSession()
+    const sessionUser = data.session?.user
+    if (!sessionUser) {
+      return null
+    }
+    // maybeSingle(): a session whose profile row was deleted (e.g. wiped
+    // staff account) must resolve to signed-out, not crash with PGRST116.
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, username, name, role, store_id, active')
+      .eq('id', sessionUser.id)
+      .maybeSingle()
+    if (!profile || !profile.active) {
+      // Stale session for a removed account — clear it server-side.
+      await supabase.auth.signOut()
+      return null
+    }
+    return profileToUser(profile)
+  } catch (cause) {
+    console.error('[session] restore failed:', cause)
     return null
   }
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id, username, name, role, store_id, active')
-    .eq('id', sessionUser.id)
-    .single()
-  if (!profile || !profile.active) {
-    return null
-  }
-  return profileToUser(profile)
 }
 
 export function SessionProvider({ children, initialUser }: SessionProviderProps) {

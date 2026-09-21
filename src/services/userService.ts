@@ -114,7 +114,7 @@ export async function signIn(input: { username: string; password: string }): Pro
       .from('profiles')
       .select('id, username, name, role, store_id, active')
       .eq('id', data.user.id)
-      .single()
+      .maybeSingle()
     if (profileError || !profile) {
       throw new ServiceError('validation', 'This account is disabled. Contact the admin.')
     }
