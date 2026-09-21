@@ -124,6 +124,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-036 | Staff management RPC fixes and admin update semantics | Accepted | 2026-09-21 |
 | DEC-037 | Catalog lists only sellable items; pending-seed parity | Accepted | 2026-09-21 |
 | DEC-038 | SweetAlert2 feedback system + logout confirmation | Accepted | 2026-09-21 |
+| DEC-039 | Hosted production wipe to owner-only clean slate | Accepted | 2026-09-21 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -669,6 +670,18 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Known limitation recorded:** a wrong-password sign-in logs `POST /auth/v1/token?grant_type=password 400` in the browser console — that is DevTools' automatic network log for the expected failed auth request, not an app error, and cannot be suppressed from app code; the popup now surfaces the failure instead of an inline alert.
 - **Testing:** Vitest runs against a deterministic double (`src/test/swalMock.ts`) — `fire()` resolves confirmed and records its options; tests assert popups via `__awaitSwal(title)` instead of rendered-text queries. The real library is never rendered under jsdom.
 - **Related documents:** `docs/TECH-STACK.md` §2, `src/lib/swal.ts`, `src/test/swalMock.ts`.
+
+### DEC-039 — Hosted production wipe to owner-only clean slate
+
+- **ID:** DEC-039
+- **Title:** Hosted production wipe to owner-only clean slate
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** The hosted project carried only development/verification data: seed demo rows (DEC-034) and staff/test accounts created while exercising the app (`alice`, `ben`, plus a client-created `orlando`). The client confirmed wiping everything except the admin/owner so live use starts from a clean slate, under the already-confirmed shared-credit model (DEC-034; no model change).
+- **Decision:** One-time FK-safe wipe of the linked hosted database, executed via SQL (not a migration — migrations reapply on `db reset`): all business tables emptied (`payments`, `credit_obligations`, `sale_lines`, `sales`, `receiving_records`, `stock_levels`, `expenses`, `riders`, `vehicles`, `products`, `customers`, `audit_events`) in one transaction, and non-owner auth users deleted — cascading their `profiles`, `auth.identities`, sessions, and refresh tokens. Kept: `owner@zafone.local` + `owner` admin profile, and the reference rows `stores` (amara, zeann) and `payment_terms` (7/15/30 days). The script is preserved under `supabase/cleanup/wipe-business-data.sql` for audit and could be re-run if demo re-seeding is ever needed first; local dev keeps the `00004` seed parity data so development and tests stay usable.
+- **Alternatives considered:** a migration — rejected; a `db reset`-rerunnable deletion would also strip dev-parity seed data from every future environment. A `db pull`-style deep reset — overkill for a pure data wipe.
+- **Consequences:** The hosted app is owner-only with empty business data. Product catalog is empty by design: new items enter through Receiving → "Add new item" (staff submit, admin approve). Staff accounts are re-created via the admin UI (`create_staff`).
+- **Related documents:** `supabase/cleanup/wipe-business-data.sql`, `docs/DATA-MODEL.md` §9, `docs/DEVELOPMENT.md` §12.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.
