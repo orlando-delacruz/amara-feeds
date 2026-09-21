@@ -30,9 +30,15 @@ describe('StoreControl', () => {
     const actor = userEvent.setup()
     renderWithProviders(<StoreControl />, { user: adminUser })
     expect(screen.getByRole('radiogroup', { name: 'Store' })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: 'Amara' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'All stores' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
     await actor.click(screen.getByRole('radio', { name: 'Zeann' }))
     expect(screen.getByRole('radio', { name: 'Zeann' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('radio', { name: 'Amara' })).toHaveAttribute('aria-checked', 'false')
+    expect(screen.getByRole('radio', { name: 'All stores' })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    )
   })
 })

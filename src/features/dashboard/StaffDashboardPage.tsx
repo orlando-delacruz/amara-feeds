@@ -15,7 +15,7 @@ import { MoneyText } from '@/components/ui/MoneyText'
 import { StatsSkeleton } from '@/components/ui/Skeletons'
 import { useAsyncData } from '@/features/shared'
 import { todayIso } from '@/lib/dates'
-import { storeNames } from '@/store/stores'
+import { concreteStoreId, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import { RouteBoard } from './RouteBoard'
 import { BalanceStateChip } from './BalanceState'
@@ -80,9 +80,9 @@ export function StaffDashboardPage() {
     <Stack>
       <RouteBoard
         title="Dashboard"
-        route={storeNames[store]}
+        route={storeNames[concreteStoreId(store)]}
         date={date}
-        accent={<StoreLivery $store={store} />}
+        accent={<StoreLivery $store={concreteStoreId(store)} />}
       />
       <AsyncBoundary
         loading={data.loading}
@@ -104,7 +104,7 @@ export function StaffDashboardPage() {
                 label="Today's sales"
                 value={<MoneyText amountMinor={data.data.storeSales?.totalMinor ?? 0} />}
                 caption={`${data.data.storeSales?.saleCount ?? 0} sales today`}
-                tone={store}
+                tone={concreteStoreId(store)}
                 icon={<Icon name="card" />}
                 valueScale="hero"
                 panel
@@ -140,7 +140,7 @@ export function StaffDashboardPage() {
                   label="Weekly sales"
                   value={<MoneyText amountMinor={data.data.weeklySales?.totalMinor ?? 0} />}
                   caption={`${data.data.weeklySales?.saleCount ?? 0} sales · last 7 days`}
-                  tone={store}
+                  tone={concreteStoreId(store)}
                   icon={<Icon name="calendar" />}
                 />
               </Plates>

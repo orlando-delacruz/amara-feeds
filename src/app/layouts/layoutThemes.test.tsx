@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+// userEvent removed with the per-page filter test
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
@@ -32,18 +32,13 @@ function brandPillBackground(): string {
 describe('admin area theme', () => {
   beforeEach(() => resetDb())
 
-  it('keeps the navy shell when the store filter switches', async () => {
-    const actor = userEvent.setup()
-    renderAdminAt('/admin/sales', 'amara')
+  it('keeps the navy shell whichever store context is active', async () => {
+    renderAdminAt('/admin/sales', 'zeann')
 
     expect(await screen.findByRole('heading', { name: 'Sales' })).toBeInTheDocument()
-    expect(brandPillBackground()).toBe('rgb(1, 60, 104)')
-
-    await actor.click(screen.getByRole('radio', { name: 'Zeann' }))
-
-    // Data context follows the filter…
+    // Data context is zeann…
     expect(screen.getByLabelText('Current store: Zeann')).toBeInTheDocument()
-    // …but the paint does not.
+    // …and the paint is still navy.
     expect(brandPillBackground()).toBe('rgb(1, 60, 104)')
   })
 

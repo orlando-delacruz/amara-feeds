@@ -29,7 +29,7 @@ import { useSession } from '@/features/session/useSession'
 import { useCart } from '@/features/sales/useCart'
 import { toMinor } from '@/lib/money'
 import { todayIso } from '@/lib/dates'
-import { storeNames } from '@/store/stores'
+import { concreteStoreId, isAllStores, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import type { PaymentType } from '@/domain'
 
@@ -102,8 +102,13 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
   const customers = useAsyncData(() => listCustomers())
   const products = useAsyncData(() => listProducts())
   const terms = useAsyncData(() => listPaymentTerms())
-  const riders = useAsyncData(() => listRiders({ storeId: store, active: true }), store)
-  const vehicles = useAsyncData(() => listVehicles({ storeId: store, active: true }), store)
+  const allMode = isAllStores(store)
+  const contextStoreId = concreteStoreId(store)
+  const riders = useAsyncData(() => listRiders({ storeId: contextStoreId, active: true }), store)
+  const vehicles = useAsyncData(
+    () => listVehicles({ storeId: contextStoreId, active: true }),
+    store,
+  )
   const duePreview = useAsyncData(
     () =>
       paymentType === 'charge' && termsId
@@ -128,7 +133,7 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const sale = await save.run({
-      storeId: store,
+      storeId: contextStoreId,
       saleDate,
       customerId: customerId || undefined,
       paymentType,
@@ -192,7 +197,7 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
       <Stack>
         <PageHeader
           title="Cart"
-          description={`Reviewing a sale at ${storeNames[store]}.`}
+          description={`Reviewing a sale at ${storeNames[concreteStoreId(store)]}.`}
           actions={
             <Button variant="secondary" onClick={() => navigate(basePath)}>
               Cancel
@@ -213,7 +218,7 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
     <Stack>
       <PageHeader
         title="Cart"
-        description={`Reviewing a sale at ${storeNames[store]}.`}
+        description={`Reviewing a sale at ${storeNames[concreteStoreId(store)]}.`}
         actions={
           <Button variant="secondary" onClick={() => navigate(basePath)}>
             Cancel
@@ -221,6 +226,13 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
         }
         size="compact"
       />
+      {save.error && <Alert variant="danger">{save.error}</Alert>}
+      {allMode && (
+        <Alert variant="warning" title="Pick a store to record the sale">
+          Set Amara or Zeann in More → Store context, or return to the catalog to add items for that
+          store's sale.
+        </Alert>
+      )}
       {(customers.error || products.error || terms.error) && (
         <Alert variant="warning">
           Some checkout details could not load. Retry or try again from the sales list.
@@ -269,7 +281,7 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
               hint="Defaults to today. Change it for a backdated sale."
               required
             />
-            <p>Location: {storeNames[store]}</p>
+            <p>Location: {storeNames[concreteStoreId(store)]}</p>
             <TextField
               id="sale-discount"
               label="Discount (₱)"
@@ -392,7 +404,7 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
               <p>
                 Date: <DateText value={saleDate} />
               </p>
-              <p>Location: {storeNames[store]}</p>
+              <p>Location: {storeNames[concreteStoreId(store)]}</p>
               <p>
                 Payment: {paymentType === 'charge' ? 'Charge' : 'Cash'}
                 {` · ${resolvedPaymentMethod || 'No payment method'}`}
@@ -414,7 +426,7 @@ export function SaleCartPage({ basePath = '/sales' }: SaleCartPageProps) {
               </p>
             </Review>
             <Actions>
-              <Button type="submit" disabled={save.pending}>
+              <Button type="submit" disabled={save.pending || allMode}>
                 {save.pending ? 'Saving…' : 'Save sale'}
               </Button>
             </Actions>

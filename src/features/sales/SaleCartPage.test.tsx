@@ -7,6 +7,7 @@ import { resetDb } from '@/services/mocks/db'
 import { __awaitSwal } from '@/test/swalMock'
 import { renderWithProviders } from '@/test/render'
 import type { CartLine } from '@/features/sales/CartContext'
+import type { StoreContextId } from '@/store/stores'
 import type { User } from '@/domain'
 
 const staffUser: User = {
@@ -30,12 +31,17 @@ const cartLines: CartLine[] = [
   { productId: 'prod-2', quantity: 3, unitPriceMinor: 6500 },
 ]
 
-function renderCart(path = '/sales/cart', user: User = staffUser, cart: CartLine[] = cartLines) {
+function renderCart(
+  path = '/sales/cart',
+  user: User = staffUser,
+  cart: CartLine[] = cartLines,
+  initialStore?: StoreContextId,
+) {
   return renderWithProviders(
     <MemoryRouter initialEntries={[path]}>
       <AppRoutes />
     </MemoryRouter>,
-    { user, cart },
+    { user, cart, store: initialStore },
   )
 }
 
@@ -110,7 +116,7 @@ describe('SaleCartPage', () => {
 
   it('records a sale as admin and returns to the admin sales list', async () => {
     const user = userEvent.setup()
-    renderCart('/admin/sales/cart', adminUser)
+    renderCart('/admin/sales/cart', adminUser, cartLines, 'amara')
 
     await user.click(screen.getByRole('button', { name: 'Save sale' }))
 

@@ -1,9 +1,9 @@
 import { createContext } from 'react'
-import type { StoreId } from './stores'
+import type { StoreContextId } from './stores'
 
 export interface StoreContextValue {
-  store: StoreId
-  setStore: (store: StoreId) => void
+  store: StoreContextId
+  setStore: (store: StoreContextId) => void
   canSwitchStore: boolean
 }
 

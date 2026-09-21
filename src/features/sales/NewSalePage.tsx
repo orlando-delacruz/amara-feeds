@@ -14,7 +14,7 @@ import { TextField } from '@/components/ui/TextField'
 import { useAsyncData } from '@/features/shared'
 import { useCart } from '@/features/sales/useCart'
 import { BasketFab } from '@/features/sales/BasketFab'
-import { storeNames } from '@/store/stores'
+import { concreteStoreId, isAllStores, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import type { Money } from '@/lib/money'
 import type { Product, ProductId } from '@/domain'
@@ -79,17 +79,23 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
   const [search, setSearch] = useState('')
 
   const products = useAsyncData(() => listProducts({ status: 'active' }))
-  const prices = useAsyncData(() => listStorePrices(store), store)
+  // Catalog pricing is per store, so "all" mode cannot price or add to a cart —
+  // it asks for a concrete store instead.
+  const allMode = isAllStores(store)
+  const contextStoreId = concreteStoreId(store)
+  const prices = useAsyncData(() => listStorePrices(contextStoreId), store)
 
   // Only sellable items: products priced at this store (i.e. received there).
   // An approved product without a receipt has no stock and no price — it stays
   // hidden from the catalog until stock is received (DEC-037).
-  const visibleProducts = (products.data ?? [])
-    .filter((product) => prices.data?.[product.id] !== undefined)
-    .filter((product) =>
-      search.trim() ? product.name.toLowerCase().includes(search.trim().toLowerCase()) : true,
-    )
-    .sort((a, b) => a.name.localeCompare(b.name, 'en'))
+  const visibleProducts = allMode
+    ? []
+    : (products.data ?? [])
+        .filter((product) => prices.data?.[product.id] !== undefined)
+        .filter((product) =>
+          search.trim() ? product.name.toLowerCase().includes(search.trim().toLowerCase()) : true,
+        )
+        .sort((a, b) => a.name.localeCompare(b.name, 'en'))
 
   function addToCart(productId: ProductId, name: string, price: Money) {
     const quantity = Number(quantities[productId] ?? '1')
@@ -105,7 +111,7 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
     <Stack>
       <PageHeader
         title="New sale"
-        description={`Adding items for a sale at ${storeNames[store]}.`}
+        description={`Adding items for a sale at ${storeNames[concreteStoreId(store)]}.`}
         actions={
           <Button variant="secondary" onClick={() => navigate(basePath)}>
             Cancel
@@ -114,6 +120,12 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
         size="compact"
       />
       {quantityError && <Alert variant="danger">{quantityError}</Alert>}
+      {allMode && (
+        <Alert variant="info" title="Pick a store to start a sale">
+          Set Amara or Zeann in More → Store context to load that store's catalog and record the
+          sale there.
+        </Alert>
+      )}
       <TextField
         id="product-search"
         label="Search items"

@@ -126,6 +126,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-038 | SweetAlert2 feedback system + logout confirmation | Accepted | 2026-09-21 |
 | DEC-039 | Hosted production wipe to owner-only clean slate | Accepted | 2026-09-21 |
 | DEC-040 | Admin store switch relocated to the More page | Accepted | 2026-09-21 |
+| DEC-041 | Admin default store context is All stores | Accepted | 2026-09-21 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -693,6 +694,16 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Context:** The admin's Amara/Zeann switch (`StoreControl`) rendered directly under each admin page's header (credit detail, inventory, receiving, riders, vehicles, expenses), reading as per-page chrome the client wants out of that position. Removing it entirely would strip the admin's ability to view each store's separate data; the client chose a single central switch.
 - **Decision:** `StoreControl` is removed from all six page tops. The admin sets the store context once from the **More page** ("Store context" section, admin-only); every admin page and the header badge follow that context. Staff still see no switch (locked to their assigned store) — the relocated control renders for admins only. Behavior and scoping are otherwise unchanged.
 - **Related documents:** `src/features/more/MorePage.tsx`, `src/features/shared/StoreControl.tsx`.
+
+### DEC-041 — Default admin store context is all-stores
+
+- **ID:** DEC-041
+- **Title:** Default admin store context is all stores
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** After DEC-040 relocated the admin switch to the More page, the default context was still one store (Amara). The client wants admins to see both stores combined by default.
+- **Decision:** The admin store context supports the value `all` (both stores combined, the default) in addition to Amara and Zeann. Read surfaces show combined data with a Store column while `all` is active; write flows that must target one store (sale checkout, receiving record, payment) are disabled with a pointing hint until a concrete store is chosen. Staff remain locked to their assigned store. The header store badge is hidden while `all` is active (the dual-logos banner already communicates the business-wide view).
+- **Related documents:** `src/store/`, `src/features/shared/StoreControl.tsx`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

@@ -2,16 +2,17 @@ import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useSession } from '@/features/session/useSession'
 import { StoreContext } from './StoreContext'
-import type { StoreId } from './stores'
+import { type StoreContextId } from './stores'
 
 interface StoreProviderProps {
   children: ReactNode
-  initialStore?: StoreId
+  initialStore?: StoreContextId
 }
 
-export function StoreProvider({ children, initialStore = 'amara' }: StoreProviderProps) {
+export function StoreProvider({ children, initialStore }: StoreProviderProps) {
   const { user } = useSession()
-  const [selectedStore, setSelectedStore] = useState<StoreId>(initialStore)
+  // Admins default to "all stores" (combined view); staff are locked below.
+  const [selectedStore, setSelectedStore] = useState<StoreContextId>(initialStore ?? 'all')
 
   // Staff operate within their assigned store; admins are business-wide and may
   // switch the store context for store-specific views.

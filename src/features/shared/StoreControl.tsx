@@ -1,11 +1,10 @@
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
-import { storeIds, storeNames } from '@/store/stores'
+import { storeIds, storeNames, type StoreContextId } from '@/store/stores'
 import { useStore } from '@/store/useStore'
-import type { StoreId } from '@/store/stores'
 
-// Admin-only store-context switch for store-scoped pages. Staff are locked to
-// their assigned store, so nothing renders for them. Lives on the pages where
-// the store context applies — the header only displays the current store.
+// Admin store-context switch, relocated to the admin More page (DEC-040).
+// Defaults to "All stores" (both stores combined); staff render nothing —
+// they are locked to their assigned store.
 export function StoreControl() {
   const { store, setStore, canSwitchStore } = useStore()
   if (!canSwitchStore) {
@@ -14,9 +13,12 @@ export function StoreControl() {
   return (
     <SegmentedControl
       label="Store"
-      options={storeIds.map((id) => ({ value: id, label: storeNames[id] }))}
+      options={[
+        { value: 'all', label: 'All stores' },
+        ...storeIds.map((id) => ({ value: id, label: storeNames[id] })),
+      ]}
       value={store}
-      onChange={(value) => setStore(value as StoreId)}
+      onChange={(value) => setStore(value as StoreContextId)}
     />
   )
 }

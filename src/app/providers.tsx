@@ -5,7 +5,7 @@ import { CartProvider } from '@/features/sales/CartProvider'
 import type { CartLine } from '@/features/sales/CartContext'
 import { SessionProvider } from '@/features/session/SessionProvider'
 import { StoreProvider } from '@/store/StoreProvider'
-import type { StoreId } from '@/store/stores'
+import type { StoreContextId } from '@/store/stores'
 import { GlobalStyle } from '@/theme/GlobalStyle'
 import { tokens } from '@/theme/tokens'
 
@@ -13,7 +13,7 @@ interface AppProvidersProps {
   children: ReactNode
   initialUser?: User | null
   initialCartLines?: CartLine[]
-  initialStore?: StoreId
+  initialStore?: StoreContextId
 }
 
 export function AppProviders({

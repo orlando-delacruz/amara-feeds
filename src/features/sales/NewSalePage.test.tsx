@@ -6,6 +6,7 @@ import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
 import { approveProduct, createProduct } from '@/services/productService'
 import { renderWithProviders } from '@/test/render'
+import type { StoreContextId } from '@/store/stores'
 import type { User } from '@/domain'
 
 const staffUser: User = {
@@ -24,12 +25,12 @@ const adminUser: User = {
   active: true,
 }
 
-function renderNewSale(path = '/sales/new', user: User = staffUser) {
+function renderNewSale(path = '/sales/new', user: User = staffUser, initialStore?: StoreContextId) {
   return renderWithProviders(
     <MemoryRouter initialEntries={[path]}>
       <AppRoutes />
     </MemoryRouter>,
-    { user },
+    { user, store: initialStore },
   )
 }
 
@@ -141,7 +142,7 @@ describe('NewSalePage', () => {
 
   it('lets an admin add to the cart and open it in the admin area', async () => {
     const user = userEvent.setup()
-    renderNewSale('/admin/sales/new', adminUser)
+    renderNewSale('/admin/sales/new', adminUser, 'amara')
 
     const rice = await productCard('Rice 25kg')
     await user.click(within(rice).getByRole('button', { name: 'Add to cart' }))

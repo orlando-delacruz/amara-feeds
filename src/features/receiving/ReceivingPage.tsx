@@ -30,7 +30,7 @@ import { confirmAction, notifyError, notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { toMinor } from '@/lib/money'
-import { storeNames } from '@/store/stores'
+import { concreteStoreId, isAllStores, storeLabel, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import type { Product } from '@/domain'
 
@@ -108,7 +108,10 @@ export function ReceivingPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [tab, setTab] = useState<'pending' | 'received'>('pending')
   const [formError, setFormError] = useState<string | null>(null)
-  const list = useAsyncData(() => listReceiving({ storeId: store }), store)
+  // 'All stores' reviews receipts of both stores combined.
+  const allMode = isAllStores(store)
+  const contextStoreId = concreteStoreId(store)
+  const list = useAsyncData(() => listReceiving(allMode ? {} : { storeId: contextStoreId }), store)
   const products = useAsyncData(() => listProducts())
   const users = useAsyncData(() => listUsers())
   const receive = useAlertMutation(createReceiving, 'Could not record the receipt.')
@@ -170,7 +173,7 @@ export function ReceivingPage() {
     }
     setFormError(null)
     const record = await receive.run({
-      storeId: store,
+      storeId: contextStoreId,
       productId,
       quantity: Number(form.quantity),
       supplier: form.supplier,
@@ -252,8 +255,8 @@ export function ReceivingPage() {
         title="Receiving Stock"
         description={
           isAdmin
-            ? `Record stock received at ${storeNames[store]}. Review staff-submitted items below.`
-            : `Record stock received at ${storeNames[store]}. New items stay pending until an admin approves them.`
+            ? `Record stock received at ${storeLabel(store)}. Review staff-submitted items below.`
+            : `Record stock received at ${storeLabel(store)}. New items stay pending until an admin approves them.`
         }
         size="compact"
       />
@@ -434,9 +437,10 @@ export function ReceivingPage() {
         >
           {list.data && list.data.length > 0 && (
             <RecordList
-              caption={`Receiving history at ${storeNames[store]}`}
+              caption={`Receiving history — ${storeLabel(store)}`}
               columns={[
                 { key: 'product', header: 'Item' },
+                ...(allMode ? ([{ key: 'store', header: 'Store' }] as const) : []),
                 { key: 'quantity', header: 'Quantity' },
                 { key: 'supplier', header: 'Supplier' },
                 { key: 'cost', header: 'Cost price' },
@@ -446,6 +450,7 @@ export function ReceivingPage() {
               ]}
               rows={list.data.map((record) => ({
                 product: productNames.get(record.productId) ?? 'Not available',
+                ...(allMode ? { store: storeNames[record.storeId] } : {}),
                 quantity: String(record.quantity),
                 supplier: record.supplier,
                 cost: <MoneyText amountMinor={record.costPriceMinor} />,

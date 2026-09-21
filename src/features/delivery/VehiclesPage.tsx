@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { createVehicle, deleteVehicle, listUsers, listVehicles, setVehicleActive } from '@/services'
+import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -14,7 +15,7 @@ import { useAsyncData, useAlertMutation, useMutation } from '@/features/shared'
 import { confirmAction, notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
-import { storeNames } from '@/store/stores'
+import { concreteStoreId, isAllStores, storeNames, storeLabel } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import { EditVehicleDialog } from './EditVehicleDialog'
 import type { Vehicle } from '@/domain'
@@ -52,7 +53,12 @@ export function VehiclesPage() {
   const { user } = useSession()
   const [label, setLabel] = useState('')
   const [editing, setEditing] = useState<Vehicle | null>(null)
-  const list = useAsyncData(() => listVehicles({ storeId: store }), store)
+  // 'All stores' reviews both stores; a concrete store filters and allows adds.
+  const allMode = isAllStores(store)
+  const list = useAsyncData(
+    () => listVehicles(allMode ? {} : { storeId: concreteStoreId(store) }),
+    store,
+  )
   const users = useAsyncData(() => listUsers())
   const add = useAlertMutation(createVehicle, 'Could not add the vehicle.')
   const toggle = useMutation((input: { id: string; active: boolean }) =>
@@ -64,7 +70,11 @@ export function VehiclesPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const created = await add.run({ label, storeId: store, createdByUserId: user?.id })
+    const created = await add.run({
+      label,
+      storeId: concreteStoreId(store),
+      createdByUserId: user?.id,
+    })
     if (created) {
       setLabel('')
       void notifySuccess(`${created.label} added.`)
@@ -110,28 +120,34 @@ export function VehiclesPage() {
     <Stack>
       <PageHeader
         title="Vehicles"
-        description={`Vehicle types used for deliveries at ${storeNames[store]}.`}
+        description={`Vehicle types used for deliveries at ${storeLabel(store)}.`}
         size="compact"
       />
-      <Card>
-        <form onSubmit={handleSubmit} noValidate>
-          <Fields>
-            <TextField
-              id="vehicle-label"
-              label="Vehicle type"
-              placeholder="Motorcycle, Tricycle, Van…"
-              value={label}
-              onChange={(event) => setLabel(event.target.value)}
-              required
-            />
-            <Actions>
-              <Button type="submit" disabled={add.pending}>
-                {add.pending ? 'Adding…' : 'Add vehicle'}
-              </Button>
-            </Actions>
-          </Fields>
-        </form>
-      </Card>
+      {allMode ? (
+        <Alert variant="info" title="Pick a store to add vehicle types">
+          Set Amara or Zeann in More → Store context to add a vehicle type for a store.
+        </Alert>
+      ) : (
+        <Card>
+          <form onSubmit={handleSubmit} noValidate>
+            <Fields>
+              <TextField
+                id="vehicle-label"
+                label="Vehicle type"
+                placeholder="Motorcycle, Tricycle, Van…"
+                value={label}
+                onChange={(event) => setLabel(event.target.value)}
+                required
+              />
+              <Actions>
+                <Button type="submit" disabled={add.pending}>
+                  {add.pending ? 'Adding…' : 'Add vehicle'}
+                </Button>
+              </Actions>
+            </Fields>
+          </form>
+        </Card>
+      )}
       <AsyncBoundary
         loading={list.loading}
         error={list.error}
@@ -148,9 +164,10 @@ export function VehiclesPage() {
       >
         {list.data && list.data.length > 0 && (
           <RecordList
-            caption={`Vehicles at ${storeNames[store]}`}
+            caption={`Vehicles — ${storeLabel(store)}`}
             columns={[
               { key: 'label', header: 'Vehicle' },
+              { key: 'store', header: 'Store' },
               { key: 'status', header: 'Status' },
               { key: 'addedBy', header: 'Added by' },
               { key: 'createdAt', header: 'Added' },
@@ -158,6 +175,7 @@ export function VehiclesPage() {
             ]}
             rows={list.data.map((vehicle) => ({
               label: vehicle.label,
+              store: storeNames[vehicle.storeId],
               status: vehicle.active ? 'Active' : 'Inactive',
               addedBy: vehicle.createdByUserId
                 ? (userNames.get(vehicle.createdByUserId) ?? 'Not available')

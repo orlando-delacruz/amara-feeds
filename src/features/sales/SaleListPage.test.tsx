@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
 import { renderWithProviders } from '@/test/render'
+import type { StoreContextId } from '@/store/stores'
 import type { User } from '@/domain'
 
 const staffUser: User = {
@@ -23,12 +24,12 @@ const adminUser: User = {
   active: true,
 }
 
-function renderAt(path: string, user: User = staffUser) {
+function renderAt(path: string, user: User = staffUser, initialStore?: StoreContextId) {
   return renderWithProviders(
     <MemoryRouter initialEntries={[path]}>
       <AppRoutes />
     </MemoryRouter>,
-    { user },
+    { user, store: initialStore },
   )
 }
 
@@ -50,7 +51,7 @@ describe('SaleListPage', () => {
 
   it('shows an empty state for a date with no sales', async () => {
     const user = userEvent.setup()
-    renderAt('/sales')
+    renderAt('/sales', undefined, 'amara')
     await screen.findByText('Maria Santos')
 
     const dateInput = screen.getByLabelText('Date')

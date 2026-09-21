@@ -6,6 +6,7 @@ import { storeBranding } from '@/store/storeBranding'
 import { syncBrowserChrome } from './browserChrome'
 import { GlobalStyle } from './GlobalStyle'
 import { storeThemes } from './storeThemes'
+import { concreteStoreId } from '@/store/stores'
 
 interface StoreThemeProviderProps {
   children: ReactNode
@@ -18,14 +19,16 @@ interface StoreThemeProviderProps {
  */
 export function StoreThemeProvider({ children }: StoreThemeProviderProps) {
   const { store } = useStore()
-  const branding = storeBranding[store]
+  // Staff area only, so the context is always concrete here.
+  const concrete = concreteStoreId(store)
+  const branding = storeBranding[concrete]
 
   useEffect(() => {
     syncBrowserChrome(branding.favicon, branding.themeColor)
   }, [branding])
 
   return (
-    <ThemeProvider theme={storeThemes[store]}>
+    <ThemeProvider theme={storeThemes[concrete]}>
       <GlobalStyle />
       {children}
     </ThemeProvider>

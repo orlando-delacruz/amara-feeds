@@ -11,11 +11,11 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
 import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
-import { StoreControl, useAsyncData } from '@/features/shared'
+import { useAsyncData } from '@/features/shared'
 import { getDisplayName } from '@/features/session/displayName'
 import { todayIso } from '@/lib/dates'
 import { formatDate } from '@/lib/format'
-import { storeNames } from '@/store/stores'
+import { concreteStoreId, isAllStores, storeNames, storeLabel } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 
 interface SaleListPageProps {
@@ -26,7 +26,13 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
   const navigate = useNavigate()
   const { store } = useStore()
   const [date, setDate] = useState(todayIso())
-  const sales = useAsyncData(() => listSales({ storeId: store, date }), `${store}:${date}`)
+  // 'All stores' lists both stores' sales combined.
+  const allMode = isAllStores(store)
+  const contextStoreId = concreteStoreId(store)
+  const sales = useAsyncData(
+    () => listSales(allMode ? { date } : { storeId: contextStoreId, date }),
+    `${store}:${date}`,
+  )
   const customers = useAsyncData(() => listCustomers())
   const users = useAsyncData(() => listUsers())
 
@@ -44,12 +50,11 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
     <Stack>
       <PageHeader
         title="Sales"
-        description={`Sales recorded at ${storeNames[store]}.`}
+        description={`Sales recorded at ${storeLabel(store)}.`}
         actions={<Button onClick={() => navigate(`${basePath}/new`)}>New sale</Button>}
         size="compact"
       />
       <FilterBar>
-        <StoreControl />
         <DatePicker id="sales-date" label="Date" value={date} onChange={setDate} />
       </FilterBar>
       <AsyncBoundary
@@ -69,9 +74,10 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
       >
         {sales.data && sales.data.length > 0 && (
           <RecordList
-            caption={`Sales at ${storeNames[store]} on ${formatDate(date)}`}
+            caption={`Sales — ${storeLabel(store)} — ${formatDate(date)}`}
             columns={[
               { key: 'customer', header: 'Customer' },
+              ...(allMode ? ([{ key: 'store', header: 'Store' }] as const) : []),
               { key: 'payment', header: 'Payment' },
               { key: 'items', header: 'Items' },
               { key: 'total', header: 'Total' },
@@ -82,6 +88,7 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
               customer: sale.customerId
                 ? (customerNames.get(sale.customerId) ?? 'Not available')
                 : 'No customer',
+              ...(allMode ? { store: storeNames[sale.storeId] } : {}),
               payment: sale.paymentType === 'charge' ? 'Charge' : 'Cash',
               items: String(sale.lines.length),
               total: <MoneyText amountMinor={sale.totalMinor} />,

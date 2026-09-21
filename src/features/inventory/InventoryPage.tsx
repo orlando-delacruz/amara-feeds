@@ -10,7 +10,7 @@ import { Stack } from '@/components/ui/Stack'
 import { useAsyncData, useAlertMutation } from '@/features/shared'
 import { confirmAction, notifySuccess } from '@/lib/swal'
 import { useSession } from '@/features/session/useSession'
-import { storeNames } from '@/store/stores'
+import { isAllStores, storeLabel, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import { EditStockDialog } from './EditStockDialog'
 import type { ProductId, StoreId } from '@/domain'
@@ -29,13 +29,20 @@ const RowActions = styled.div`
   justify-content: flex-end;
 `
 
+const StoreCell = styled.span`
+  font-size: ${({ theme }) => theme.font.size.sm};
+  color: ${({ theme }) => theme.color.text.secondary};
+`
+
 export function InventoryPage() {
   const { store } = useStore()
   const { user } = useSession()
   const [editing, setEditing] = useState<Row | null>(null)
+  // "All stores" shows both stores combined; a concrete store filters to it.
+  const allMode = isAllStores(store)
   const { data, loading, error, reload } = useAsyncData(async () => {
     const stock = await getCurrentStock()
-    return stock.filter((row) => row.storeId === store)
+    return allMode ? stock : stock.filter((row) => row.storeId === store)
   }, store)
   const remove = useAlertMutation(
     (input: { storeId: StoreId; productId: ProductId }) =>
@@ -74,6 +81,7 @@ export function InventoryPage() {
   const rows: RowWithActions[] = (data ?? []).map((row) => ({
     ...row,
     product: row.productName,
+    store: <StoreCell>{storeNames[row.storeId]}</StoreCell>,
     quantityDisplay: String(row.quantity),
     actions: (
       <RowActions>
@@ -96,7 +104,7 @@ export function InventoryPage() {
     <Stack>
       <PageHeader
         title="Inventory"
-        description={`Current stock for ${storeNames[store]}. Stock changes automatically on sales and receiving.`}
+        description={`Current stock for ${storeLabel(store)}. Stock changes automatically on sales and receiving.`}
         size="compact"
       />
       <AsyncBoundary
@@ -115,9 +123,10 @@ export function InventoryPage() {
       >
         {rows.length > 0 && (
           <RecordList
-            caption={`Current stock at ${storeNames[store]}`}
+            caption={`Current stock — ${storeLabel(store)}`}
             columns={[
               { key: 'product', header: 'Product' },
+              ...(allMode ? ([{ key: 'store', header: 'Store' }] as const) : []),
               { key: 'quantityDisplay', header: 'Quantity' },
               { key: 'actions', header: 'Actions' },
             ]}

@@ -53,12 +53,12 @@ describe('application shell', () => {
     expect(screen.queryByLabelText('Store')).not.toBeInTheDocument()
   })
 
-  it('lets an admin switch the store context on a store-scoped page', async () => {
+  it('lets an admin set the store context from the More page', async () => {
     const user = userEvent.setup()
-    renderAt('/admin/sales', adminUser)
-    expect(await screen.findByRole('heading', { name: 'Sales' })).toBeInTheDocument()
+    renderAt('/admin/more', adminUser)
+    expect(await screen.findByText('Store context')).toBeInTheDocument()
     await user.click(screen.getByRole('radio', { name: 'Zeann' }))
-    expect(screen.getByLabelText('Current store: Zeann')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Zeann' })).toHaveAttribute('aria-checked', 'true')
   })
 
   it('redirects a staff user away from admin routes', () => {

@@ -26,7 +26,7 @@ import { notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { toMinor } from '@/lib/money'
-import { storeNames } from '@/store/stores'
+import { concreteStoreId, isAllStores, storeLabel } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import type { ExpenseType, Rider, Vehicle } from '@/domain'
 
@@ -82,11 +82,20 @@ export function ExpensesPage() {
   const { user } = useSession()
   const [form, setForm] = useState<ExpenseFormState>(emptyForm)
   const [formError, setFormError] = useState<string | null>(null)
-  const expenses = useAsyncData(() => listExpenses({ storeId: store }), store)
-  const riders = useAsyncData(() => listRiders({ storeId: store, active: true }), store)
-  const vehicles = useAsyncData(() => listVehicles({ storeId: store, active: true }), store)
+  // 'All stores' reviews both stores; expenses are recorded per concrete store.
+  const allMode = isAllStores(store)
+  const contextStoreId = concreteStoreId(store)
+  const expenses = useAsyncData(
+    () => listExpenses(allMode ? {} : { storeId: contextStoreId }),
+    store,
+  )
+  const riders = useAsyncData(() => listRiders({ storeId: contextStoreId, active: true }), store)
+  const vehicles = useAsyncData(
+    () => listVehicles({ storeId: contextStoreId, active: true }),
+    store,
+  )
   const users = useAsyncData(() => listUsers())
-  const netSummary = useAsyncData(() => getDeliveryNetSummary(store), store)
+  const netSummary = useAsyncData(() => getDeliveryNetSummary(contextStoreId), store)
   const add = useAlertMutation(createExpense, 'Could not record the expense.')
 
   function updateForm<K extends keyof ExpenseFormState>(key: K, value: ExpenseFormState[K]) {
@@ -111,7 +120,7 @@ export function ExpensesPage() {
     }
     setFormError(null)
     const record = await add.run({
-      storeId: store,
+      storeId: contextStoreId,
       type: form.type,
       amountMinor: toMinor(Number(form.amount)),
       note: form.note || undefined,
@@ -145,7 +154,7 @@ export function ExpensesPage() {
     <Stack>
       <PageHeader
         title="Expenses"
-        description={`Fuel and repair expenses at ${storeNames[store]}.`}
+        description={`Fuel and repair expenses at ${storeLabel(store)}.`}
         size="compact"
       />
       {formError && <Alert variant="danger">{formError}</Alert>}
@@ -266,7 +275,7 @@ export function ExpensesPage() {
       >
         {expenses.data && expenses.data.length > 0 && (
           <RecordList
-            caption={`Expense history at ${storeNames[store]}`}
+            caption={`Expense history — ${storeLabel(store)}`}
             columns={[
               { key: 'target', header: 'Rider / Vehicle' },
               { key: 'type', header: 'Type' },

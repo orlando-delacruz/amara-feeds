@@ -4,7 +4,7 @@ import { StoreBadge } from '@/components/ui/StoreBadge'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { storeBranding } from '@/store/storeBranding'
-import { storeNames } from '@/store/stores'
+import { concreteStoreId, isAllStores, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import { confirmAction } from '@/lib/swal'
 
@@ -158,7 +158,10 @@ export function TopBar({ sectionLabel, brand }: TopBarProps) {
   const { store } = useStore()
   const { user, signOut } = useSession()
   const navigate = useNavigate()
-  const branding = storeBranding[store]
+  // Concrete banner paint: staff (store-brand header) always have a concrete
+  // store; admin carries "all" and uses the dual brand, so paint never falls
+  // through to "all".
+  const branding = storeBranding[concreteStoreId(store)]
 
   async function handleSignOut() {
     const confirmed = await confirmAction({
@@ -184,14 +187,18 @@ export function TopBar({ sectionLabel, brand }: TopBarProps) {
               <DualLogoMark src={storeBranding.zeann.logo} alt={storeBranding.zeann.alt} />
             </DualLogos>
           ) : (
-            <LogoMark src={branding.logo} alt={branding.alt} title={storeNames[store]} />
+            <LogoMark
+              src={branding.logo}
+              alt={branding.alt}
+              title={storeNames[concreteStoreId(store)]}
+            />
           )}
           <BrandName>ZAF ONE</BrandName>
         </Brand>
         <SectionTag>{sectionLabel}</SectionTag>
         <Spacer />
         <Controls>
-          <StoreBadge store={store} />
+          {!isAllStores(store) && <StoreBadge store={concreteStoreId(store)} />}
           {user && <UserName>{getDisplayName(user.name)}</UserName>}
           <SignOutButton type="button" onClick={() => void handleSignOut()}>
             Sign out

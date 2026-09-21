@@ -4,12 +4,12 @@ import type { ReactElement, ReactNode } from 'react'
 import { AppProviders } from '@/app/providers'
 import type { CartLine } from '@/features/sales/CartContext'
 import type { User } from '@/domain'
-import type { StoreId } from '@/store/stores'
+import type { StoreContextId } from '@/store/stores'
 
 interface RenderWithProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   user?: User | null
   cart?: CartLine[]
-  store?: StoreId
+  store?: StoreContextId
 }
 
 export function renderWithProviders(ui: ReactElement, options: RenderWithProvidersOptions = {}) {

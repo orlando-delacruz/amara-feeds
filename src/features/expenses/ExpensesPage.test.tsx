@@ -42,7 +42,7 @@ describe('ExpensesPage', () => {
 
   it('shows expense history from seeded data', async () => {
     renderWithProviders(<ExpensesPage />, { user: staffUser })
-    expect(await screen.findByText('Expense history at Amara')).toBeInTheDocument()
+    expect(await screen.findByText('Expense history — Amara')).toBeInTheDocument()
     expect(screen.getByText('Weekly fuel for Amara deliveries')).toBeInTheDocument()
   })
 })

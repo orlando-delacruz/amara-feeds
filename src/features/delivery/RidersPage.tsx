@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { createRider, deleteRider, listRiders, listUsers, setRiderActive } from '@/services'
+import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -14,7 +15,7 @@ import { useAsyncData, useAlertMutation, useMutation } from '@/features/shared'
 import { confirmAction, notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
-import { storeNames } from '@/store/stores'
+import { concreteStoreId, isAllStores, storeNames, storeLabel } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import { EditRiderDialog } from './EditRiderDialog'
 import type { Rider } from '@/domain'
@@ -52,7 +53,12 @@ export function RidersPage() {
   const { user } = useSession()
   const [name, setName] = useState('')
   const [editing, setEditing] = useState<Rider | null>(null)
-  const list = useAsyncData(() => listRiders({ storeId: store }), store)
+  // 'All stores' reviews both stores; a concrete store filters and allows adds.
+  const allMode = isAllStores(store)
+  const list = useAsyncData(
+    () => listRiders(allMode ? {} : { storeId: concreteStoreId(store) }),
+    store,
+  )
   const users = useAsyncData(() => listUsers())
   const add = useAlertMutation(createRider, 'Could not add the rider.')
   const toggle = useMutation((input: { id: string; active: boolean }) =>
@@ -64,7 +70,11 @@ export function RidersPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const created = await add.run({ name, storeId: store, createdByUserId: user?.id })
+    const created = await add.run({
+      name,
+      storeId: concreteStoreId(store),
+      createdByUserId: user?.id,
+    })
     if (created) {
       setName('')
       void notifySuccess(`${created.name} added.`)
@@ -110,27 +120,33 @@ export function RidersPage() {
     <Stack>
       <PageHeader
         title="Riders"
-        description={`Delivery riders at ${storeNames[store]}.`}
+        description={`Delivery riders at ${storeLabel(store)}.`}
         size="compact"
       />
-      <Card>
-        <form onSubmit={handleSubmit} noValidate>
-          <Fields>
-            <TextField
-              id="rider-name"
-              label="Rider name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              required
-            />
-            <Actions>
-              <Button type="submit" disabled={add.pending}>
-                {add.pending ? 'Adding…' : 'Add rider'}
-              </Button>
-            </Actions>
-          </Fields>
-        </form>
-      </Card>
+      {allMode ? (
+        <Alert variant="info" title="Pick a store to add riders">
+          Set Amara or Zeann in More → Store context to add a rider for a store.
+        </Alert>
+      ) : (
+        <Card>
+          <form onSubmit={handleSubmit} noValidate>
+            <Fields>
+              <TextField
+                id="rider-name"
+                label="Rider name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+              />
+              <Actions>
+                <Button type="submit" disabled={add.pending}>
+                  {add.pending ? 'Adding…' : 'Add rider'}
+                </Button>
+              </Actions>
+            </Fields>
+          </form>
+        </Card>
+      )}
       <AsyncBoundary
         loading={list.loading}
         error={list.error}
@@ -147,9 +163,10 @@ export function RidersPage() {
       >
         {list.data && list.data.length > 0 && (
           <RecordList
-            caption={`Riders at ${storeNames[store]}`}
+            caption={`Riders — ${storeLabel(store)}`}
             columns={[
               { key: 'name', header: 'Name' },
+              { key: 'store', header: 'Store' },
               { key: 'status', header: 'Status' },
               { key: 'addedBy', header: 'Added by' },
               { key: 'createdAt', header: 'Added' },
@@ -157,6 +174,7 @@ export function RidersPage() {
             ]}
             rows={list.data.map((rider) => ({
               name: rider.name,
+              store: storeNames[rider.storeId],
               status: rider.active ? 'Active' : 'Inactive',
               addedBy: rider.createdByUserId
                 ? (userNames.get(rider.createdByUserId) ?? 'Not available')

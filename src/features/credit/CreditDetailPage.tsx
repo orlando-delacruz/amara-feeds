@@ -28,7 +28,7 @@ import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { PAYMENT_METHOD_PRESETS } from '@/domain'
 import { toMinor } from '@/lib/money'
-import { storeNames } from '@/store/stores'
+import { concreteStoreId, isAllStores, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 
 interface CreditDetailPageProps {
@@ -110,7 +110,7 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
     const resolvedMethod = method === 'Other' ? customMethod.trim() : method
     const result = await pay.run({
       creditId: credit.id,
-      storeId: store,
+      storeId: concreteStoreId(store),
       amountMinor: toMinor(Number(amount)),
       method: resolvedMethod,
       recordedByUserId: user?.id ?? '',
@@ -234,10 +234,14 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
                           required
                         />
                       )}
-                      <PaymentNote>Payment will be recorded at {storeNames[store]}.</PaymentNote>
+                      <PaymentNote>
+                        {!isAllStores(store)
+                          ? `Payment will be recorded at ${storeNames[concreteStoreId(store)]}.`
+                          : 'Select Amara or Zeann in More → Store context to record the payment.'}
+                      </PaymentNote>
                     </PaymentFields>
                     <PaymentActions>
-                      <Button type="submit" disabled={pay.pending}>
+                      <Button type="submit" disabled={pay.pending || isAllStores(store)}>
                         {pay.pending ? 'Recording…' : 'Record payment'}
                       </Button>
                     </PaymentActions>
