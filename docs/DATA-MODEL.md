@@ -40,8 +40,8 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.2 Customer — Confirmed
 
-- **Concept:** one shared customer identity usable across both stores, never duplicated per store. The implemented record carries name, an optional contact, and an optional address. Authorized users can edit incorrect details; deletion is refused for any customer referenced by sales or credit records, so no historical transaction can break (DEC-049).
-- **Source:** REQ-CUST-001, REQ-STORE-003; `docs/PROJECT.md` §2; customer edit/delete per client request (DEC-049).
+- **Concept:** one shared customer identity usable across both stores, never duplicated per store. The implemented record carries name, an optional contact, and an optional address. Authorized users can edit incorrect details; only admins can delete a customer, and deletion is a hard delete — the customer's sales, credit obligations, and payments are removed with the customer row (client revision, DEC-053). Deletion is refused only while the customer carries an outstanding (non-voided, unpaid) credit balance, protecting collections; deleted history is gone permanently and no longer appears in dashboards, History, or exports.
+- **Source:** REQ-CUST-001, REQ-STORE-003; `docs/PROJECT.md` §2; customer edit/delete per client request (DEC-049, revised DEC-053).
 - **Boundary:** exact identity fields are Confirmation Required beyond the implemented name, contact, and address; no per-store customer copies exist in this model.
 
 ### 4.3 Product / Item — Confirmed

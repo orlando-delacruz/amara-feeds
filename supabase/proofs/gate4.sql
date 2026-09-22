@@ -490,7 +490,7 @@ select status = 'voided' as credit_voided_with_sale from public.credit_obligatio
 rollback;
 select 'pass: sale undo restores stock, voids credit and payments' as proof;
 
--- --- 21. Customer edit + guarded delete --------------------------------
+-- --- 21. Customer edit + admin-only hard delete (DEC-053) --------------
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
@@ -499,20 +499,37 @@ select public.create_customer('Proof Temp Customer', null, null) as temp_cust \g
 select public.update_customer((:'temp_cust'::jsonb->>'customer_id')::uuid, 'Proof Renamed', '0917', 'Address');
 select name = 'Proof Renamed' and contact = '0917' as customer_renamed
   from public.customers where id = (:'temp_cust'::jsonb->>'customer_id')::uuid;
+-- Staff cannot delete customers.
+set local app.temp_cust = :'temp_cust';
+do $$
+begin
+  begin
+    perform public.delete_customer(
+      (nullif(current_setting('app.temp_cust', true), '')::jsonb->>'customer_id')::uuid);
+    raise exception 'FAIL: staff deleted a customer';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff customer delete blocked'; else raise; end if;
+  end;
+end $$;
+-- Admin deletes the temp customer outright.
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
 select public.delete_customer((:'temp_cust'::jsonb->>'customer_id')::uuid);
 select count(*) = 0 as temp_customer_gone from public.customers
- where id = (:'temp_cust'::jsonb->>'customer_id')::uuid;
+  where id = (:'temp_cust'::jsonb->>'customer_id')::uuid;
+-- Maria (customer ...0001) backs sales + an outstanding credit: refused.
 do $$
 begin
   begin
     perform public.delete_customer('aaaaaaaa-0000-0000-0000-000000000001');
-    raise exception 'FAIL: referenced customer deleted';
+    raise exception 'FAIL: outstanding-credit customer deleted';
   exception when others then
-    if sqlerrm like '%recorded sales%' then raise notice 'referenced customer delete blocked'; else raise; end if;
+    if sqlerrm like '%outstanding credit%' then raise notice 'outstanding-credit customer delete blocked'; else raise; end if;
   end;
 end $$;
 rollback;
-select 'pass: customer edit works, referenced delete refused' as proof;
+select 'pass: customer edit works, admin-only hard delete, outstanding guard' as proof;
 
 -- --- 22. update_own_account: password-verified self-service -------------
 begin;
@@ -736,5 +753,61 @@ begin
 end $$;
 rollback;
 select 'pass: soft rejection keeps history, blocks approval' as proof;
+
+-- --- 28. Hard customer delete removes sales, credits, payments (DEC-053) --
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.create_customer('Proof Doomed Customer', null, null) as doomed \gset
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+select public.record_sale('amara', current_date, (:'doomed'::jsonb->>'customer_id')::uuid,
+  'charge', null, 0, null, null, 0, 'terms-7',
+  '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":1}]'
+) as doomed_sale \gset
+-- Charge created an outstanding credit: even the admin is refused.
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+set local app.doomed = :'doomed';
+do $$
+begin
+  begin
+    perform public.delete_customer(
+      (nullif(current_setting('app.doomed', true), '')::jsonb->>'customer_id')::uuid);
+    raise exception 'FAIL: outstanding-credit customer deleted';
+  exception when others then
+    if sqlerrm like '%outstanding credit%' then raise notice 'admin blocked by outstanding credit';
+    else raise; end if;
+  end;
+end $$;
+-- Settle the credit in full, then delete: everything goes.
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+select id as doomed_credit from public.credit_obligations
+ where customer_id = (:'doomed'::jsonb->>'customer_id')::uuid \gset
+select public.record_payment(:'doomed_credit'::uuid, 'amara',
+  (select balance_minor from public.credit_obligations where id = :'doomed_credit'::uuid), 'Cash');
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.delete_customer((:'doomed'::jsonb->>'customer_id')::uuid);
+select count(*) = 0 as customer_gone from public.customers
+ where id = (:'doomed'::jsonb->>'customer_id')::uuid;
+select count(*) = 0 as customer_sales_gone from public.sales
+ where customer_id = (:'doomed'::jsonb->>'customer_id')::uuid;
+select count(*) = 0 as customer_credits_gone from public.credit_obligations
+ where customer_id = (:'doomed'::jsonb->>'customer_id')::uuid;
+select count(*) = 0 as customer_payments_gone from public.payments p
+  join public.credit_obligations c on c.id = p.credit_id
+ where c.customer_id = (:'doomed'::jsonb->>'customer_id')::uuid;
+select count(*) = 1 as delete_audited from public.audit_events
+ where action = 'customer.deleted'
+   and subject = 'Proof Doomed Customer';
+rollback;
+select 'pass: hard customer delete cascades, guards outstanding, audits' as proof;
 
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

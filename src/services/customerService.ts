@@ -139,27 +139,37 @@ export async function updateCustomer(
   return { ...customer }
 }
 
-export async function deleteCustomer(id: CustomerId): Promise<void> {
+export async function deleteCustomer(id: CustomerId): Promise<CustomerId> {
   if (isSupabaseConfigured && supabase) {
     const { error } = await supabase.rpc('delete_customer', { p_customer_id: id })
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
-    return
+    return id
   }
   const db = getDb()
   const index = db.customers.findIndex((item) => item.id === id)
   if (index === -1) {
     throw new ServiceError('not_found', 'Customer not found.')
   }
-  const referenced =
-    db.sales.some((sale) => sale.customerId === id) ||
-    db.credits.some((credit) => credit.customerId === id)
-  if (referenced) {
+  // Mirror the database hard delete (DEC-053): outstanding (payable) credit
+  // blocks deletion; settled/voided credits, their payments, and the
+  // customer's sales are removed with the customer.
+  const hasOutstanding = db.credits.some(
+    (credit) => credit.customerId === id && credit.status === 'outstanding',
+  )
+  if (hasOutstanding) {
     throw new ServiceError(
       'conflict',
-      'This customer has recorded sales or credit records and cannot be deleted.',
+      'This customer has an outstanding credit balance and cannot be deleted.',
     )
   }
+  const creditIds = new Set(
+    db.credits.filter((credit) => credit.customerId === id).map((credit) => credit.id),
+  )
+  db.payments = db.payments.filter((payment) => !creditIds.has(payment.creditId))
+  db.credits = db.credits.filter((credit) => credit.customerId !== id)
+  db.sales = db.sales.filter((sale) => sale.customerId !== id)
   db.customers.splice(index, 1)
+  return id
 }

@@ -7,7 +7,7 @@ import {
   searchCustomers,
   updateCustomer,
 } from './customerService'
-import { resetDb } from './mocks/db'
+import { getDb, resetDb } from './mocks/db'
 
 describe('customerService', () => {
   beforeEach(() => resetDb())
@@ -55,12 +55,29 @@ describe('customerService', () => {
     })
   })
 
-  it('deletes an unreferenced customer and refuses referenced ones (DEC-049)', async () => {
+  it('deletes an unreferenced customer (DEC-053)', async () => {
     const created = await createCustomer({ name: 'Temporary Customer' })
     await deleteCustomer(created.id)
     expect((await listCustomers()).some((customer) => customer.id === created.id)).toBe(false)
+  })
 
-    // Seed customers back sales and credits: deletion is refused.
+  it('refuses deletion while an outstanding credit exists (DEC-053)', async () => {
+    // Seed cust-1 carries sales and an outstanding credit (cred-2).
     await expect(deleteCustomer('cust-1')).rejects.toMatchObject({ code: 'conflict' })
+    expect((await listCustomers()).some((customer) => customer.id === 'cust-1')).toBe(true)
+  })
+
+  it('deletes a settled customer with their sales, credits, and payments (DEC-053)', async () => {
+    // Seed cust-3 has no sales but carries settled credit cred-3 + pay-3.
+    await deleteCustomer('cust-3')
+    const db = getDb()
+    expect(db.customers.some((customer) => customer.id === 'cust-3')).toBe(false)
+    expect(db.credits.some((credit) => credit.customerId === 'cust-3')).toBe(false)
+    expect(db.payments.some((payment) => payment.creditId === 'cred-3')).toBe(false)
+    // Everyone else's records are untouched.
+    expect(db.customers.length).toBe(2)
+    expect(db.sales.length).toBe(4)
+    expect(db.credits.length).toBe(2)
+    expect(db.payments.length).toBe(2)
   })
 })

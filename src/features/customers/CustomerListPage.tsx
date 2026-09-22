@@ -100,6 +100,7 @@ function EditCustomerDialog({
 
 export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
   const { user } = useSession()
+  const isAdmin = user?.role === 'admin'
   const [term, setTerm] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Customer | null>(null)
@@ -130,7 +131,7 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
   async function requestDelete(customer: Customer) {
     const confirmed = await confirmAction({
       title: 'Delete this customer?',
-      text: `Delete "${customer.name}"? Customers with recorded sales or credit records cannot be deleted.`,
+      text: `Permanently delete "${customer.name}"? Their sales, credit records, and payments are removed too and cannot be recovered. A customer with an outstanding credit balance cannot be deleted.`,
       confirmLabel: 'Delete',
       danger: true,
     })
@@ -201,14 +202,16 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
                   <Button size="sm" variant="secondary" onClick={() => setEditing(customer)}>
                     Edit
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    disabled={remove.pending}
-                    onClick={() => void requestDelete(customer)}
-                  >
-                    Delete
-                  </Button>
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      disabled={remove.pending}
+                      onClick={() => void requestDelete(customer)}
+                    >
+                      Delete
+                    </Button>
+                  )}
                 </RowActions>
               ),
             }))}

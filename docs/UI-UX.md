@@ -115,7 +115,7 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 ### 7.2 Customers
 
 - **Behavior.** Find and select an existing customer, or add a new customer during the sale flow or from the customer area. Adding a customer captures an optional name, contact, and address; the customer list and the sale's selected customer show the address.
-- **Editing and deletion (DEC-049).** Customer rows carry Edit and Delete actions: editing corrects an incorrect name, contact, or address; deletion is confirmed and is refused (at the data layer) when the customer has sales or credit records, so no historical transaction can break.
+- **Editing and deletion (DEC-053).** Customer rows carry Edit for all active users and Delete for admins only: editing corrects an incorrect name, contact, or address; admin deletion is confirmed with a permanent-deletion warning and removes the customer's sales, credit records, and payments with the customer row — refused (at the data layer) only while the customer has an outstanding credit balance.
 - **Shared context.** The customer record is visibly shared across both stores, never presented as a store-specific record.
 - **Constraints.** Exact customer fields are Confirmation Required and are never defined here beyond the implemented name, contact, and address.
 

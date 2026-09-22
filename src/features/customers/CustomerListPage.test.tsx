@@ -16,6 +16,15 @@ const staffUser: User = {
   active: true,
 }
 
+const adminUser: User = {
+  id: 'user-3',
+  name: 'Owner',
+  role: 'admin',
+  storeId: 'zeann',
+  username: 'owner',
+  active: true,
+}
+
 describe('CustomerListPage', () => {
   beforeEach(() => resetDb())
 
@@ -69,5 +78,27 @@ describe('CustomerListPage', () => {
     renderWithProviders(<CustomerListPage canAdd={false} />, { user: staffUser })
     await screen.findByText('Maria Santos')
     expect(screen.queryByRole('button', { name: 'Add customer' })).not.toBeInTheDocument()
+  })
+
+  it('shows Delete only to admins (DEC-053)', async () => {
+    renderWithProviders(<CustomerListPage />, { user: staffUser })
+    await screen.findByText('Maria Santos')
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+  })
+
+  it('deletes a customer as admin (DEC-053)', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<CustomerListPage />, { user: adminUser })
+    await screen.findByText('Maria Santos')
+
+    expect(screen.getAllByRole('button', { name: 'Delete' }).length).toBeGreaterThan(0)
+    // Ana Reyes carries only a settled credit: deletion succeeds.
+    const anaName = await screen.findByText('Ana Reyes')
+    const anaRow = anaName.closest('tr, [role="row"], article, li')
+    expect(anaRow).not.toBeNull()
+    await user.click(within(anaRow as HTMLElement).getByRole('button', { name: 'Delete' }))
+
+    await __awaitSwal('Customer deleted.')
+    expect(screen.queryByText('Ana Reyes')).not.toBeInTheDocument()
   })
 })

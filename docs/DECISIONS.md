@@ -138,6 +138,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-050 | Bank-style admin-only correction: void/undo for sales, credits, and inventory (migration 00010) | Accepted | 2026-09-21 |
 | DEC-051 | Soft product rejection (migration 00011) | Accepted | 2026-09-21 |
 | DEC-052 | Credit sheet in the report Excel export | Accepted | 2026-09-21 |
+| DEC-053 | Admin-only hard customer deletion with outstanding-credit guard (migration 00013) | Accepted | 2026-09-22 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -843,6 +844,19 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Rationale:** The sales sheet stays untouched and credits are added as their own tab, so revenue rows and balance rows can't be confused; the range-scoped credits keep the export consistent with every other report section.
 - **Consequences:** The export button builds both row sets (small extra fetch); printing is unaffected. `docs/UI-UX.md` §7.7 and `docs/API.md` §14 row 8 updated; no migration.
 - **Related documents:** `src/features/reports/reportRows.ts`, `src/lib/exportReportExcel.ts`, `src/features/reports/ReportsPage.tsx`, `docs/API.md`, `docs/UI-UX.md`.
+
+### DEC-053 — Admin-only hard customer deletion with outstanding-credit guard (migration 00013)
+
+- **ID:** DEC-053
+- **Title:** Admin-only hard customer deletion with outstanding-credit guard (migration 00013)
+- **Status:** Accepted
+- **Date:** 2026-09-22
+- **Context:** The owner hit DEC-049's refusal ("This customer has recorded sales and cannot be deleted") when deleting an existing customer with sales. The refusal worked as designed, but the client requirement changed: the owner wants deletion to succeed for customers with recorded history.
+- **Decision:** Migration `00013`, verified by Gate-4 proof sections 21 (rewritten) + 28: `delete_customer` (same signature, so old frontends tolerate the new DB) becomes admin-only and performs a hard delete — inside one transaction it removes the customer's payments, credit obligations (settled and voided), sales (sale lines cascade), and the customer row, writing a `customer.deleted` audit event that records the removed sale/credit/payment counts. The only refusal left is an outstanding (non-voided, unpaid) credit balance, protecting collections. UI: the Customers Delete button is admin-only with a permanent-deletion confirm warning; Edit stays available to all active users. Mock service and Gate-4 proofs mirror the semantics.
+- **Alternatives considered:** Soft-archive (hide the customer, keep history) — rejected by the client after an explicit irreversibility confirmation: they chose true deletion. Keep the DEC-049 refusal — rejected: it blocks the client's stated workflow.
+- **Rationale:** Enforcement stays in the data layer (admin-checked RPC, RLS-denying direct writes); the collections guard prevents deleting a customer the business is still owed money by.
+- **Consequences:** Deletion permanently removes the customer's sales, credits, and payments — dashboards, History, and report exports no longer include them, and the numbers are not restorable. Supersedes DEC-049's customer-deletion refusal. Hosted rollout: `supabase db push` (whatever of 00007–00013 is pending) with the next frontend deploy. `docs/DATA-MODEL.md` §4.2 and `docs/API.md` §5 updated.
+- **Related documents:** `supabase/migrations/20260922090000_00013_hard_delete_customer.sql`, `supabase/proofs/gate4.sql`, `src/services/customerService.ts`, `src/features/customers/CustomerListPage.tsx`, `docs/DATA-MODEL.md`, `docs/API.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.
