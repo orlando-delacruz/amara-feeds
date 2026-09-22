@@ -89,6 +89,8 @@ describe('InventoryPage', () => {
 
     await user.click(within(row).getByRole('button', { name: 'Approve' }))
 
+    // The confirm copy describes approval as the admin-verification marker.
+    await __awaitSwal(/Mark inventory as approved\?/)
     await __awaitSwal('Inventory for "Rice 25kg" approved.')
     const approvedRow = (await screen.findByText('Rice 25kg')).closest('tr') as HTMLElement
     expect(within(approvedRow).getByText('Approved')).toBeInTheDocument()

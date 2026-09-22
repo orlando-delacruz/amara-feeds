@@ -133,7 +133,7 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 - **Behavior.** Inventory is shown per store with the current store context always visible.
 - **Requirements.** Automatic stock deduction occurs after a successful sale save (REQ-INV-002) and is reflected in the displayed stock.
 - **Quantity and price editing (DEC-049, revised DEC-050).** Correction is admin-only: staff see inventory data with no Edit/Delete actions ("Admin-managed") — quantity and the item's current selling price are admin operations on all rows (approved or not). The edit dialog changes the quantity on hand and the current selling price (the price future sales use — past records are never altered); the effective price is shown as a hint and leaving it empty keeps it. Staff receiving stays available.
-- **Approved inventory (DEC-048).** Admins approve a stock row; approved rows show an "Approved" status and staff no longer see Edit/Delete on them ("Admin-managed") — only admins can change approved inventory. Receiving stock into an approved row stays available for staff.
+- **Approved inventory (DEC-048, revised DEC-050).** All inventory correction is admin-only (DEC-050): staff see stock rows as "Admin-managed" with no Edit/Delete actions. Admins can additionally mark a row as approved — a count-verified marker other users can never change — which shows an "Approved" status and land in History ("Inventory approved — counted and verified"). Staff receiving of approved items stays available.
 - **Constraints.** No stock adjustment workflows beyond the confirmed behavior are defined here.
 
 ### 7.5 Receiving Stock

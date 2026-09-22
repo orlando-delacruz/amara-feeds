@@ -107,8 +107,8 @@ export function InventoryPage() {
 
   async function requestApprove(row: Row) {
     const confirmed = await confirmAction({
-      title: 'Approve inventory?',
-      text: `Approve the stock of "${productNameOf(row)}" at ${storeNames[row.storeId]}? Store staff will no longer be able to edit or delete it — only you can.`,
+      title: 'Mark inventory as approved?',
+      text: `Approve the stock of "${productNameOf(row)}" at ${storeNames[row.storeId]}? This marks the quantity as admin-verified — a marker other users can see but never change. Staff receiving of this item stays available.`,
       confirmLabel: 'Approve',
     })
     if (!confirmed) {
