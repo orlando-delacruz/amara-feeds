@@ -37,17 +37,19 @@ async function fetchSalesForSummary(): Promise<SaleRow[]> {
   const { data, error } = await supabase
     .from('sales')
     .select('id, store_id, sale_date, total_minor, payment_method, payment_type')
-    // Encoded legacy credits never count as sales (DEC-049).
+    // Encoded legacy credits never count as sales (DEC-049); voided sales are
+    // corrections (DEC-050).
     .eq('is_legacy', false)
+    .eq('is_voided', false)
   if (error) {
     throw serviceErrorFromSupabase(error)
   }
   return (data ?? []) as SaleRow[]
 }
 
-/** Sales summaries never include encoded legacy credits (DEC-049). */
+/** Sales summaries never include encoded legacy credits or undone sales (DEC-049/050). */
 function liveSales(): Sale[] {
-  return getDb().sales.filter((sale) => !sale.isLegacy)
+  return getDb().sales.filter((sale) => !sale.isLegacy && !sale.isVoided)
 }
 
 export async function getDailySalesByStore(date: string): Promise<DailySalesByStore[]> {
@@ -278,7 +280,11 @@ export async function getPaymentsSummary(
   filter: { date?: string; from?: string; to?: string } = {},
 ): Promise<PaymentsSummary> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase.from('payments').select('amount_minor, paid_at')
+    let query = supabase
+      .from('payments')
+      .select('amount_minor, paid_at')
+      // Voided (admin-reverted) payments are corrections, not collections.
+      .eq('is_voided', false)
     if (filter.date) {
       query = query
         .gte('paid_at', `${filter.date}T00:00:00`)
@@ -302,6 +308,7 @@ export async function getPaymentsSummary(
   }
   const payments = getDb().payments.filter(
     (payment) =>
+      !payment.isVoided &&
       (!filter.date || isSameDate(payment.paidAt, filter.date)) &&
       (!filter.from || toDateOnly(new Date(payment.paidAt)) >= filter.from) &&
       (!filter.to || toDateOnly(new Date(payment.paidAt)) <= filter.to),

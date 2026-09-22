@@ -3,7 +3,7 @@ import type { StoreId } from './store'
 import type { Money } from '@/lib/money'
 import type { Payment } from './payment'
 
-export type CreditStatus = 'outstanding' | 'settled'
+export type CreditStatus = 'outstanding' | 'settled' | 'voided'
 
 export interface PaymentTerms {
   id: PaymentTermsId

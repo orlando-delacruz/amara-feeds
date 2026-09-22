@@ -60,7 +60,7 @@ Candidate operation groups, described conceptually — never field names or sche
 
 Final operation sets, required-vs-optional inputs, and option lists are Confirmation Required. Collection rules: no extra personal-data kinds without justification.
 
-Additional confirmed operations (client revision, DEC-049): an admin can delete a sales transaction to correct a mistake — stock restoration and paid-credit protection are enforced at the data layer, never by the UI; the signed-in user can change their own username and password from the "My Account" page, always confirming with their current password.
+Additional confirmed operations (client revisions, DEC-049/050): admins correct saved transactions bank-style — a sale Undo voids the sale (kept for traceability), restores its stock exactly once, and voids the linked credit plus its payment rows; a credit Undo does the same from the credit side and never touches inventory for encoded legacy credits; inventory quantity/price correction is admin-only outright; staff record new transactions and payments but can never edit, delete, or undo anything after saving. The signed-in user can change their own username and password from the "My Account" page, always confirming with their current password.
 
 ## 6. Response Behavior
 

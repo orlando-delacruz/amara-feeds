@@ -7,7 +7,8 @@ import { serviceErrorFromSupabase } from './userService'
 
 export const AUDIT_ACTION_LABELS: Record<AuditEvent['action'], string> = {
   'sale.recorded': 'Sale recorded',
-  'sale.deleted': 'Sale deleted',
+  'sale.voided': 'Sale corrected (undone)',
+  'credit.voided': 'Credit undone',
   'payment.recorded': 'Payment recorded',
   'receiving.recorded': 'Stock received',
   'product.submitted': 'Product submitted',

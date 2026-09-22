@@ -18,6 +18,8 @@ export interface Payment {
   creditId: CreditId
   storeId: StoreId
   amountMinor: Money
+  /** Admin reverted (DEC-050): excluded from balances, history, and summaries. */
+  isVoided?: boolean
   /**
    * assumed: collection method (Cash, GCash, Maya, Bank Transfer, Check, or a
    * staff-entered custom value when Other is selected). Exact methods are

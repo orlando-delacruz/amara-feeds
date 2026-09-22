@@ -3,7 +3,8 @@ import { approveStock, deleteStock, getStock, listStock, updateStock } from './i
 import { listAuditEvents } from './auditService'
 import { resetDb } from './mocks/db'
 
-const actor = { userId: 'user-alice', role: 'staff' as const }
+const actor = { userId: 'user-3', role: 'admin' as const }
+const staffActor = { userId: 'user-alice', role: 'staff' as const }
 
 describe('inventoryService', () => {
   beforeEach(() => resetDb())
@@ -133,16 +134,17 @@ describe('inventoryService', () => {
       ).rejects.toMatchObject({ code: 'validation' })
     })
 
-    it('refuses staff updates and deletes on approved rows; admins keep access', async () => {
-      await approveStock('amara', 'prod-1', { userId: 'user-3', role: 'admin' })
+    it('refuses all staff inventory correction; admins keep access (DEC-050)', async () => {
       await expect(
-        updateStock('amara', 'prod-1', { quantity: 5, actorUserId: 'user-1', actorRole: 'staff' }),
+        updateStock('amara', 'prod-1', {
+          quantity: 5,
+          actorUserId: staffActor.userId,
+          actorRole: staffActor.role,
+        }),
       ).rejects.toMatchObject({ code: 'validation' })
       await expect(
-        deleteStock('amara', 'prod-1', { userId: 'user-1', role: 'staff' }),
-      ).rejects.toMatchObject({
-        code: 'validation',
-      })
+        deleteStock('amara', 'prod-2', { userId: staffActor.userId, role: staffActor.role }),
+      ).rejects.toMatchObject({ code: 'validation' })
       const saved = await updateStock('amara', 'prod-1', {
         quantity: 7,
         actorUserId: 'user-3',

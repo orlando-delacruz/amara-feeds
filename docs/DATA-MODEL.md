@@ -52,8 +52,8 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.4 Sale — Confirmed
 
-- **Concept:** a store-specific completed sale recording customer (optional), purchased items with quantities, business sale date, payment type (cash or charge), mode of payment, an optional one-time discount, and delivery details when applicable. Net total = items + delivery fee − discount. Admins can delete a sale to correct mistakes (client revision, DEC-049): deletion restores the sale's deducted stock, refuses sales whose credit has recorded payments, and removes the unpaid credit atomically; encoded legacy credit rows (`is_legacy`) are managed under Credit, not Sales.
-- **Source:** REQ-SALE-001–007; `docs/PROJECT.md` §4; sale deletion per client request (DEC-049).
+- **Concept:** a store-specific completed sale recording customer (optional), purchased items with quantities, business sale date, payment type (cash or charge), mode of payment, an optional one-time discount, and delivery details when applicable. Net total = items + delivery fee − discount. Saved sales are corrected by admins only, bank-style (client revision, DEC-050): the admin Undo voids the sale — the record is kept for the audit trail and excluded everywhere — restores its deducted stock exactly once, and voids the linked credit and its payment rows; staff can never edit or delete a saved sale. Encoded legacy credit rows (`is_legacy`) are managed under Credit, not Sales.
+- **Source:** REQ-SALE-001–007; `docs/PROJECT.md` §4; admin-only correction per client request (DEC-049, revised DEC-050).
 - **Boundary:** the business sale date defaults to today, may be backdated, and drives credit due dates (independent of creation time); exact payment-method vocabulary and discount policy are Confirmation Required; sale editing and reversal (beyond deletion) are Confirmation Required; no additional sale attributes defined here.
 
 ### 4.5 Purchased items (sale lines) — Confirmed
@@ -64,20 +64,20 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.6 Credit obligation — Confirmed
 
-- **Concept:** a shared outstanding obligation arising from a charge sale, carrying the originating store, selected payment terms with an automatically calculated due date, remaining balance, and outstanding/settled state. Encoded existing balances (client change, DEC-049) carry complete transaction details: they are backed by a legacy sales row (`is_legacy`, excluded from sales lists, dashboards, and reports) whose sale lines record the item details — customer, date, item, quantity, price, total — plus an optional initial partial payment. Encoding never affects stock; the balance settles through the normal payment flow (partial payments, fully-paid status, remaining balance).
+- **Concept:** a shared outstanding obligation arising from a charge sale, carrying the originating store, selected payment terms with an automatically calculated due date, remaining balance, and outstanding/settled state. Encoded existing balances (client change, DEC-049) carry complete transaction details: they are backed by a legacy sales row (`is_legacy`, excluded from sales lists, dashboards, and reports) whose sale lines record the item details — customer, date, item, quantity, price, total — plus an optional initial partial payment. Encoding never affects stock; the balance settles through the normal payment flow (partial payments, fully-paid status, remaining balance). Saved credits are corrected by admins only (DEC-050): the admin Undo voids the credit, its payments, and its underlying sale — records remain for the audit trail and are excluded everywhere — and restores stock only for charge-sale credits, never for encoded legacy credits.
 - **Source:** REQ-CRED-001–004, REQ-CRED-006; `docs/PROJECT.md` §4; existing-credit encoding per client request (DEC-048, revised DEC-049).
 - **Boundary:** exact term options, calculation rules, and status vocabulary beyond outstanding/settled are Confirmation Required.
 
 ### 4.7 Payment — Confirmed
 
-- **Concept:** a full or partial payment against a shared credit obligation, recorded through either store, carrying the payment store and contributing to one traceable shared history with updated balance and status.
-- **Source:** REQ-PAY-001–002, REQ-CRED-005–007; `docs/PROJECT.md` §2.
-- **Boundary:** exact payment information, methods, and reversal behavior are Confirmation Required.
+- **Concept:** a full or partial payment against a shared credit obligation, recorded through either store, carrying the payment store and contributing to one traceable shared history with updated balance and status. Payments are staff-recorded; only admins can revert them — via the credit Undo, which voids the payment rows (kept for traceability, excluded from balances, history, and summaries) while restoring the credit's balance effect (DEC-050).
+- **Source:** REQ-PAY-001–002, REQ-CRED-005–007; `docs/PROJECT.md` §2; payment reversion per client request (DEC-050).
+- **Boundary:** exact payment information, methods, and direct reversal behavior beyond the admin credit undo are Confirmation Required.
 
 ### 4.8 Inventory / Stock — Confirmed
 
-- **Concept:** the per-store quantity of a product/item held by Amara or Zeann, increased by receiving and decreased by successful sales; each row also carries the store's current selling price (falling back to the latest priced receiving record when unset) and an admin-approval state (client changes, DEC-048/DEC-049): approved rows are edit/delete-locked for staff — only admins can edit quantity or price — while receiving into an approved row stays allowed. Deleting a sale restores its deducted stock.
-- **Source:** REQ-INV-001–002; `docs/PROJECT.md` §2; approved-inventory lock and price editing per client request (DEC-048, DEC-049).
+- **Concept:** the per-store quantity of a product/item held by Amara or Zeann, increased by receiving and decreased by successful sales; each row also carries the store's current selling price (falling back to the latest priced receiving record when unset) and an admin-approval state (client changes, DEC-048/DEC-049). Inventory correction is admin-only (client revision, DEC-050, superseding the DEC-032 staff carve-out): staff record receiving through the normal workflow but never manually edit or delete stock rows — quantity and price corrections are admin operations, and undoing a sale restores its deducted stock exactly once.
+- **Source:** REQ-INV-001–002; `docs/PROJECT.md` §2; approved-inventory lock, price editing, and admin-only correction per client request (DEC-048, DEC-049, DEC-050).
 - **Boundary:** exact stock calculations, negative-stock rules, adjustment workflows, and reversal behavior are Confirmation Required.
 
 ### 4.9 Receiving record — Confirmed

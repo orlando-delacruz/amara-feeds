@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import {
   getCreditHistory,
   listCustomers,
   listPaymentTerms,
   listUsers,
   recordPayment,
+  voidCredit,
 } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
@@ -23,7 +24,7 @@ import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { TextField } from '@/components/ui/TextField'
 import { useAsyncData, useAlertMutation } from '@/features/shared'
-import { notifySuccess } from '@/lib/swal'
+import { confirmAction, notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { PAYMENT_METHOD_PRESETS } from '@/domain'
@@ -79,6 +80,7 @@ const PaymentNote = styled.p`
 
 export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps) {
   const { creditId } = useParams<{ creditId: string }>()
+  const navigate = useNavigate()
   const { store } = useStore()
   const { user } = useSession()
   const [amount, setAmount] = useState('')
@@ -93,6 +95,30 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
   const terms = useAsyncData(() => listPaymentTerms())
   const users = useAsyncData(() => listUsers())
   const pay = useAlertMutation(recordPayment, 'Could not record the payment.')
+  const undo = useAlertMutation((id: string) => voidCredit(id), 'Could not undo the credit.')
+
+  const isAdmin = user?.role === 'admin'
+
+  async function requestUndoCredit() {
+    if (!credit) {
+      return
+    }
+    const label = customerNames.get(credit.customerId) ?? 'this credit'
+    const confirmed = await confirmAction({
+      title: 'Undo this credit?',
+      text: `Correct "${label}"? Its balance returns to how it was before any payments, the payment history is undone (kept for the audit trail), and any sale behind it is undone with its stock restored. Encoded existing-credit records never affect inventory. Only admins can undo credits.`,
+      confirmLabel: 'Undo credit',
+      danger: true,
+    })
+    if (!confirmed) {
+      return
+    }
+    const undone = await undo.run(credit.id)
+    if (undone) {
+      void notifySuccess('Credit undone.', 'The correction was recorded in History.')
+      navigate(basePath)
+    }
+  }
 
   const credit = history.data?.credit
   const customerNames = new Map(
@@ -136,7 +162,21 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
         description={
           credit ? `${customerNames.get(credit.customerId) ?? 'Credit record'}'s credit` : undefined
         }
-        actions={<BackLink to={basePath}>Back to credit</BackLink>}
+        actions={
+          <>
+            {isAdmin && credit && (
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={undo.pending}
+                onClick={() => void requestUndoCredit()}
+              >
+                Undo credit
+              </Button>
+            )}
+            <BackLink to={basePath}>Back to credit</BackLink>
+          </>
+        }
         size="compact"
       />
       <AsyncBoundary

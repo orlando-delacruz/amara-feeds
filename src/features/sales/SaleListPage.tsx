@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { deleteSale, listCustomers, listSales, listUsers } from '@/services'
+import { voidSale, listCustomers, listSales, listUsers } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { DatePicker } from '@/components/ui/DatePicker'
@@ -40,24 +40,21 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
   )
   const customers = useAsyncData(() => listCustomers())
   const users = useAsyncData(() => listUsers())
-  const remove = useAlertMutation(
-    (saleId: string) => deleteSale(saleId),
-    'Could not delete the sale.',
-  )
+  const remove = useAlertMutation((saleId: string) => voidSale(saleId), 'Could not undo the sale.')
 
-  async function requestDelete(saleId: string) {
+  async function requestUndo(saleId: string, description: string) {
     const confirmed = await confirmAction({
-      title: 'Delete this sale?',
-      text: 'The sold quantities return to the current stock of the same store. A sale with recorded payments cannot be deleted.',
-      confirmLabel: 'Delete',
+      title: 'Undo this sale?',
+      text: `Correct "${description}"? Its quantities return to the store's current stock and any credit or payments recorded against it are undone (kept for the audit trail). Only admins can undo saved sales.`,
+      confirmLabel: 'Undo sale',
       danger: true,
     })
     if (!confirmed) {
       return
     }
-    const deleted = await remove.run(saleId)
-    if (deleted) {
-      void notifySuccess('Sale deleted.', 'The stock was restored to this store.')
+    const undone = await remove.run(saleId)
+    if (undone) {
+      void notifySuccess('Sale undone.', 'The stock was restored to this store.')
       sales.reload()
     }
   }
@@ -130,9 +127,14 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
                         size="sm"
                         variant="danger"
                         disabled={remove.pending}
-                        onClick={() => void requestDelete(sale.id)}
+                        onClick={() =>
+                          void requestUndo(
+                            sale.id,
+                            customerNames.get(sale.customerId ?? '') ?? 'this sale',
+                          )
+                        }
                       >
-                        Delete
+                        Undo
                       </Button>
                     ),
                   }

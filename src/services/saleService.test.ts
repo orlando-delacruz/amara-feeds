@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createSale, deleteSale, listSales } from './saleService'
+import { createSale, listSales, voidSale } from './saleService'
 import { getStock } from './inventoryService'
 import { createExistingCredit, listCredits, previewDueDate } from './creditService'
 import { recordPayment } from './paymentService'
@@ -135,15 +135,16 @@ describe('saleService', () => {
       })
       expect(await getStock('amara', 'prod-1')).toMatchObject({ quantity: 17 })
 
-      await deleteSale(sale.id)
+      await voidSale(sale.id)
 
       expect(await getStock('amara', 'prod-1')).toMatchObject({ quantity: 20 })
       expect((await listSales({ storeId: 'amara' })).some((item) => item.id === sale.id)).toBe(
         false,
       )
+      await expect(voidSale(sale.id)).rejects.toMatchObject({ code: 'conflict' })
     })
 
-    it('refuses to delete a sale whose credit has payments', async () => {
+    it('voids a paid sale and undoes its credit and payments (DEC-050)', async () => {
       const sale = await createSale({
         storeId: 'amara',
         paymentType: 'charge',
@@ -162,8 +163,13 @@ describe('saleService', () => {
         method: 'Cash',
         recordedByUserId: 'user-1',
       })
-      await expect(deleteSale(sale.id)).rejects.toMatchObject({ code: 'validation' })
-      expect(await getStock('amara', 'prod-1')).toMatchObject({ quantity: 19 })
+      await voidSale(sale.id)
+      // The deduction is fully reversed: 20 back on hand.
+      expect(await getStock('amara', 'prod-1')).toMatchObject({ quantity: 20 })
+      // The credit and its payments are voided, not deleted: hidden from lists.
+      expect(
+        (await listCredits({ customerId: 'cust-1' })).some((c) => c.id === obligation!.id),
+      ).toBe(false)
     })
   })
 

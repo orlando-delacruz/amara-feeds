@@ -65,6 +65,8 @@ export async function listCredits(
       .select(
         'id, customer_id, origin_store_id, sale_id, terms_id, due_date, original_amount_minor, balance_minor, status, created_at',
       )
+      // Voided (admin-reverted) credits are corrections, not standing records.
+      .neq('status', 'voided')
     if (filter.customerId) {
       query = query.eq('customer_id', filter.customerId)
     }
@@ -94,6 +96,7 @@ export async function listCredits(
   return getDb()
     .credits.filter(
       (credit) =>
+        credit.status !== 'voided' &&
         (!filter.customerId || credit.customerId === filter.customerId) &&
         (!filter.originStoreId || credit.originStoreId === filter.originStoreId) &&
         (!filter.status || credit.status === filter.status),
@@ -220,6 +223,50 @@ export interface CreateExistingCreditItem {
   productId: ProductId
   quantity: number
   unitPriceMinor: Money
+}
+
+/**
+ * Admin-only credit undo (DEC-050, bank-style correction): voids the credit,
+ * its payment rows, and its underlying sale. Only system charge-sale credits
+ * restore stock — encoded legacy credits never touched inventory, so undoing
+ * them has no inventory effect (the DEC-048/049 guarantee holds).
+ */
+export async function voidCredit(id: CreditId): Promise<void> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('void_credit', { p_credit_id: id })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return
+  }
+  const db = getDb()
+  const credit = db.credits.find((item) => item.id === id)
+  if (!credit) {
+    throw new ServiceError('not_found', 'Credit not found.')
+  }
+  if (credit.status === 'voided') {
+    throw new ServiceError('conflict', 'This credit was already undone.')
+  }
+  for (const payment of db.payments) {
+    if (payment.creditId === id && !payment.isVoided) {
+      payment.isVoided = true
+    }
+  }
+  credit.status = 'voided'
+  const sale = credit.saleId ? db.sales.find((item) => item.id === credit.saleId) : undefined
+  if (sale) {
+    if (!sale.isLegacy && !sale.isVoided) {
+      for (const line of sale.lines) {
+        const level = db.stock.find(
+          (row) => row.storeId === sale.storeId && row.productId === line.productId,
+        )
+        if (level) {
+          level.quantity += line.quantity
+        }
+      }
+    }
+    sale.isVoided = true
+  }
 }
 
 export interface CreateExistingCreditInput {

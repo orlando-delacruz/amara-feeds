@@ -123,9 +123,9 @@ export async function updateStock(
   }
   const level = getStockRow(storeId, productId)
   const previousQuantity = level?.quantity ?? 0
-  // Approved inventory is admin-edit-only (client change, amends DEC-032).
-  if (level?.adminApproved && input.actorRole !== 'admin') {
-    throw new ServiceError('validation', 'Approved inventory can only be changed by an admin.')
+  // Inventory correction is admin-only (DEC-050, superseding DEC-032).
+  if (input.actorRole !== 'admin') {
+    throw new ServiceError('validation', 'Only admins can correct inventory.')
   }
   if (!level) {
     if (input.quantity === 0) {
@@ -200,9 +200,9 @@ export async function deleteStock(
   if (index === -1) {
     throw new ServiceError('not_found', 'Stock not found.')
   }
-  // Approved inventory is admin-edit-only (client change, amends DEC-032).
-  if (db.stock[index].adminApproved && _actor.role !== 'admin') {
-    throw new ServiceError('validation', 'Approved inventory can only be changed by an admin.')
+  // Inventory correction is admin-only (DEC-050, superseding DEC-032).
+  if (_actor.role !== 'admin') {
+    throw new ServiceError('validation', 'Only admins can correct inventory.')
   }
   const hasSales = db.sales.some(
     (sale) => sale.storeId === storeId && sale.lines.some((line) => line.productId === productId),
@@ -232,8 +232,8 @@ function getStockRow(storeId: StoreId, productId: ProductId): StockLevel | undef
 }
 
 /**
- * Admin-only approval of a stock row (client change): approved rows refuse
- * staff adjust/delete at the data layer; admins keep full edit rights.
+ * Admin-only approval of a stock row: approved rows remain admin-managed;
+ * staff edits are refused outright (DEC-050 makes ALL correction admin-only).
  * Receiving into an approved row stays allowed.
  */
 export async function approveStock(

@@ -4,8 +4,10 @@ import {
   getCreditHistory,
   listCredits,
   listPaymentTerms,
+  voidCredit,
 } from './creditService'
 import { listPayments } from './paymentService'
+import { getStock } from './inventoryService'
 import { resetDb } from './mocks/db'
 
 describe('creditService', () => {
@@ -103,5 +105,33 @@ describe('creditService', () => {
         recordedByUserId: 'user-3',
       }),
     ).rejects.toMatchObject({ code: 'validation' })
+  })
+
+  it('lets an admin undo a credit; encoded credits never touch stock (DEC-050)', async () => {
+    const created = await createExistingCredit({
+      customerId: 'cust-1',
+      originStoreId: 'amara',
+      date: '2026-09-10',
+      dueDate: '2026-10-01',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100000 }],
+      recordedByUserId: 'user-3',
+    })
+    await voidCredit(created.id)
+    expect((await listCredits()).some((credit) => credit.id === created.id)).toBe(false)
+    // Encoding never deducted stock, so undoing restores nothing.
+    expect(await getStock('amara', 'prod-1')).toMatchObject({ quantity: 20 })
+  })
+
+  it('refuses a double undo', async () => {
+    const created = await createExistingCredit({
+      customerId: 'cust-1',
+      originStoreId: 'amara',
+      date: '2026-09-10',
+      dueDate: '2026-10-01',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100000 }],
+      recordedByUserId: 'user-3',
+    })
+    await voidCredit(created.id)
+    await expect(voidCredit(created.id)).rejects.toMatchObject({ code: 'conflict' })
   })
 })

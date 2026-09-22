@@ -128,9 +128,10 @@ export function InventoryPage() {
     store: <StoreCell>{storeNames[row.storeId]}</StoreCell>,
     quantityDisplay: String(row.quantity),
     approved: row.adminApproved ? <ApprovedCell>Approved</ApprovedCell> : '',
-    actions: (
+    // Inventory correction is admin-only (DEC-050): staff see data only.
+    actions: isAdmin ? (
       <RowActions>
-        {isAdmin && !row.adminApproved && (
+        {!row.adminApproved && (
           <Button
             size="sm"
             variant="secondary"
@@ -140,23 +141,20 @@ export function InventoryPage() {
             Approve
           </Button>
         )}
-        {(isAdmin || !row.adminApproved) && (
-          <Button size="sm" variant="secondary" onClick={() => setEditing(row)}>
-            Edit
-          </Button>
-        )}
-        {(isAdmin || !row.adminApproved) && (
-          <Button
-            size="sm"
-            variant="danger"
-            disabled={remove.pending}
-            onClick={() => void requestDelete(row)}
-          >
-            Delete
-          </Button>
-        )}
-        {!isAdmin && row.adminApproved && <ApprovedCell>Admin-managed</ApprovedCell>}
+        <Button size="sm" variant="secondary" onClick={() => setEditing(row)}>
+          Edit
+        </Button>
+        <Button
+          size="sm"
+          variant="danger"
+          disabled={remove.pending}
+          onClick={() => void requestDelete(row)}
+        >
+          Delete
+        </Button>
       </RowActions>
+    ) : (
+      <ApprovedCell>Admin-managed</ApprovedCell>
     ),
   }))
 

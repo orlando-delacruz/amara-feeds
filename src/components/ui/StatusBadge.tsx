@@ -12,6 +12,7 @@ const labels: Record<StatusBadgeStatus, string> = {
   active: 'Active',
   outstanding: 'Outstanding',
   settled: 'Settled',
+  voided: 'Voided',
 }
 
 const tones: Record<StatusBadgeStatus, 'warning' | 'success'> = {
@@ -19,6 +20,7 @@ const tones: Record<StatusBadgeStatus, 'warning' | 'success'> = {
   active: 'success',
   outstanding: 'warning',
   settled: 'success',
+  voided: 'warning',
 }
 
 const Badge = styled.span<{ $tone: 'warning' | 'success' }>`

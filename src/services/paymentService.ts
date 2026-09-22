@@ -14,6 +14,8 @@ export async function listPayments(
     let query = supabase
       .from('payments')
       .select('id, credit_id, store_id, amount_minor, method, recorded_by_user_id, paid_at')
+      // Voided (admin-reverted) payments are corrections, not history (DEC-050).
+      .eq('is_voided', false)
     if (filter.creditId) {
       query = query.eq('credit_id', filter.creditId)
     }
@@ -37,6 +39,7 @@ export async function listPayments(
   return getDb()
     .payments.filter(
       (payment) =>
+        !payment.isVoided &&
         (!filter.creditId || payment.creditId === filter.creditId) &&
         (!filter.storeId || payment.storeId === filter.storeId),
     )
@@ -84,6 +87,12 @@ export async function recordPayment(
   const credit = db.credits.find((item) => item.id === input.creditId)
   if (!credit) {
     throw new ServiceError('not_found', 'Credit not found.')
+  }
+  if (credit.status === 'voided') {
+    throw new ServiceError(
+      'validation',
+      'This credit record was undone and cannot receive payments.',
+    )
   }
   if (credit.status === 'settled') {
     throw new ServiceError('conflict', 'This credit is already settled.')

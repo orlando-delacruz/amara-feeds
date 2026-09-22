@@ -58,8 +58,10 @@ export async function listSales(
          total_minor, recorded_by_user_id, created_at,
          sale_lines(id, product_id, quantity, unit_price_minor)`,
       )
-      // Encoded legacy credits live only under Credit (DEC-049).
+      // Encoded legacy credits live only under Credit (DEC-049); voided sales
+      // are corrections, excluded from lists (DEC-050).
       .eq('is_legacy', false)
+      .eq('is_voided', false)
     if (filter.storeId) {
       query = query.eq('store_id', filter.storeId)
     }
@@ -109,6 +111,7 @@ export async function listSales(
     .sales.filter(
       (sale) =>
         !sale.isLegacy &&
+        !sale.isVoided &&
         (!filter.storeId || sale.storeId === filter.storeId) &&
         (!filter.customerId || sale.customerId === filter.customerId) &&
         (!filter.date || saleDay(sale) === filter.date) &&
@@ -131,9 +134,16 @@ export async function getSale(id: SaleId): Promise<Sale> {
  * database function restores stock per line, refuses sales whose credit has
  * payments, and removes the unpaid credit atomically.
  */
-export async function deleteSale(id: SaleId): Promise<void> {
+/**
+ * Admin-only sale undo (DEC-050, bank-style correction): the sale is voided —
+ * not deleted — its deducted stock returns to the same store in one atomic
+ * database step, and the linked credit plus its payment rows are voided
+ * (kept for traceability, excluded everywhere). Corrections live only at the
+ * data layer; staff cannot bypass them via direct API calls.
+ */
+export async function voidSale(id: SaleId): Promise<void> {
   if (isSupabaseConfigured && supabase) {
-    const { error } = await supabase.rpc('delete_sale', { p_sale_id: id })
+    const { error } = await supabase.rpc('void_sale', { p_sale_id: id })
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
@@ -144,14 +154,13 @@ export async function deleteSale(id: SaleId): Promise<void> {
   if (!sale) {
     throw new ServiceError('not_found', 'Sale not found.')
   }
-  const credit = db.credits.find((credit) => credit.saleId === id)
-  if (credit && db.payments.some((payment) => payment.creditId === credit.id)) {
-    throw new ServiceError('validation', 'This sale has recorded payments and cannot be deleted.')
+  if (sale.isVoided) {
+    throw new ServiceError('conflict', 'This sale was already undone.')
   }
   if (sale.isLegacy) {
-    throw new ServiceError('validation', 'Encoded credits are managed in Credit, not Sales.')
+    throw new ServiceError('validation', 'Encoded credits are undone in Credit, not Sales.')
   }
-  // Restore stock per line, mirroring the database function.
+  // Reverse the inventory effect exactly once, mirroring the database function.
   for (const line of sale.lines) {
     const level = db.stock.find(
       (row) => row.storeId === sale.storeId && row.productId === line.productId,
@@ -160,10 +169,16 @@ export async function deleteSale(id: SaleId): Promise<void> {
       level.quantity += line.quantity
     }
   }
+  sale.isVoided = true
+  const credit = db.credits.find((item) => item.saleId === id)
   if (credit) {
-    db.credits.splice(db.credits.indexOf(credit), 1)
+    credit.status = 'voided'
+    for (const payment of db.payments) {
+      if (payment.creditId === credit.id && !payment.isVoided) {
+        payment.isVoided = true
+      }
+    }
   }
-  db.sales.splice(db.sales.indexOf(sale), 1)
 }
 
 export async function createSale(input: NewSaleInput): Promise<Sale> {

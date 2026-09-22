@@ -157,7 +157,7 @@ select 'pass: approval gating (staff blocked, admin works)' as proof;
 -- --- 9. Stock guard (DEC-032): product with sales cannot be deleted ----
 begin;
 set local role authenticated;
-set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
 set local request.jwt.claim.role = 'authenticated';
 do $$
 begin
@@ -356,7 +356,7 @@ end $$;
 rollback;
 select 'pass: existing credit encoded admin-only, stock untouched' as proof;
 
--- --- 18. Approved inventory: staff locked out, admin retains edits -----
+-- --- 18. Approved inventory: admin retains edits, receiving unaffected --
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
@@ -371,27 +371,8 @@ set local role authenticated;
 set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
 set local request.jwt.claim.role = 'authenticated';
 select public.approve_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001');
-set local role authenticated;
-set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
-set local request.jwt.claim.role = 'authenticated';
-do $$
-begin
-  begin
-    perform public.adjust_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 15);
-    raise exception 'FAIL: staff adjusted approved inventory';
-  exception when others then
-    if sqlerrm like '%Approved inventory%' then raise notice 'staff adjust of approved stock blocked'; else raise; end if;
-  end;
-  begin
-    perform public.delete_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001');
-    raise exception 'FAIL: staff deleted approved inventory';
-  exception when others then
-    if sqlerrm like '%Approved inventory%' then raise notice 'staff delete of approved stock blocked'; else raise; end if;
-  end;
-end $$;
--- Receiving into an approved row stays allowed (normal workflow).
-select public.record_receiving('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 5, 'Proof Supplier', 100000, 115000, null, null);
-select quantity = 25 as receiving_still_adds from public.stock_levels
+select public.adjust_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 18);
+select quantity = 18 as admin_still_edits from public.stock_levels
  where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
 rollback;
 
@@ -400,8 +381,12 @@ set local role authenticated;
 set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
 set local request.jwt.claim.role = 'authenticated';
 select public.approve_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001');
-select public.adjust_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 18);
-select quantity = 18 as admin_still_edits from public.stock_levels
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+-- Receiving into an approved row stays allowed (normal workflow).
+select public.record_receiving('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 5, 'Proof Supplier', 100000, 115000, null, null);
+select quantity = 25 as receiving_still_adds from public.stock_levels
  where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
 rollback;
 select 'pass: approved inventory admin-edit-only, receiving unaffected' as proof;
@@ -452,7 +437,7 @@ end $$;
 rollback;
 select 'pass: encoded credit carries items + payment, stock untouched' as proof;
 
--- --- 20. delete_sale: stock restored; paid sales refused; admin-only ----
+-- --- 20. void_sale: stock restored once; admin-only (DEC-050) ----------
 begin;
 set local role authenticated;
 set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
@@ -471,13 +456,13 @@ do $$
 declare sid uuid := nullif(current_setting('app.proof_sale_id', true), '')::uuid;
 begin
   begin
-    perform public.delete_sale(sid);
-    raise notice 'admin deleted the sale';
+    perform public.void_sale(sid);
+    raise notice 'admin voided the sale';
   exception when others then
-    raise exception 'FAIL: admin delete failed: %', sqlerrm;
+    raise exception 'FAIL: admin void failed: %', sqlerrm;
   end;
 end $$;
-select quantity = 20 as stock_restored_after_delete from public.stock_levels
+select quantity = 20 as stock_restored_after_void from public.stock_levels
  where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
 rollback;
 
@@ -498,19 +483,12 @@ set local role authenticated;
 set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
 set local request.jwt.claim.role = 'authenticated';
 set local app.proof_sale_id = :'proof_sale_id';
-do $$
-declare sid uuid := nullif(current_setting('app.proof_sale_id', true), '')::uuid;
-begin
-  begin
-    perform public.delete_sale(sid);
-    raise exception 'FAIL: paid sale deleted';
-  exception when others then
-    if sqlerrm like '%recorded payments%' then raise notice 'sale with payments cannot be deleted';
-    else raise; end if;
-  end;
-end $$;
+select public.void_sale(nullif(current_setting('app.proof_sale_id', true), '')::uuid);
+-- Paid sale: credit voided and its payment row voided, stock restored.
+select status = 'voided' as credit_voided_with_sale from public.credit_obligations
+ where sale_id = nullif(current_setting('app.proof_sale_id', true), '')::uuid;
 rollback;
-select 'pass: sale delete restores stock, refuses paid, admin-only' as proof;
+select 'pass: sale undo restores stock, voids credit and payments' as proof;
 
 -- --- 21. Customer edit + guarded delete --------------------------------
 begin;
@@ -559,5 +537,157 @@ select crypt('brandnew123', encrypted_password) = encrypted_password as new_pass
   from auth.users where id = '33333333-3333-3333-3333-333333333333';
 rollback;
 select 'pass: own-account change verified, identity synced' as proof;
+
+-- --- 23. void_sale: reversal once, no duplicated stock, admin-only ------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+select public.record_sale('amara', current_date, null, 'cash', 'Cash', 0, null, null, 0, null,
+  '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":3}]'
+) as void_proof_sale \gset
+select :'void_proof_sale'::jsonb->>'sale_id' as proof_void_sale \gset
+set local app.proof_void_sale = :'proof_void_sale';
+select quantity = 17 as stock_after_sale from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.void_sale(nullif(current_setting('app.proof_void_sale', true), '')::uuid);
+    raise exception 'FAIL: staff voided a sale';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff void blocked'; else raise; end if;
+  end;
+end $$;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.void_sale(nullif(current_setting('app.proof_void_sale', true), '')::uuid);
+select is_voided as sale_voided from public.sales
+ where id = nullif(current_setting('app.proof_void_sale', true), '')::uuid;
+select quantity = 20 as stock_restored_once from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+do $$
+begin
+  begin
+    perform public.void_sale(nullif(current_setting('app.proof_void_sale', true), '')::uuid);
+    raise exception 'FAIL: double void allowed';
+  exception when others then
+    if sqlerrm like '%already undone%' then raise notice 're-void refused'; else raise; end if;
+  end;
+end $$;
+select quantity = 20 as stock_not_double_restored from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+rollback;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+set local request.jwt.claim.role = 'authenticated';
+-- Paid charge sale: admin undo voids credit AND its payments.
+select public.record_sale('zeann', current_date, 'aaaaaaaa-0000-0000-0000-000000000002',
+  'charge', null, 0, null, null, 0, 'terms-7',
+  '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000002","quantity":2}]'
+) as paid_sale \gset
+select :'paid_sale'::jsonb->>'sale_id' as proof_paid_sale \gset
+set local app.proof_paid_sale = :'proof_paid_sale';
+select public.record_payment(
+  (select id from public.credit_obligations where sale_id = :'proof_paid_sale'::uuid),
+  'zeann', 500, 'Cash');
+select quantity = 38 as stock_after_charge_sale from public.stock_levels
+ where store_id='zeann' and product_id='bbbbbbbb-0000-0000-0000-000000000002';
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.void_sale(nullif(current_setting('app.proof_paid_sale', true), '')::uuid);
+select quantity = 40 as stock_restored_on_voided_sale from public.stock_levels
+ where store_id='zeann' and product_id='bbbbbbbb-0000-0000-0000-000000000001'
+    or store_id='zeann' and product_id='bbbbbbbb-0000-0000-0000-000000000002';
+rollback;
+select 'pass: sale undo reverses stock once and voids credit + payments' as proof;
+
+-- --- 24. void_credit: encoded credits have no stock; voided unpaid ------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.record_existing_credit(
+  'aaaaaaaa-0000-0000-0000-000000000001', 'amara', current_date - 5, current_date + 30,
+  '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":1,"unit_price_minor":90000}]',
+  null, null
+) as encoded_credit \gset
+select :'encoded_credit'::jsonb->>'credit_id' as proof_credit \gset
+set local app.proof_credit = :'proof_credit';
+select quantity = 20 as stock_before_credit_undo from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+select public.void_credit(nullif(current_setting('app.proof_credit', true), '')::uuid);
+select status = 'voided' as encoded_credit_voided from public.credit_obligations
+ where id = nullif(current_setting('app.proof_credit', true), '')::uuid;
+select quantity = 20 as stock_untouched_by_credit_undo from public.stock_levels
+ where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
+rollback;
+
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+-- Seed cred-1 (-0101, sale-2's credit) with no payments: void it.
+select quantity = 40 as zeann_sugar_before from public.stock_levels
+ where store_id='zeann' and product_id='bbbbbbbb-0000-0000-0000-000000000002';
+select public.void_credit('aaaaaaaa-0000-0000-0000-000000000101');
+select quantity = 43 as charge_sale_stock_restored from public.stock_levels
+ where store_id='zeann' and product_id='bbbbbbbb-0000-0000-0000-000000000002';
+select status = 'voided' as credit_voided from public.credit_obligations
+ where id = 'aaaaaaaa-0000-0000-0000-000000000101';
+rollback;
+select 'pass: credit undo voids credit+sale, stock only for system sales' as proof;
+
+-- --- 25. record_payment refuses voided credits --------------------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.void_credit('aaaaaaaa-0000-0000-0000-000000000101');
+set local role authenticated;
+set local request.jwt.claim.sub = '22222222-2222-2222-2222-222222222222';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.record_payment('aaaaaaaa-0000-0000-0000-000000000101', 'zeann', 100, 'Cash');
+    raise exception 'FAIL: payment accepted on voided credit';
+  exception when others then
+    if sqlerrm like '%was undone%' then raise notice 'voided credit cannot receive payments';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: voided credits cannot receive payments' as proof;
+
+-- --- 26. Inventory correction is admin-only outright --------------------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.adjust_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 99, null);
+    raise exception 'FAIL: staff adjusted inventory';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff inventory correction blocked'; else raise; end if;
+  end;
+  begin
+    perform public.delete_stock('amara', 'bbbbbbbb-0000-0000-0000-000000000002');
+    raise exception 'FAIL: staff deleted inventory';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff inventory delete blocked'; else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: inventory correction is admin-only' as proof;
 
 select 'ALL GATE 4 PROOFS COMPLETED' as result;
