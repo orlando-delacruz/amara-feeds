@@ -100,9 +100,9 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.12 Product approval state — Confirmed
 
-- **Concept:** the lifecycle state of a staff-submitted product: pending after submission, active only after admin review and approval.
-- **Source:** REQ-PROD-002–003; `docs/PROJECT.md` §4.
-- **Boundary:** rejection, editing, resubmission, and any further states or timestamps are Confirmation Required.
+- **Concept:** the lifecycle state of a staff-submitted product: pending after submission, active only after admin review and approval. Rejection is a soft terminal state (client revision, DEC-051): the record is kept (its receiving/stock history was never FK-deletable and stays intact) and disappears from the pending-approval list and the sale catalog via its status; a rejected product cannot be approved and is not resubmittable this round.
+- **Source:** REQ-PROD-002–003; `docs/PROJECT.md` §4; soft rejection per client request (DEC-051).
+- **Boundary:** product editing, resubmission, and the retention of rejected records are Confirmation Required.
 
 ### 4.13 Rider — Confirmed (user-confirmed addition)
 

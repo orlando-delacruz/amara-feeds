@@ -10,6 +10,7 @@ interface StatusBadgeProps {
 const labels: Record<StatusBadgeStatus, string> = {
   pending: 'Pending',
   active: 'Active',
+  rejected: 'Rejected',
   outstanding: 'Outstanding',
   settled: 'Settled',
   voided: 'Voided',
@@ -18,6 +19,7 @@ const labels: Record<StatusBadgeStatus, string> = {
 const tones: Record<StatusBadgeStatus, 'warning' | 'success'> = {
   pending: 'warning',
   active: 'success',
+  rejected: 'warning',
   outstanding: 'warning',
   settled: 'success',
   voided: 'warning',

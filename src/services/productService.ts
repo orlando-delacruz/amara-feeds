@@ -92,17 +92,17 @@ export async function rejectProduct(id: ProductId): Promise<Product> {
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
-    return { id, name: '', status: 'pending', createdAt: new Date().toISOString() }
+    return { id, name: '', status: 'rejected', createdAt: new Date().toISOString() }
   }
-  const db = getDb()
-  const index = db.products.findIndex((item) => item.id === id)
-  if (index === -1) {
+  const product = getDb().products.find((item) => item.id === id)
+  if (!product) {
     throw new ServiceError('not_found', 'Product not found.')
   }
-  const product = db.products[index]
   if (product.status !== 'pending') {
     throw new ServiceError('conflict', 'Only pending products can be rejected.')
   }
-  const [removed] = db.products.splice(index, 1)
-  return { ...removed }
+  // Soft reject (DEC-051): the record stays (receiving/stock history intact)
+  // and disappears from the pending list and catalog via status filters.
+  product.status = 'rejected'
+  return { ...product }
 }

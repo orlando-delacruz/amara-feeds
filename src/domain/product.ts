@@ -1,6 +1,6 @@
 import type { ProductId, UserId } from './ids'
 
-export type ProductStatus = 'pending' | 'active'
+export type ProductStatus = 'pending' | 'active' | 'rejected'
 
 export interface Product {
   id: ProductId

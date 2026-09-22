@@ -690,4 +690,51 @@ end $$;
 rollback;
 select 'pass: inventory correction is admin-only' as proof;
 
+-- --- 27. Soft product rejection survives receiving history (DEC-051) ----
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+select public.submit_product('Proof Reject Item') as proof_product \gset
+select :'proof_product'::jsonb->>'product_id' as proof_pid \gset
+set local app.proof_pid = :'proof_pid';
+-- Staff receive stock for the still-pending product (real, reachable flow).
+select public.record_receiving('amara', nullif(current_setting('app.proof_pid', true), '')::uuid,
+  4, 'Proof Supplier', 8000, 9000, null, null);
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.reject_product(nullif(current_setting('app.proof_pid', true), '')::uuid);
+    raise notice 'rejection succeeded despite receiving history';
+  exception when others then
+    raise exception 'FAIL: reject failed: %', sqlerrm;
+  end;
+end $$;
+select status = 'rejected' as product_soft_rejected from public.products
+ where id = nullif(current_setting('app.proof_pid', true), '')::uuid;
+select count(*) > 0 as receiving_history_kept from public.receiving_records
+ where product_id = nullif(current_setting('app.proof_pid', true), '')::uuid;
+rollback;
+
+begin;
+insert into public.products (id, name, status)
+values ('bbbbbbbb-0000-0000-0000-000000000097', 'Proof Already Rejected', 'rejected');
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.approve_product('bbbbbbbb-0000-0000-0000-000000000097');
+    raise exception 'FAIL: rejected product approved';
+  exception when others then
+    if sqlerrm like '%Only pending%' then raise notice 'rejected product cannot be approved'; else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: soft rejection keeps history, blocks approval' as proof;
+
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

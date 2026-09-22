@@ -362,7 +362,8 @@ export function serviceErrorFromSupabase(error: { message: string; code?: string
     return new ServiceError('conflict', 'That record already exists.')
   }
 
-  // Never surface raw database internals to users (docs/SECURITY.md §7, §11).
-  console.error(`[supabase] ${code || 'unknown'}: ${message}`)
+  // Never surface raw database internals to users (docs/SECURITY.md §7, §11);
+  // the diagnostics line stays free of schema detail (§10).
+  console.error(`[supabase] unclassified data-layer error (code ${code || 'unknown'})`)
   return new ServiceError('validation', 'Something went wrong. Please try again.')
 }

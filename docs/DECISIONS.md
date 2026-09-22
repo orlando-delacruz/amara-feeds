@@ -136,6 +136,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-048 | Existing credit encoding, approved inventory lock, per-store admin selection (migration 00008) | Accepted | 2026-09-21 |
 | DEC-049 | Credit details, price editing, sale deletion, customer edit/delete, My Account (migration 00009) | Accepted | 2026-09-21 |
 | DEC-050 | Bank-style admin-only correction: void/undo for sales, credits, and inventory (migration 00010) | Accepted | 2026-09-21 |
+| DEC-051 | Soft product rejection (migration 00011) | Accepted | 2026-09-21 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -816,6 +817,18 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Rationale:** Voiding keeps every original record inspectable (payment evidence survives, excluded only from calculations), satisfies "reversible/traceable when practical", and all enforcement is in admin-checked SQL functions — staff cannot bypass it through direct API calls, and direct table writes remain RLS-denied.
 - **Consequences:** Voiding restores stock against current quantities — if stock was manually corrected since, restoration reflects to that state (admin-visible; noted edge). Mock audit parity skips server-written `sale.voided`/`credit.voided` events (History still renders the void from real systems). Hosted rollout needs `supabase db push` (00007–00010) plus a frontend deploy in one window. Checklist: `docs/DATA-MODEL.md` §§4.4/4.6/4.7/4.8, `docs/API.md` §5, and `docs/UI-UX.md` §§7.1/7.3/7.4 updated; Gate-4 proofs now 26/26 including double-void refusal and voided-credit payment refusal.
 - **Related documents:** `supabase/migrations/20260921170000_00010_admin_correction.sql`, `supabase/proofs/gate4.sql`, `src/services/saleService.ts`, `src/services/creditService.ts`, `src/services/paymentService.ts`, `src/services/inventoryService.ts`, `src/features/sales/SaleListPage.tsx`, `src/features/credit/CreditDetailPage.tsx`, `src/features/inventory/InventoryPage.tsx`, `docs/DATA-MODEL.md`, `docs/API.md`, `docs/UI-UX.md`.
+
+### DEC-051 — Soft product rejection (migration 00011)
+
+- **ID:** DEC-051
+- **Title:** Soft product rejection (migration 00011)
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** Rejecting a product that already carried receiving records or stock failed with a raw FK conflict (`23503 on receiving_records_product_id_fkey`): staff submit a product and receive stock for it before approval (record_receiving never gated on product status), while `products` is FK-restricted by receiving_records/stock_levels/sale_lines — so `reject_product`'s hard `DELETE` could never succeed for received products. The mapper collapsed the failure to a generic error, and the client console log leaked schema detail.
+- **Decision:** Migration `00011`, verified by a Gate-4 proof extension (27/27): `products.status` gains `'rejected'`; `reject_product` soft-rejects (sets the status) instead of deleting — receiving/stock history stays intact and traceable, the record disappears from the pending-approval list and the catalog via its status filters, a rejected product can never be approved, and the audit detail notes "kept for its records" when receiving exists. Also rejects are not resubmittable this round (unchanged Confirmation Required), and the unclassified-error console log no longer prints raw database messages. Consistent with the DEC-050 reversal philosophy.
+- **Alternatives considered:** Hard-delete with a friendly refusal — rejected: after barring rejection, there is no receiving-delete path, so the admin would be permanently stuck and forced to approve junk. Cascade-deleting receiving history — rejected: destroys purchase records against the preserve-history principle.
+- **Consequences:** Rejected products accumulate as hidden records (no retention policy yet — Confirmation Required); `StatusBadge` gains a Rejected label. Hosted rollout: `supabase db push` (00007–00011) with the next frontend deploy. `docs/DATA-MODEL.md` §4.12 and `docs/API.md` §5 updated.
+- **Related documents:** `supabase/migrations/20260921180000_00011_soft_product_rejection.sql`, `supabase/proofs/gate4.sql`, `src/services/productService.ts`, `src/domain/product.ts`, `src/services/userService.ts`, `docs/DATA-MODEL.md`, `docs/API.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.
