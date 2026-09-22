@@ -222,13 +222,13 @@ export function AdminDashboardPage() {
             </DepotBoard>
 
             <Section title="Credit & payments" variant="flush">
-              <Stack gap="sm">
+              <DepotBoard>
                 <StatCard
                   label="Outstanding credit"
                   value={<MoneyText amountMinor={data.outstanding.totalMinor} />}
+                  valueScale="large"
                   caption={`${data.outstanding.count} obligations`}
                   icon={<Icon name="alert" />}
-                  orientation="row"
                   badge={
                     <BalanceStateChip
                       state={data.outstanding.totalMinor > 0 ? 'attention' : 'healthy'}
@@ -238,11 +238,11 @@ export function AdminDashboardPage() {
                 <StatCard
                   label="Payments today"
                   value={<MoneyText amountMinor={data.payments.totalMinor} />}
+                  valueScale="large"
                   caption={`${data.payments.count} payments`}
                   icon={<Icon name="card" />}
-                  orientation="row"
                 />
-              </Stack>
+              </DepotBoard>
             </Section>
 
             <Section
