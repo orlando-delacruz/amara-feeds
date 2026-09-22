@@ -44,11 +44,11 @@ const Stamp = styled.div`
 
 const DepotBoard = styled.div`
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: ${({ theme }) => theme.space.md};
 
   @media (min-width: ${({ theme }) => theme.breakpoint.phoneWide}) {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 `
 

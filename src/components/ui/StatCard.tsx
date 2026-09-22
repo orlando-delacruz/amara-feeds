@@ -57,6 +57,8 @@ const Container = styled.div<{
   gap: ${({ theme, $row }) => ($row ? theme.space.md : theme.space.xs)};
   padding: ${({ theme }) => theme.space.lg};
   border-radius: ${({ theme }) => theme.radius.lg};
+  /* Unbreakable money strings must never force the card past the viewport. */
+  min-width: 0;
 
   ${({ theme, $panel, $outline, $tone }) =>
     $panel
@@ -133,17 +135,22 @@ const Label = styled.span<{ $plate: boolean; $outline: boolean; $tone: StatCardT
 `
 
 const Value = styled.span<{ $scale: StatCardValueScale; $plate: boolean; $tone: StatCardTone }>`
+  /* Money strings have no break points and can outgrow small viewports at
+     full display size — scale with the viewport (clamp) instead of a fixed
+     desktop size, and letter-break only as a last resort. */
   font-size: ${({ theme, $scale }) =>
     $scale === 'hero'
-      ? theme.font.size.hero
+      ? 'clamp(28px, 9vw, ' + theme.font.size.hero + ')'
       : $scale === 'large'
-        ? theme.font.size.display
+        ? 'clamp(22px, 7vw, ' + theme.font.size.display + ')'
         : theme.font.size.xxl};
   font-weight: ${({ theme }) => theme.font.weight.bold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
   letter-spacing: ${({ theme }) => theme.font.tracking.tight};
   font-variant-numeric: tabular-nums;
   text-wrap: balance;
+  overflow-wrap: anywhere;
+  min-width: 0;
   color: ${({ theme, $plate, $tone }) => ($plate ? theme.color.text.inverse : paint(theme, $tone))};
 `
 
@@ -175,13 +182,14 @@ const Caption = styled.span<{
 
 const RowValue = styled.span<{ $plate: boolean; $tone: StatCardTone }>`
   margin-left: auto;
-  flex-shrink: 0;
+  min-width: 0;
   font-size: ${({ theme }) => theme.font.size.xl};
   font-weight: ${({ theme }) => theme.font.weight.bold};
   line-height: ${({ theme }) => theme.font.lineHeight.tight};
   letter-spacing: ${({ theme }) => theme.font.tracking.tight};
   font-variant-numeric: tabular-nums;
   text-align: right;
+  overflow-wrap: anywhere;
   color: ${({ theme, $plate, $tone }) => ($plate ? theme.color.text.inverse : paint(theme, $tone))};
 `
 

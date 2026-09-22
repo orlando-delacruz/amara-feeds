@@ -75,7 +75,8 @@ const Now = styled.div`
   display: inline-flex;
   align-items: center;
   gap: ${({ theme }) => theme.space.sm};
-  flex-shrink: 0;
+  /* Shrink inward on narrow screens instead of pushing the board wider. */
+  min-width: 0;
 `
 
 const NowDot = styled.span`
@@ -104,6 +105,8 @@ const NowText = styled.span`
   text-transform: uppercase;
   color: ${({ theme }) => theme.color.text.inverse};
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `
 
 const Stripe = styled.span`

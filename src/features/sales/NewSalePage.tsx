@@ -63,11 +63,16 @@ const ProductPrice = styled.p`
   min-height: 1.5em;
 `
 
-const ProductStock = styled.p`
+const ProductStock = styled.p<{ $tone: 'neutral' | 'warning' | 'danger' }>`
   margin: 0;
   font-size: ${({ theme }) => theme.font.size.sm};
   font-weight: ${({ theme }) => theme.font.weight.semibold};
-  color: ${({ theme }) => theme.color.text.secondary};
+  color: ${({ theme, $tone }) =>
+    $tone === 'warning'
+      ? theme.color.status.warning.text
+      : $tone === 'danger'
+        ? theme.color.status.danger.text
+        : theme.color.text.secondary};
   font-variant-numeric: tabular-nums;
 `
 
@@ -112,6 +117,20 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
     const quantity = Number(quantities[productId] ?? '1')
     if (!Number.isInteger(quantity) || quantity < 1) {
       setQuantityError(`${name}: quantity must be a whole number of at least 1.`)
+      return
+    }
+    // Stock snapshot guard: the Save's database refusal stays the boundary —
+    // this keeps the basket consistent with the catalog's on-hand view.
+    const onHand = stockByProduct.get(productId) ?? 0
+    const inCart = cart.lines
+      .filter((line) => line.productId === productId)
+      .reduce((total, line) => total + line.quantity, 0)
+    if (quantity + inCart > onHand) {
+      setQuantityError(
+        onHand === 0
+          ? `${name} is out of stock at this store.`
+          : `${name}: only ${onHand} on hand.`,
+      )
       return
     }
     setQuantityError(null)
@@ -184,13 +203,29 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
             const price = prices.data?.[product.id] as Money
             const quantity = quantities[product.id] ?? '1'
             const onHand = stockByProduct.get(product.id) ?? 0
+            const inCart = cart.lines
+              .filter((line) => line.productId === product.id)
+              .reduce((total, line) => total + line.quantity, 0)
+            // Zero stock blocks outright; a partially stocked item blocks
+            // only when the requested amount would overdraw it (basket
+            // quantities included — duplicates merge into one line).
+            const outOfStock = onHand === 0
+            const insufficient =
+              !outOfStock && quantity !== '' && Number(quantity) + inCart > onHand
+            const stockTone = outOfStock ? 'danger' : insufficient ? 'warning' : 'neutral'
             return (
               <ProductCard key={product.id}>
                 <ProductName>{product.name}</ProductName>
                 <ProductPrice>
                   Price per bag: <MoneyText amountMinor={price} />
                 </ProductPrice>
-                <ProductStock>On hand: {onHand}</ProductStock>
+                <ProductStock $tone={stockTone}>
+                  {outOfStock
+                    ? 'Out of stock'
+                    : insufficient
+                      ? `Insufficient stock — only ${onHand} on hand`
+                      : `On hand: ${onHand}`}
+                </ProductStock>
                 <QtyField
                   id={`sale-quantity-${product.id}`}
                   label="Quantity"
@@ -206,6 +241,7 @@ export function NewSalePage({ basePath = '/sales' }: NewSalePageProps) {
                 <Button
                   variant="primary"
                   size="sm"
+                  disabled={outOfStock || insufficient}
                   onClick={() => addToCart(product.id, product.name, price)}
                 >
                   Add to cart

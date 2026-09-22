@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
-import { resetDb } from '@/services/mocks/db'
+import { resetDb, getDb } from '@/services/mocks/db'
 import { approveProduct, createProduct } from '@/services/productService'
 import { renderWithProviders } from '@/test/render'
 import type { StoreContextId } from '@/store/stores'
@@ -174,5 +174,39 @@ describe('NewSalePage', () => {
     await user.click(screen.getByRole('radio', { name: 'Amara' }))
     const amaraRice = await productCard('Rice 25kg')
     expect(within(amaraRice).getByText('On hand: 20')).toBeInTheDocument()
+  })
+
+  it('blocks adding to the cart when the item is out of stock', async () => {
+    getDb().stock = getDb().stock.filter(
+      (row) => !(row.storeId === 'amara' && row.productId === 'prod-2'),
+    )
+    // A priced zero-stock row: receiving adds stock; a manual correction can
+    // also leave the row at 0 — the catalog must refuse to sell it.
+    getDb().stock.push({ storeId: 'amara', productId: 'prod-2', quantity: 0 })
+
+    renderNewSale()
+    const sugar = await productCard('Sugar 1kg')
+
+    expect(within(sugar).getByText('Out of stock')).toBeInTheDocument()
+    expect(within(sugar).getByRole('button', { name: 'Add to cart' })).toBeDisabled()
+  })
+
+  it('blocks adding to the cart when the requested quantity exceeds stock', async () => {
+    const user = userEvent.setup()
+    renderNewSale()
+    const rice = await productCard('Rice 25kg') // On hand: 20
+
+    const input = within(rice).getByLabelText(/Quantity/)
+    await user.clear(input)
+    await user.type(input, '21')
+    expect(
+      await within(rice).findByText('Insufficient stock — only 20 on hand'),
+    ).toBeInTheDocument()
+    expect(within(rice).getByRole('button', { name: 'Add to cart' })).toBeDisabled()
+
+    await user.clear(input)
+    await user.type(input, '20')
+    expect(within(rice).getByText('On hand: 20')).toBeInTheDocument()
+    expect(within(rice).getByRole('button', { name: 'Add to cart' })).toBeEnabled()
   })
 })
