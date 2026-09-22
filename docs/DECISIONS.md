@@ -139,6 +139,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-051 | Soft product rejection (migration 00011) | Accepted | 2026-09-21 |
 | DEC-052 | Credit sheet in the report Excel export | Accepted | 2026-09-21 |
 | DEC-053 | Admin-only hard customer deletion with outstanding-credit guard (migration 00013) | Accepted | 2026-09-22 |
+| DEC-054 | Expenses Excel import with by-date summary/export (no schema change) | Accepted | 2026-09-22 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -857,6 +858,18 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Rationale:** Enforcement stays in the data layer (admin-checked RPC, RLS-denying direct writes); the collections guard prevents deleting a customer the business is still owed money by.
 - **Consequences:** Deletion permanently removes the customer's sales, credits, and payments — dashboards, History, and report exports no longer include them, and the numbers are not restorable. Supersedes DEC-049's customer-deletion refusal. Hosted rollout: `supabase db push` (whatever of 00007–00013 is pending) with the next frontend deploy. `docs/DATA-MODEL.md` §4.2 and `docs/API.md` §5 updated.
 - **Related documents:** `supabase/migrations/20260922090000_00013_hard_delete_customer.sql`, `supabase/proofs/gate4.sql`, `src/services/customerService.ts`, `src/features/customers/CustomerListPage.tsx`, `docs/DATA-MODEL.md`, `docs/API.md`.
+
+### DEC-054 — Expenses Excel import with by-date summary/export (no schema change)
+
+- **ID:** DEC-054
+- **Title:** Expenses Excel import with by-date summary/export (no schema change)
+- **Status:** Accepted
+- **Date:** 2026-09-22
+- **Context:** Final client revision for Expenses: import an Excel file of expense records, summarize by date, and export the summary. Verified first: the expenses schema carries no expense-date field (only server-set `created_at`), and `create_expense` requires an active rider or vehicle per row — so saving imported rows as real records would stamp everything "today" and force a schema change.
+- **Decision:** Summary-only import, no database changes. New `read-excel-file` dependency (sibling of the existing `write-excel-file`, lazily imported, same author) to parse .xlsx in the browser. `src/features/expenses/expenseImport.ts` validates the expected columns (Date, Type Fuel/Repair, Amount > 0, Rider and/or Vehicle matched by name against the current store, optional Note) with per-row plain-language errors and groups valid rows by date; `src/lib/exportExpenseExcel.ts` exports the Date/Fuel/Repair/Total summary and generates a one-row import template, mirroring the report-export writer. The Expenses page gains an Import Excel dialog, an in-memory summary section with skip warnings, and Export/Clear actions; permissions match recording (staff own store, admin via store context).
+- **Alternatives considered:** Saving imported rows as real expenses — rejected: would need an expense-date schema column (against the no-schema-change constraint), and the client chose summary-only after confirmation. Soft options like CSV-only import — rejected: the client works in Excel.
+- **Consequences:** Imported data never touches stored expenses, net summaries, or reports — it is a file-scoped tool. `docs/UI-UX.md` §7.11 and `docs/API.md` §5 updated; no migration, no hosted DB work.
+- **Related documents:** `src/features/expenses/expenseImport.ts`, `src/features/expenses/ExpensesPage.tsx`, `src/lib/exportExpenseExcel.ts`, `docs/UI-UX.md`, `docs/API.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

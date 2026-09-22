@@ -45,4 +45,78 @@ describe('ExpensesPage', () => {
     expect(await screen.findByText('Expense history — Amara')).toBeInTheDocument()
     expect(screen.getByText('Weekly fuel for Amara deliveries')).toBeInTheDocument()
   })
+
+  it('opens the import dialog with a template download (DEC-054)', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ExpensesPage />, { user: staffUser })
+    await screen.findByText('Riders net')
+
+    await user.click(screen.getByRole('button', { name: 'Import Excel' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Import expenses' })
+    expect(dialog).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Download template' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Expense Excel file')).toBeInTheDocument()
+  })
+
+  it('rejects a non-Excel file without breaking the page (DEC-054)', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ExpensesPage />, { user: staffUser })
+    await screen.findByText('Riders net')
+
+    await user.click(screen.getByRole('button', { name: 'Import Excel' }))
+    await screen.findByRole('dialog', { name: 'Import expenses' })
+    const input = screen.getByLabelText('Expense Excel file')
+    // A corrupt payload wearing an .xlsx name (browsers only filter by name).
+    await user.upload(input, new File(['hello'], 'broken.xlsx'))
+
+    expect(
+      await screen.findByText('This file could not be read as an Excel (.xlsx) file.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Imported summary by date')).not.toBeInTheDocument()
+  })
+
+  it('imports, summarizes by date, and exports the summary (DEC-054)', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ExpensesPage />, { user: staffUser })
+    await screen.findByText('Riders net')
+
+    const writeExcelFile = (await import('write-excel-file/browser')).default
+    const blob = await writeExcelFile([
+      {
+        data: [
+          ['Date', 'Type', 'Amount', 'Rider', 'Vehicle', 'Note'].map((value) => ({ value })),
+          [
+            { value: new Date(2026, 2, 4), type: Date, format: 'yyyy-mm-dd' },
+            { value: 'Fuel' },
+            { value: 750 },
+            { value: 'Jojo Ramos' },
+            { value: '' },
+            { value: '' },
+          ],
+          [
+            { value: '2026-03-05' },
+            { value: 'Repair' },
+            { value: 1200 },
+            { value: '' },
+            { value: 'Tricycle' },
+            { value: '' },
+          ],
+        ],
+        sheet: 'Expenses',
+        columns: Array.from({ length: 6 }, () => ({ width: 16 })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any,
+    ]).toBlob()
+
+    await user.click(screen.getByRole('button', { name: 'Import Excel' }))
+    await screen.findByRole('dialog', { name: 'Import expenses' })
+    await user.upload(
+      screen.getByLabelText('Expense Excel file'),
+      new File([blob], 'expenses.xlsx'),
+    )
+
+    expect(await screen.findByText('Imported summary by date')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Export summary' }))
+    await __awaitSwal('Summary exported.')
+  })
 })

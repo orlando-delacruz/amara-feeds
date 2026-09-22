@@ -170,7 +170,7 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.11 Expenses
 
-- **Behavior.** Staff record fuel and repair expenses for their own store's riders or vehicles; admin manage both stores via the store control. The page shows a per-rider and per-vehicle net summary (delivered-sales value minus recorded expenses) and an expense history with target, type, amount, note, recorded-by, and date.
+- **Behavior.** Staff record fuel and repair expenses for their own store's riders or vehicles; admin manage both stores via the store control. The page shows a per-rider and per-vehicle net summary (delivered-sales value minus recorded expenses) and an expense history with target, type, amount, note, recorded-by, and date. An Import Excel action (same recording permissions) opens a dialog to upload an .xlsx file with Date, Type (Fuel/Repair), Amount, Rider, Vehicle, and optional Note columns; the file is validated row by row and summarized by date in memory only — nothing is recorded — and the summary can be exported as its own Excel file or cleared. A downloadable template shows the expected columns.
 - **Constraints.** Expense type enum (fuel, repair) is Assumed pending exact values; net computation uses only delivery-tagged sales at the same store.
 
 ## 8. Action Hierarchy
