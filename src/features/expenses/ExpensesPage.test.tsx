@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDb } from '@/services/mocks/db'
@@ -13,6 +13,15 @@ const staffUser: User = {
   role: 'staff',
   storeId: 'amara',
   username: 'alice',
+  active: true,
+}
+
+const adminUser: User = {
+  id: 'user-3',
+  name: 'Owner',
+  role: 'admin',
+  storeId: 'zeann',
+  username: 'owner',
   active: true,
 }
 
@@ -59,5 +68,57 @@ describe('ExpensesPage', () => {
     await screen.findByText('Riders net')
 
     expect(screen.queryByRole('button', { name: 'Import Excel' })).not.toBeInTheDocument()
+  })
+
+  it('hides Delete from staff (DEC-055)', async () => {
+    renderWithProviders(<ExpensesPage />, { user: staffUser })
+    await screen.findByText('Expense history — Amara')
+
+    expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+  })
+
+  it('hides Edit from staff (DEC-056)', async () => {
+    renderWithProviders(<ExpensesPage />, { user: staffUser })
+    await screen.findByText('Expense history — Amara')
+
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+  })
+
+  it('deletes an expense as admin (DEC-055)', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ExpensesPage />, { user: adminUser, store: 'amara' })
+    await screen.findByText('Riders net')
+
+    expect(screen.getAllByRole('button', { name: 'Delete' }).length).toBeGreaterThan(0)
+    const note = await screen.findByText('Tricycle tire replacement')
+    const row = note.closest('tr, [role="row"], article, li')
+    expect(row).not.toBeNull()
+    await user.click(within(row as HTMLElement).getByRole('button', { name: 'Delete' }))
+
+    await __awaitSwal('Expense deleted.')
+    expect(screen.queryByText('Tricycle tire replacement')).not.toBeInTheDocument()
+  })
+
+  it('edits an expense as admin (DEC-056)', async () => {
+    const user = userEvent.setup()
+    const { container } = renderWithProviders(<ExpensesPage />, { user: adminUser, store: 'amara' })
+    await screen.findByText('Riders net')
+
+    const note = await screen.findByText('Weekly fuel for Amara deliveries')
+    const row = note.closest('tr, [role="row"], article, li')
+    expect(row).not.toBeNull()
+    await user.click(within(row as HTMLElement).getByRole('button', { name: 'Edit' }))
+
+    const dialog = await screen.findByRole('dialog', { name: 'Edit expense' })
+    const amountInput = within(dialog).getByLabelText(/Amount/) as HTMLInputElement
+    expect(amountInput.value).toBe('500')
+    await user.clear(amountInput)
+    await user.type(amountInput, '750')
+    // Re-select the same rider through the dialog target select.
+    const targetSelect = container.querySelector('#edit-expense-target') as HTMLSelectElement
+    await user.selectOptions(targetSelect, 'rider-1')
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+    await __awaitSwal('Expense updated.')
   })
 })

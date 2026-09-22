@@ -118,8 +118,8 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.15 Expense — Confirmed (user-confirmed addition)
 
-- **Concept:** a store-specific fuel or repair cost recorded against a rider or vehicle (at least one required), used to compute per-rider/vehicle net (delivered-sales value minus expenses).
-- **Source:** REQ-EXP-001–003; client confirmation (fuel/repair costs deducted from rider/vehicle sales).
+- **Concept:** a store-specific fuel or repair cost recorded against a rider or vehicle (at least one required), used to compute per-rider/vehicle net (delivered-sales value minus expenses). Only admins can edit or delete a recorded expense (client revisions, DEC-055/DEC-056): editing corrects target, type, amount, and note without changing the store; deletion is a single-row removal — nothing references expenses — so net, by-date, and report figures recompute from the remaining rows.
+- **Source:** REQ-EXP-001–003; client confirmation (fuel/repair costs deducted from rider/vehicle sales); admin-only edit/delete per client request (DEC-055, DEC-056).
 - **Boundary:** per-store (never shared); expense type enum (fuel, repair) is Assumed pending exact values; net computation uses only delivery-tagged sales at the same store.
 
 ## 5. Conceptual Relationships

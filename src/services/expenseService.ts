@@ -98,6 +98,83 @@ export async function createExpense(input: NewExpenseInput): Promise<Expense> {
   return { ...record }
 }
 
+export async function deleteExpense(id: string): Promise<string> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('delete_expense', { p_expense_id: id })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return id
+  }
+  const db = getDb()
+  const index = db.expenses.findIndex((record) => record.id === id)
+  if (index === -1) {
+    throw new ServiceError('not_found', 'Expense not found.')
+  }
+  db.expenses.splice(index, 1)
+  return id
+}
+
+export interface UpdateExpenseInput {
+  riderId?: string
+  vehicleId?: string
+  type: Expense['type']
+  amountMinor: number
+  note?: string
+}
+
+export async function updateExpense(id: string, input: UpdateExpenseInput): Promise<Expense> {
+  if (input.amountMinor <= 0) {
+    throw new ServiceError('validation', 'Expense amount must be greater than zero.')
+  }
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('update_expense', {
+      p_expense_id: id,
+      p_rider_id: input.riderId ?? null,
+      p_vehicle_id: input.vehicleId ?? null,
+      p_type: input.type,
+      p_amount_minor: input.amountMinor,
+      p_note: input.note?.trim() || null,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    const updated = (await listExpenses()).find((record) => record.id === id)
+    if (!updated) {
+      throw new ServiceError('not_found', 'Expense not found.')
+    }
+    return updated
+  }
+  const db = getDb()
+  const record = db.expenses.find((item) => item.id === id)
+  if (!record) {
+    throw new ServiceError('not_found', 'Expense not found.')
+  }
+  if (!input.riderId && !input.vehicleId) {
+    throw new ServiceError('validation', 'Assign the expense to a rider or vehicle.')
+  }
+  if (input.riderId) {
+    const rider = db.riders.find((r) => r.id === input.riderId && r.storeId === record.storeId)
+    if (!rider || !rider.active) {
+      throw new ServiceError('validation', 'Selected rider is not active at this store.')
+    }
+  }
+  if (input.vehicleId) {
+    const vehicle = db.vehicles.find(
+      (v) => v.id === input.vehicleId && v.storeId === record.storeId,
+    )
+    if (!vehicle || !vehicle.active) {
+      throw new ServiceError('validation', 'Selected vehicle is not active at this store.')
+    }
+  }
+  record.riderId = input.riderId
+  record.vehicleId = input.vehicleId
+  record.type = input.type
+  record.amountMinor = input.amountMinor
+  record.note = input.note?.trim() || undefined
+  return { ...record }
+}
+
 export interface DeliveryNetEntry {
   id: string
   name: string

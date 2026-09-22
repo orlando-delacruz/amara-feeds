@@ -140,6 +140,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-052 | Credit sheet in the report Excel export | Accepted | 2026-09-21 |
 | DEC-053 | Admin-only hard customer deletion with outstanding-credit guard (migration 00013) | Accepted | 2026-09-22 |
 | DEC-054 | Expenses by-date summary on the page + Expenses sheet in the report export (no schema change) | Accepted | 2026-09-22 |
+| DEC-055 | Admin-only expense deletion (migration 00014) | Accepted | 2026-09-22 |
+| DEC-056 | Admin-only expense editing (migration 00015) | Accepted | 2026-09-22 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -870,6 +872,30 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Alternatives considered:** Excel import of expense files — built, then reverted per client correction (wrong direction; would also have needed name-mapping and could never carry true expense dates). Combined both-stores totals without a store split — rejected: expenses are per-store and the Credit sheet already carries store attribution.
 - **Consequences:** The by-date numbers on the page and in the export both derive from recorded expenses only. `docs/UI-UX.md` §§7.11–7.12 and `docs/API.md` §5 updated; no migration, no hosted DB work.
 - **Related documents:** `src/features/expenses/expenseSummary.ts`, `src/features/expenses/ExpensesPage.tsx`, `src/features/reports/reportRows.ts`, `src/lib/exportReportExcel.ts`, `src/features/reports/ReportsPage.tsx`, `docs/UI-UX.md`, `docs/API.md`.
+
+### DEC-055 — Admin-only expense deletion (migration 00014)
+
+- **ID:** DEC-055
+- **Title:** Admin-only expense deletion (migration 00014)
+- **Status:** Accepted
+- **Date:** 2026-09-22
+- **Context:** The client asked that the admin be able to delete expense records from the Expenses page. Expenses previously had no delete path (create + list only).
+- **Decision:** Migration `00014`, verified by Gate-4 proof section 29: new admin-only `delete_expense` RPC (same signature/grant pattern as the house RPCs; staff refused with "Only admins can delete an expense."). No other table references expenses, so deletion is a single-row removal with no cascade — per-rider/vehicle net, by-date, and report figures recompute from the remaining rows — plus an `expense.deleted` audit event. UI: the expense history gains an admin-only Delete action per row (confirmed, permanent), with success feedback and list refresh; staff see no action. Mock service and tests mirror the semantics; `deleteExpense` returns the deleted id so the page's success path fires (same lesson as DEC-053).
+- **Alternatives considered:** Staff deletion — rejected: consistent with the bank-style correction model (DEC-050) where destructive actions are admin-only. Void/undo instead of delete — rejected: expenses have no downstream stock/financial effects to reverse, so a plain delete with audit is sufficient.
+- **Consequences:** Deleted expenses disappear from net, by-date, and report figures permanently. Hosted rollout: `supabase db push` (00014) with the next frontend deploy. `docs/DATA-MODEL.md` §4.15, `docs/API.md` §5, and `docs/UI-UX.md` §7.11 updated.
+- **Related documents:** `supabase/migrations/20260922120000_00014_delete_expense.sql`, `supabase/proofs/gate4.sql`, `src/services/expenseService.ts`, `src/features/expenses/ExpensesPage.tsx`, `docs/DATA-MODEL.md`, `docs/API.md`, `docs/UI-UX.md`.
+
+### DEC-056 — Admin-only expense editing (migration 00015)
+
+- **ID:** DEC-056
+- **Title:** Admin-only expense editing (migration 00015)
+- **Status:** Accepted
+- **Date:** 2026-09-22
+- **Context:** Follow-up to DEC-055: the client also asked for expense editing, with both edit and delete restricted to admins.
+- **Decision:** Migration `00015`, verified by Gate-4 proof section 30: new admin-only `update_expense` RPC correcting target (rider/vehicle), type, amount, and note — the record's store never changes, and validation mirrors `create_expense` (positive amount, rider-or-vehicle required, target active at the record's store) plus an `expense.updated` audit event. UI: the expense history's admin-only Actions column gains an Edit button opening an Edit dialog prefilled from the record; success feedback refreshes history and net summary. Staff see neither Edit nor Delete. Mock service and tests mirror the semantics.
+- **Alternatives considered:** Staff editing — rejected: same bank-style correction model as DEC-055. Allowing store reassignment on edit — rejected: keeps net attribution per store unambiguous.
+- **Consequences:** Corrected figures flow into net, by-date, and report summaries from the edited rows. Hosted rollout: `supabase db push` (00015) with the next frontend deploy. `docs/DATA-MODEL.md` §4.15, `docs/API.md` §5, and `docs/UI-UX.md` §7.11 updated.
+- **Related documents:** `supabase/migrations/20260922150000_00015_update_expense.sql`, `supabase/proofs/gate4.sql`, `src/services/expenseService.ts`, `src/features/expenses/ExpensesPage.tsx`, `docs/DATA-MODEL.md`, `docs/API.md`, `docs/UI-UX.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

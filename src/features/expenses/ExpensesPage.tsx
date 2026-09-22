@@ -2,17 +2,20 @@ import { useMemo, useState } from 'react'
 import styled from 'styled-components'
 import {
   createExpense,
+  deleteExpense,
   getDeliveryNetSummary,
   listExpenses,
   listRiders,
   listUsers,
   listVehicles,
+  updateExpense,
 } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { DateText } from '@/components/ui/DateText'
+import { Dialog } from '@/components/ui/Dialog'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
@@ -22,14 +25,14 @@ import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
 import { useAsyncData, useAlertMutation } from '@/features/shared'
-import { notifySuccess } from '@/lib/swal'
+import { confirmAction, notifySuccess } from '@/lib/swal'
 import { buildExpenseDateSummary } from './expenseSummary'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
-import { toMinor } from '@/lib/money'
+import { formatPeso, toMinor } from '@/lib/money'
 import { concreteStoreId, isAllStores, storeLabel } from '@/store/stores'
 import { useStore } from '@/store/useStore'
-import type { ExpenseType, Rider, Vehicle } from '@/domain'
+import type { Expense, ExpenseType, Rider, Vehicle } from '@/domain'
 
 const Fields = styled.div`
   display: grid;
@@ -45,6 +48,13 @@ const Actions = styled.div`
   display: flex;
   justify-content: flex-end;
   margin-top: ${({ theme }) => theme.space.md};
+`
+
+const RowActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${({ theme }) => theme.space.sm};
+  justify-content: flex-end;
 `
 
 const NetGrid = styled.div`
@@ -78,9 +88,119 @@ const emptyForm: ExpenseFormState = {
   note: '',
 }
 
+function EditExpenseDialog({
+  record,
+  riders,
+  vehicles,
+  onSaved,
+}: {
+  record: Expense | null
+  riders: Rider[]
+  vehicles: Vehicle[]
+  onSaved: () => void
+}) {
+  const [targetKind, setTargetKind] = useState<'rider' | 'vehicle'>(
+    record?.riderId ? 'rider' : 'vehicle',
+  )
+  const [targetId, setTargetId] = useState(record?.riderId ?? record?.vehicleId ?? '')
+  const [type, setType] = useState<ExpenseType>(record?.type ?? 'fuel')
+  const [amount, setAmount] = useState(record ? String(record.amountMinor / 100) : '')
+  const [note, setNote] = useState(record?.note ?? '')
+  const [formError, setFormError] = useState<string | null>(null)
+  const { run, pending } = useAlertMutation(
+    (input: { targetId: string; type: ExpenseType; amount: string; note: string }) =>
+      updateExpense(record!.id, {
+        type: input.type,
+        amountMinor: toMinor(Number(input.amount)),
+        note: input.note || undefined,
+        ...(targetKind === 'rider' ? { riderId: input.targetId } : { vehicleId: input.targetId }),
+      }),
+    'Could not update the expense.',
+  )
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!record || !targetId || Number(amount) <= 0) {
+      setFormError('Select a target and enter an amount greater than zero.')
+      return
+    }
+    setFormError(null)
+    const saved = await run({ targetId, type, amount, note })
+    if (saved) {
+      onSaved()
+    }
+  }
+
+  const targetOptions =
+    targetKind === 'rider'
+      ? riders.map((rider) => ({ value: rider.id, label: rider.name }))
+      : vehicles.map((vehicle) => ({ value: vehicle.id, label: vehicle.label }))
+
+  return (
+    <Dialog open={record !== null} title="Edit expense" onClose={onSaved}>
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+      >
+        {formError && <Alert variant="danger">{formError}</Alert>}
+        <Select
+          id="edit-expense-target-kind"
+          label="Assign to"
+          options={[
+            { value: 'rider', label: 'Rider' },
+            { value: 'vehicle', label: 'Vehicle' },
+          ]}
+          value={targetKind}
+          onChange={(event) => {
+            setTargetKind(event.target.value as 'rider' | 'vehicle')
+            setTargetId('')
+          }}
+        />
+        <Select
+          id="edit-expense-target"
+          label={targetKind === 'rider' ? 'Rider' : 'Vehicle'}
+          options={targetOptions}
+          placeholder={targetKind === 'rider' ? 'Select a rider' : 'Select a vehicle'}
+          value={targetId}
+          onChange={(event) => setTargetId(event.target.value)}
+          required
+        />
+        <Select
+          id="edit-expense-type"
+          label="Expense type"
+          options={expenseTypeOptions}
+          value={type}
+          onChange={(event) => setType(event.target.value as ExpenseType)}
+        />
+        <TextField
+          id="edit-expense-amount"
+          label="Amount (₱)"
+          type="number"
+          min={0}
+          step="0.01"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+          required
+        />
+        <TextField
+          id="edit-expense-note"
+          label="Note (optional)"
+          value={note}
+          onChange={(event) => setNote(event.target.value)}
+        />
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Saving…' : 'Save changes'}
+        </Button>
+      </form>
+    </Dialog>
+  )
+}
+
 export function ExpensesPage() {
   const { store } = useStore()
   const { user } = useSession()
+  const isAdmin = user?.role === 'admin'
   const [form, setForm] = useState<ExpenseFormState>(emptyForm)
   const [formError, setFormError] = useState<string | null>(null)
   // 'All stores' reviews both stores; expenses are recorded per concrete store.
@@ -98,6 +218,11 @@ export function ExpensesPage() {
   const users = useAsyncData(() => listUsers())
   const netSummary = useAsyncData(() => getDeliveryNetSummary(contextStoreId), store)
   const add = useAlertMutation(createExpense, 'Could not record the expense.')
+  const [editing, setEditing] = useState<Expense | null>(null)
+  const remove = useAlertMutation(
+    (expenseId: string) => deleteExpense(expenseId),
+    'Could not delete the expense.',
+  )
 
   function updateForm<K extends keyof ExpenseFormState>(key: K, value: ExpenseFormState[K]) {
     setForm((current) => {
@@ -145,6 +270,31 @@ export function ExpensesPage() {
         }))
 
   const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
+
+  async function requestDelete(record: Expense) {
+    const confirmed = await confirmAction({
+      title: 'Delete this expense?',
+      text: `Permanently delete the ${record.type} expense of ${formatPeso(record.amountMinor)}? Net summaries update accordingly.`,
+      confirmLabel: 'Delete',
+      danger: true,
+    })
+    if (!confirmed) {
+      return
+    }
+    const deleted = await remove.run(record.id)
+    if (deleted) {
+      void notifySuccess('Expense deleted.')
+      expenses.reload()
+      netSummary.reload()
+    }
+  }
+
+  function handleSaved() {
+    setEditing(null)
+    void notifySuccess('Expense updated.')
+    expenses.reload()
+    netSummary.reload()
+  }
 
   // By-date summary of the recorded expenses in view (DEC-054). Expenses carry
   // no expense-date field, so each record counts on its recording date.
@@ -307,6 +457,7 @@ export function ExpensesPage() {
               { key: 'note', header: 'Note' },
               { key: 'recordedBy', header: 'Recorded by' },
               { key: 'createdAt', header: 'Date' },
+              ...(isAdmin ? [{ key: 'actions', header: 'Actions' }] : []),
             ]}
             rows={expenses.data.map((record) => ({
               target:
@@ -318,10 +469,36 @@ export function ExpensesPage() {
               note: record.note ?? '—',
               recordedBy: userNames.get(record.recordedByUserId) ?? 'Not available',
               createdAt: <DateText value={record.createdAt} />,
+              ...(isAdmin
+                ? {
+                    actions: (
+                      <RowActions>
+                        <Button size="sm" variant="secondary" onClick={() => setEditing(record)}>
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          disabled={remove.pending}
+                          onClick={() => void requestDelete(record)}
+                        >
+                          Delete
+                        </Button>
+                      </RowActions>
+                    ),
+                  }
+                : {}),
             }))}
           />
         )}
       </AsyncBoundary>
+      <EditExpenseDialog
+        key={editing?.id ?? 'none'}
+        record={editing}
+        riders={riders.data ?? []}
+        vehicles={vehicles.data ?? []}
+        onSaved={handleSaved}
+      />
     </Stack>
   )
 }

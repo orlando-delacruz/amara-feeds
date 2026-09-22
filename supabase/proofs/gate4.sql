@@ -810,4 +810,85 @@ select count(*) = 1 as delete_audited from public.audit_events
 rollback;
 select 'pass: hard customer delete cascades, guards outstanding, audits' as proof;
 
+-- --- 29. delete_expense: admin-only, staff refused, audited (DEC-055) ----
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+select public.create_expense('amara', 'cccccccc-0000-0000-0000-000000000001', null,
+  'fuel', 42000, 'Proof fuel') as doomed_expense \gset
+set local app.doomed_expense = :'doomed_expense';
+-- Staff cannot delete expenses.
+do $$
+begin
+  begin
+    perform public.delete_expense(
+      (nullif(current_setting('app.doomed_expense', true), '')::jsonb->>'expense_id')::uuid);
+    raise exception 'FAIL: staff deleted an expense';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff expense delete blocked'; else raise; end if;
+  end;
+end $$;
+-- Admin deletes: row gone, audit written.
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.delete_expense((:'doomed_expense'::jsonb->>'expense_id')::uuid);
+select count(*) = 0 as expense_gone from public.expenses
+ where id = (:'doomed_expense'::jsonb->>'expense_id')::uuid;
+select count(*) = 1 as delete_audited from public.audit_events
+ where action = 'expense.deleted'
+   and detail = 'Deleted 420.00';
+rollback;
+select 'pass: expense delete is admin-only and audited' as proof;
+
+-- --- 30. update_expense: admin-only correction, validated (DEC-056) -----
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+select public.create_expense('amara', 'cccccccc-0000-0000-0000-000000000001', null,
+  'fuel', 42000, 'Proof fuel') as fixable_expense \gset
+set local app.fixable_expense = :'fixable_expense';
+-- Staff cannot edit expenses.
+do $$
+begin
+  begin
+    perform public.update_expense(
+      (nullif(current_setting('app.fixable_expense', true), '')::jsonb->>'expense_id')::uuid,
+      'cccccccc-0000-0000-0000-000000000001', null, 'fuel', 43000, null);
+    raise exception 'FAIL: staff edited an expense';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff expense edit blocked'; else raise; end if;
+  end;
+end $$;
+-- Admin correction validates like creation: zero amount refused.
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.update_expense(
+      (nullif(current_setting('app.fixable_expense', true), '')::jsonb->>'expense_id')::uuid,
+      'cccccccc-0000-0000-0000-000000000001', null, 'fuel', 0, null);
+    raise exception 'FAIL: zero-amount edit allowed';
+  exception when others then
+    if sqlerrm like '%greater than zero%' then raise notice 'zero-amount edit refused';
+    else raise; end if;
+  end;
+end $$;
+-- Valid admin edit applies and audits.
+select public.update_expense((:'fixable_expense'::jsonb->>'expense_id')::uuid,
+  null, 'dddddddd-0000-0000-0000-000000000002', 'repair', 120000, 'Proof correction');
+select rider_id is null and vehicle_id = 'dddddddd-0000-0000-0000-000000000002'
+   and type = 'repair' and amount_minor = 120000 and note = 'Proof correction'
+  as expense_corrected from public.expenses
+ where id = (:'fixable_expense'::jsonb->>'expense_id')::uuid;
+select count(*) = 1 as edit_audited from public.audit_events
+ where action = 'expense.updated'
+   and detail = 'Corrected to 1200.00';
+rollback;
+select 'pass: expense edit is admin-only, validated, audited' as proof;
+
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

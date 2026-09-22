@@ -170,7 +170,7 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.11 Expenses
 
-- **Behavior.** Staff record fuel and repair expenses for their own store's riders or vehicles; admin manage both stores via the store control. The page shows a per-rider and per-vehicle net summary (delivered-sales value minus recorded expenses), a by-date summary of the recorded expenses (date, fuel, repair, total — each record counts on its recording date), and an expense history with target, type, amount, note, recorded-by, and date.
+- **Behavior.** Staff record fuel and repair expenses for their own store's riders or vehicles; admin manage both stores via the store control. The page shows a per-rider and per-vehicle net summary (delivered-sales value minus recorded expenses), a by-date summary of the recorded expenses (date, fuel, repair, total — each record counts on its recording date), and an expense history with target, type, amount, note, recorded-by, and date. Admins see Edit and Delete actions on each history row (edit opens a prefilled correction dialog; delete is confirmed and permanent); staff see no row actions.
 - **Constraints.** Expense type enum (fuel, repair) is Assumed pending exact values; net computation uses only delivery-tagged sales at the same store.
 
 ## 8. Action Hierarchy

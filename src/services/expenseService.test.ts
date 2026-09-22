@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createExpense, getDeliveryNetSummary, listExpenses } from './expenseService'
-import { resetDb } from './mocks/db'
+import {
+  createExpense,
+  deleteExpense,
+  getDeliveryNetSummary,
+  listExpenses,
+  updateExpense,
+} from './expenseService'
+import { getDb, resetDb } from './mocks/db'
 
 describe('expenseService', () => {
   beforeEach(() => resetDb())
@@ -107,5 +113,50 @@ describe('expenseService', () => {
     const jojo = summary.riders.find((r) => r.id === 'rider-1')
     expect(jojo).toBeDefined()
     expect(jojo!.expensesMinor).toBeGreaterThan(0)
+  })
+
+  it('deletes an expense and drops it from the list (DEC-055)', async () => {
+    const deleted = await deleteExpense('exp-1')
+    expect(deleted).toBe('exp-1')
+    expect(getDb().expenses.some((record) => record.id === 'exp-1')).toBe(false)
+    expect((await listExpenses({ storeId: 'amara' })).some((record) => record.id === 'exp-1')).toBe(
+      false,
+    )
+    // Other records are untouched.
+    expect(getDb().expenses.length).toBe(2)
+  })
+
+  it('throws not_found for an unknown expense id (DEC-055)', async () => {
+    await expect(deleteExpense('exp-missing')).rejects.toMatchObject({ code: 'not_found' })
+  })
+
+  it('edits type, amount, note, and target (DEC-056)', async () => {
+    const saved = await updateExpense('exp-1', {
+      vehicleId: 'vehicle-1',
+      type: 'repair',
+      amountMinor: 120000,
+      note: 'Corrected note',
+    })
+    expect(saved.riderId).toBeUndefined()
+    expect(saved.vehicleId).toBe('vehicle-1')
+    expect(saved.type).toBe('repair')
+    expect(saved.amountMinor).toBe(120000)
+    expect(saved.note).toBe('Corrected note')
+    expect(saved.storeId).toBe('amara')
+  })
+
+  it('rejects invalid edits (DEC-056)', async () => {
+    await expect(
+      updateExpense('exp-1', { riderId: 'rider-1', type: 'fuel', amountMinor: 0 }),
+    ).rejects.toMatchObject({ code: 'validation' })
+    await expect(
+      updateExpense('exp-1', { type: 'fuel', amountMinor: 50000 }),
+    ).rejects.toMatchObject({ code: 'validation' })
+    await expect(
+      updateExpense('exp-1', { riderId: 'rider-3', type: 'fuel', amountMinor: 50000 }),
+    ).rejects.toMatchObject({ code: 'validation' })
+    await expect(
+      updateExpense('exp-missing', { riderId: 'rider-1', type: 'fuel', amountMinor: 50000 }),
+    ).rejects.toMatchObject({ code: 'not_found' })
   })
 })
