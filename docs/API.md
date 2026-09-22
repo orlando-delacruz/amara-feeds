@@ -138,7 +138,7 @@ High-level boundaries only; detail belongs in `docs/SECURITY.md`:
 | 5 | Inventory failure and insufficient-stock behavior | **Confirmation Required** | No thresholds or rules assumed. |
 | 6 | Duplicate customer handling | **Confirmation Required** | One-shared-record principle confirmed; handling unconfirmed. |
 | 7 | Product rejection, editing, and resubmission behavior | **Confirmation Required** | Only pending-to-approved is confirmed. |
-| 8 | Exact report/export behavior (columns, formats) | **Confirmation Required** | Summaries confirmed; exact behavior unconfirmed. |
+| 8 | Exact report/export behavior (columns, formats) | **Assumed implemented** | Summaries confirmed; per-sale sales sheet implemented (REQ-REP-001) plus a Credit sheet for credit obligations created in the range (DEC-052); further column/format changes Confirmation Required. |
 | 9 | Detailed permissions | **Confirmation Required** | Only store assignment and product approval confirmed. |
 | 10 | Exact data-access implementation structure | **Confirmation Required** | Boundary defined here; mechanisms deferred. |
 | 11 | Abuse controls beyond basic duplicate-submission prevention | **Confirmation Required** | Behavior confirmed; numeric controls not established. |

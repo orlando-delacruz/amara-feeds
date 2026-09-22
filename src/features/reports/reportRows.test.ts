@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDb } from '@/services/mocks/db'
 import { createSale } from '@/services/saleService'
 import { createCustomer } from '@/services/customerService'
-import { buildSalesReportRows } from './reportRows'
+import { createExistingCredit } from '@/services/creditService'
+import { buildCreditReportRows, buildSalesReportRows } from './reportRows'
 import { todayIso } from '@/lib/dates'
 
 describe('buildSalesReportRows', () => {
@@ -85,5 +86,60 @@ describe('buildSalesReportRows', () => {
 
     const outOfRange = await buildSalesReportRows('2026-09-03', '2026-09-04', 'amara')
     expect(outOfRange).toHaveLength(0)
+  })
+})
+
+describe('buildCreditReportRows', () => {
+  beforeEach(() => resetDb())
+
+  it('exports credits created in the range with balance math and status (DEC-052)', async () => {
+    const customer = await createCustomer({ name: 'Liza Reyes' })
+    await createExistingCredit({
+      customerId: customer.id,
+      originStoreId: 'amara',
+      date: todayIso(),
+      dueDate: todayIso(),
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100000 }],
+      initialPaymentMinor: 25000,
+      initialPaymentMethod: 'Cash',
+      recordedByUserId: 'user-3',
+    })
+
+    const rows = (await buildCreditReportRows(todayIso(), todayIso())).filter(
+      (row) => row.customerName === 'Liza Reyes',
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      customerName: 'Liza Reyes',
+      originStoreId: 'amara',
+      dueDate: todayIso(),
+      originalMinor: 100000,
+      paidMinor: 25000,
+      balanceMinor: 75000,
+      status: 'Outstanding',
+    })
+  })
+
+  it('filter by origin store and excludes out-of-range credits', async () => {
+    const customer = await createCustomer({ name: 'Mira Cruz' })
+    await createExistingCredit({
+      customerId: customer.id,
+      originStoreId: 'amara',
+      date: todayIso(),
+      dueDate: todayIso(),
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100000 }],
+      recordedByUserId: 'user-3',
+    })
+
+    const outOfRange = await buildCreditReportRows('2020-01-01', '2020-01-02')
+    expect(outOfRange.some((row) => row.customerName === 'Mira Cruz')).toBe(false)
+
+    const zeannOnly = await buildCreditReportRows(todayIso(), todayIso(), 'zeann')
+    expect(zeannOnly.some((row) => row.customerName === 'Mira Cruz')).toBe(false)
+
+    const amaraOnly = await buildCreditReportRows(todayIso(), todayIso(), 'amara')
+    const mira = amaraOnly.filter((row) => row.customerName === 'Mira Cruz')
+    expect(mira).toHaveLength(1)
+    expect(mira[0]?.originStoreId).toBe('amara')
   })
 })

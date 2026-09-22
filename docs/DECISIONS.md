@@ -137,6 +137,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-049 | Credit details, price editing, sale deletion, customer edit/delete, My Account (migration 00009) | Accepted | 2026-09-21 |
 | DEC-050 | Bank-style admin-only correction: void/undo for sales, credits, and inventory (migration 00010) | Accepted | 2026-09-21 |
 | DEC-051 | Soft product rejection (migration 00011) | Accepted | 2026-09-21 |
+| DEC-052 | Credit sheet in the report Excel export | Accepted | 2026-09-21 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -829,6 +830,19 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Alternatives considered:** Hard-delete with a friendly refusal — rejected: after barring rejection, there is no receiving-delete path, so the admin would be permanently stuck and forced to approve junk. Cascade-deleting receiving history — rejected: destroys purchase records against the preserve-history principle.
 - **Consequences:** Rejected products accumulate as hidden records (no retention policy yet — Confirmation Required); `StatusBadge` gains a Rejected label. Hosted rollout: `supabase db push` (00007–00011) with the next frontend deploy. `docs/DATA-MODEL.md` §4.12 and `docs/API.md` §5 updated.
 - **Related documents:** `supabase/migrations/20260921180000_00011_soft_product_rejection.sql`, `supabase/proofs/gate4.sql`, `src/services/productService.ts`, `src/domain/product.ts`, `src/services/userService.ts`, `docs/DATA-MODEL.md`, `docs/API.md`.
+
+### DEC-052 — Credit sheet in the report Excel export (no schema change)
+
+- **ID:** DEC-052
+- **Title:** Credit sheet in the report Excel export
+- **Status:** Accepted
+- **Date:** 2026-09-21
+- **Context:** The report export carried sales rows only; the client asked for credit records in the exported file after verification confirmed the export had no credit section. Verify-first noted `listCredits` already excludes voided (DEC-050) and rejected/legacy-credit semantics are stable.
+- **Decision:** The exported workbook gains a second **"Credit"** sheet beside "Sales" (one `write-excel-file` multi-sheet call v4.1.1): one row per credit obligation created within the report's From–To range (Option A), honoring the report's origin-store scope. Columns: Customer, Origin Store, Created, Due Date, Original, Paid (original − balance), Remaining Balance, Status (Outstanding/Settled). Non-voided only — voided credits are corrections and stay excluded everywhere (DEC-050); both outstanding and settled records export with their status so partial-payment history is visible. No database, credit, or service changes; `buildCreditReportRows` reuses `listCredits`/`listCustomers`.
+- **Alternatives considered:** Outstanding-only ledger snapshot ignoring the range (Option B) — rejected this round per client choice; a third sheet — the Credit one keeps report and Credit-page parity via the existing list pipeline.
+- **Rationale:** The sales sheet stays untouched and credits are added as their own tab, so revenue rows and balance rows can't be confused; the range-scoped credits keep the export consistent with every other report section.
+- **Consequences:** The export button builds both row sets (small extra fetch); printing is unaffected. `docs/UI-UX.md` §7.7 and `docs/API.md` §14 row 8 updated; no migration.
+- **Related documents:** `src/features/reports/reportRows.ts`, `src/lib/exportReportExcel.ts`, `src/features/reports/ReportsPage.tsx`, `docs/API.md`, `docs/UI-UX.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

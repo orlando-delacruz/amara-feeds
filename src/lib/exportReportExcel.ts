@@ -1,11 +1,13 @@
 import type { StoreId } from '@/domain'
 import { storeNames } from '@/store/stores'
+import type { CreditExcelRow } from '@/features/reports/reportRows'
 
 export interface ReportExcelInput {
   from: string
   to: string
   storeId?: StoreId
   rows: ReportExcelRow[]
+  creditRows?: CreditExcelRow[]
 }
 
 export interface ReportExcelRow {
@@ -51,7 +53,7 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     textColor: '#ffffff',
   }
 
-  const columns = [
+  const salesColumns = [
     { header: headerStyle, label: 'Date', width: 12 },
     { header: headerStyle, label: 'Location', width: 14 },
     { header: headerStyle, label: 'Customer', width: 20 },
@@ -68,8 +70,19 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     { header: headerStyle, label: 'Vehicle', width: 12 },
   ]
 
-  const sheetData = [
-    columns.map((col) => ({ value: col.label, ...col.header })),
+  const creditColumns = [
+    { header: headerStyle, label: 'Customer', width: 20 },
+    { header: headerStyle, label: 'Origin Store', width: 14 },
+    { header: headerStyle, label: 'Created', width: 12 },
+    { header: headerStyle, label: 'Due Date', width: 12 },
+    { header: headerStyle, label: 'Original', width: 12 },
+    { header: headerStyle, label: 'Paid', width: 12 },
+    { header: headerStyle, label: 'Balance', width: 12 },
+    { header: headerStyle, label: 'Status', width: 12 },
+  ]
+
+  const salesSheet = [
+    salesColumns.map((col) => ({ value: col.label, ...col.header })),
     ...input.rows.map((row) => [
       { value: row.date, type: String },
       { value: storeNames[row.storeId] ?? row.storeId, type: String },
@@ -88,9 +101,31 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     ]),
   ]
 
-  const blob = await writeExcelFile(sheetData, {
-    columns: columns.map((col) => ({ width: col.width })),
-  }).toBlob()
+  const creditRows = input.creditRows ?? []
+  const creditSheet = [
+    creditColumns.map((col) => ({ value: col.label, ...col.header })),
+    ...creditRows.map((row) => [
+      { value: row.customerName, type: String },
+      { value: storeNames[row.originStoreId] ?? row.originStoreId, type: String },
+      { value: row.createdDate, type: String },
+      { value: row.dueDate, type: String },
+      { value: row.originalMinor / 100, type: Number, format: '#,##0.00' },
+      { value: row.paidMinor / 100, type: Number, format: '#,##0.00' },
+      { value: row.balanceMinor / 100, type: Number, format: '#,##0.00' },
+      { value: row.status, type: String },
+    ]),
+  ]
+
+  const columnsWidth = (cols: Array<{ width: number }>) => cols.map((col) => ({ width: col.width }))
+
+  // Multi-sheet shape per write-excel-file's docs: one { data, sheet, columns } per tab.
+  const salesTab = { data: salesSheet, sheet: 'Sales', columns: columnsWidth(salesColumns) }
+  const creditTab = { data: creditSheet, sheet: 'Credit', columns: columnsWidth(creditColumns) }
+  const conditionalSheets = input.creditRows ? [salesTab, creditTab] : [salesTab]
+
+  const blob = await writeExcelFile(
+    conditionalSheets as unknown as Parameters<typeof writeExcelFile>[0],
+  ).toBlob()
 
   downloadBlob(blob, reportExcelFilename(input.from, input.to, input.storeId))
 }

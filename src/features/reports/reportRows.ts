@@ -1,6 +1,61 @@
-import { listCustomers, listProducts, listRiders, listSales, listVehicles } from '@/services'
+import {
+  listCredits,
+  listCustomers,
+  listProducts,
+  listRiders,
+  listSales,
+  listVehicles,
+} from '@/services'
 import type { StoreId } from '@/domain'
+import { toDateOnly } from '@/lib/dates'
 import type { ReportExcelRow } from '@/lib/exportReportExcel'
+
+/**
+ * One row per credit obligation created within the range (Option A): both
+ * outstanding and settled records with their balance math, so the report
+ * shows the partial-payment history. Voided credits are already excluded by
+ * listCredits (DEC-050); encoded legacy credits ride the same path as any
+ * other obligation — they ARE credit records, only never sales rows.
+ */
+export interface CreditExcelRow {
+  customerName: string
+  originStoreId: StoreId
+  createdDate: string
+  dueDate: string
+  originalMinor: number
+  paidMinor: number
+  balanceMinor: number
+  status: string
+}
+
+function inDateRange(date: string, from: string, to: string): boolean {
+  return date >= from && date <= to
+}
+
+export async function buildCreditReportRows(
+  from: string,
+  to: string,
+  storeId?: StoreId,
+): Promise<CreditExcelRow[]> {
+  const [credits, customers] = await Promise.all([
+    listCredits(storeId ? { originStoreId: storeId } : {}),
+    listCustomers(),
+  ])
+  const customerNames = new Map(customers.map((customer) => [customer.id, customer.name]))
+
+  return credits
+    .filter((credit) => inDateRange(toDateOnly(new Date(credit.createdAt)), from, to))
+    .map((credit) => ({
+      customerName: customerNames.get(credit.customerId) ?? 'Unknown customer',
+      originStoreId: credit.originStoreId,
+      createdDate: toDateOnly(new Date(credit.createdAt)),
+      dueDate: credit.dueDate,
+      originalMinor: credit.originalAmountMinor,
+      paidMinor: credit.originalAmountMinor - credit.balanceMinor,
+      balanceMinor: credit.balanceMinor,
+      status: credit.status === 'settled' ? 'Settled' : 'Outstanding',
+    }))
+}
 
 /**
  * Expands the sales within a date range into one row per sale line for the
