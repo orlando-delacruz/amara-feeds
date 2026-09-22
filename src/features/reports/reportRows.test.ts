@@ -3,7 +3,8 @@ import { resetDb } from '@/services/mocks/db'
 import { createSale } from '@/services/saleService'
 import { createCustomer } from '@/services/customerService'
 import { createExistingCredit } from '@/services/creditService'
-import { buildCreditReportRows, buildSalesReportRows } from './reportRows'
+import { createExpense } from '@/services/expenseService'
+import { buildCreditReportRows, buildExpenseReportRows, buildSalesReportRows } from './reportRows'
 import { todayIso } from '@/lib/dates'
 
 describe('buildSalesReportRows', () => {
@@ -141,5 +142,47 @@ describe('buildCreditReportRows', () => {
     const mira = amaraOnly.filter((row) => row.customerName === 'Mira Cruz')
     expect(mira).toHaveLength(1)
     expect(mira[0]?.originStoreId).toBe('amara')
+  })
+})
+
+describe('buildExpenseReportRows', () => {
+  beforeEach(() => resetDb())
+
+  it('groups recorded expenses by date and store with fuel/repair splits (DEC-054)', async () => {
+    await createExpense({
+      storeId: 'amara',
+      riderId: 'rider-1',
+      type: 'fuel',
+      amountMinor: 75000,
+      recordedByUserId: 'user-1',
+    })
+    await createExpense({
+      storeId: 'amara',
+      vehicleId: 'vehicle-1',
+      type: 'repair',
+      amountMinor: 120000,
+      recordedByUserId: 'user-1',
+    })
+    await createExpense({
+      storeId: 'zeann',
+      riderId: 'rider-3',
+      type: 'fuel',
+      amountMinor: 35000,
+      recordedByUserId: 'user-2',
+    })
+
+    const rows = await buildExpenseReportRows(todayIso(), todayIso())
+    // Seed expenses (amara + zeann) plus the three created above.
+    const amara = rows.find((row) => row.date === todayIso() && row.storeId === 'amara')
+    const zeann = rows.find((row) => row.date === todayIso() && row.storeId === 'zeann')
+    expect(amara?.fuelMinor).toBeGreaterThanOrEqual(75000)
+    expect(amara?.repairMinor).toBeGreaterThanOrEqual(120000)
+    expect(amara?.totalMinor).toBe((amara?.fuelMinor ?? 0) + (amara?.repairMinor ?? 0))
+    expect(zeann?.fuelMinor).toBeGreaterThanOrEqual(35000)
+  })
+
+  it('excludes expenses recorded outside the range (DEC-054)', async () => {
+    const rows = await buildExpenseReportRows('2020-01-01', '2020-01-02')
+    expect(rows).toHaveLength(0)
   })
 })

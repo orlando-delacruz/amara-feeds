@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import styled from 'styled-components'
 import {
   createExpense,
@@ -13,7 +13,6 @@ import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { DateText } from '@/components/ui/DateText'
-import { Dialog } from '@/components/ui/Dialog'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
@@ -23,9 +22,8 @@ import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { TextField } from '@/components/ui/TextField'
 import { useAsyncData, useAlertMutation } from '@/features/shared'
-import { notifyError, notifySuccess } from '@/lib/swal'
-import { downloadExpenseTemplate, exportExpenseSummaryExcel } from '@/lib/exportExpenseExcel'
-import { groupExpensesByDate, parseExpenseExcel, type ExpenseDateEntry } from './expenseImport'
+import { notifySuccess } from '@/lib/swal'
+import { buildExpenseDateSummary } from './expenseSummary'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { toMinor } from '@/lib/money'
@@ -57,27 +55,6 @@ const NetGrid = styled.div`
   @media (min-width: ${({ theme }) => theme.breakpoint.tablet}) {
     grid-template-columns: 1fr 1fr;
   }
-`
-
-const FileInput = styled.input`
-  display: block;
-  width: 100%;
-  margin-top: ${({ theme }) => theme.space.md};
-  font-size: ${({ theme }) => theme.font.size.sm};
-`
-
-const DialogActions = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${({ theme }) => theme.space.sm};
-  justify-content: flex-end;
-  margin-top: ${({ theme }) => theme.space.md};
-`
-
-const SummaryActions = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: ${({ theme }) => theme.space.sm};
 `
 
 const expenseTypeOptions = [
@@ -121,14 +98,6 @@ export function ExpensesPage() {
   const users = useAsyncData(() => listUsers())
   const netSummary = useAsyncData(() => getDeliveryNetSummary(contextStoreId), store)
   const add = useAlertMutation(createExpense, 'Could not record the expense.')
-  // Excel import state (DEC-054): the imported file is summarized by date in
-  // memory only — nothing is written to the database.
-  const [importOpen, setImportOpen] = useState(false)
-  const [importError, setImportError] = useState<string | null>(null)
-  const [importing, setImporting] = useState(false)
-  const [summary, setSummary] = useState<ExpenseDateEntry[] | null>(null)
-  const [skipped, setSkipped] = useState<string[]>([])
-  const [exporting, setExporting] = useState(false)
 
   function updateForm<K extends keyof ExpenseFormState>(key: K, value: ExpenseFormState[K]) {
     setForm((current) => {
@@ -177,52 +146,9 @@ export function ExpensesPage() {
 
   const userNames = new Map((users.data ?? []).map((item) => [item.id, getDisplayName(item.name)]))
 
-  async function handleImportFile(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    event.target.value = ''
-    if (!file) {
-      return
-    }
-    setImporting(true)
-    setImportError(null)
-    try {
-      const result = await parseExpenseExcel(file, {
-        riderNames: (riders.data ?? []).map((rider: Rider) => rider.name),
-        vehicleNames: (vehicles.data ?? []).map((vehicle: Vehicle) => vehicle.label),
-      })
-      if (result.rows.length === 0) {
-        setImportError(result.errors[0] ?? 'The Excel file has no expense rows to summarize.')
-        return
-      }
-      setSummary(groupExpensesByDate(result.rows))
-      setSkipped(result.errors)
-      setImportOpen(false)
-    } catch {
-      setImportError('This file could not be read as an Excel (.xlsx) file.')
-    } finally {
-      setImporting(false)
-    }
-  }
-
-  async function handleExportSummary() {
-    if (!summary || summary.length === 0 || exporting) {
-      return
-    }
-    setExporting(true)
-    try {
-      await exportExpenseSummaryExcel({ storeId: contextStoreId, entries: summary })
-      void notifySuccess('Summary exported.', 'The expense summary Excel file has been downloaded.')
-    } catch {
-      void notifyError('Could not export the summary.', 'Please try again.')
-    } finally {
-      setExporting(false)
-    }
-  }
-
-  function clearSummary() {
-    setSummary(null)
-    setSkipped([])
-  }
+  // By-date summary of the recorded expenses in view (DEC-054). Expenses carry
+  // no expense-date field, so each record counts on its recording date.
+  const dateSummary = useMemo(() => buildExpenseDateSummary(expenses.data ?? []), [expenses.data])
 
   const riderNames = new Map((riders.data ?? []).map((rider: Rider) => [rider.id, rider.name]))
   const vehicleNames = new Map(
@@ -234,47 +160,19 @@ export function ExpensesPage() {
       <PageHeader
         title="Expenses"
         description={`Fuel and repair expenses at ${storeLabel(store)}.`}
-        actions={
-          <Button variant="secondary" onClick={() => setImportOpen(true)}>
-            Import Excel
-          </Button>
-        }
         size="compact"
       />
-      {summary && (
-        <Section
-          title="Imported summary by date"
-          action={
-            <SummaryActions>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleExportSummary}
-                disabled={exporting}
-              >
-                {exporting ? 'Exporting…' : 'Export summary'}
-              </Button>
-              <Button variant="secondary" size="sm" onClick={clearSummary}>
-                Clear
-              </Button>
-            </SummaryActions>
-          }
-        >
-          {skipped.length > 0 && (
-            <Alert variant="warning">
-              {skipped.length} row{skipped.length > 1 ? 's were' : ' was'} skipped: {skipped[0]}
-              {skipped.length > 1 ? ' (and more — see the file).' : ''}
-            </Alert>
-          )}
+      {dateSummary.length > 0 && (
+        <Section title="Summary by date">
           <RecordList
-            caption="Imported expenses summarized by date"
+            caption="Recorded expenses summarized by date"
             columns={[
               { key: 'date', header: 'Date' },
               { key: 'fuel', header: 'Fuel' },
               { key: 'repair', header: 'Repair' },
               { key: 'total', header: 'Total' },
             ]}
-            rows={summary.map((entry) => ({
+            rows={dateSummary.map((entry) => ({
               date: <DateText value={`${entry.date}T00:00:00`} />,
               fuel: <MoneyText amountMinor={entry.fuelMinor} />,
               repair: <MoneyText amountMinor={entry.repairMinor} />,
@@ -391,7 +289,7 @@ export function ExpensesPage() {
         onRetry={expenses.reload}
         skeleton={<ListSkeleton rows={3} />}
         empty={
-          expenses.data && expenses.data.length === 0 && !summary
+          expenses.data && expenses.data.length === 0
             ? {
                 title: 'No expenses yet',
                 description: 'Record the first expense above.',
@@ -424,28 +322,6 @@ export function ExpensesPage() {
           />
         )}
       </AsyncBoundary>
-      <Dialog open={importOpen} title="Import expenses" onClose={() => setImportOpen(false)}>
-        <p>
-          Upload an .xlsx file with columns Date, Type (Fuel/Repair), Amount (₱), Rider, Vehicle,
-          and Note (optional). The file is summarized by date only — nothing is recorded.
-        </p>
-        {importError && <Alert variant="danger">{importError}</Alert>}
-        <FileInput
-          type="file"
-          accept=".xlsx"
-          aria-label="Expense Excel file"
-          disabled={importing}
-          onChange={(event) => void handleImportFile(event)}
-        />
-        <DialogActions>
-          <Button variant="secondary" size="sm" onClick={() => void downloadExpenseTemplate()}>
-            Download template
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => setImportOpen(false)}>
-            {importing ? 'Reading…' : 'Close'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Stack>
   )
 }

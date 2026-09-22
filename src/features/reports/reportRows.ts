@@ -1,6 +1,7 @@
 import {
   listCredits,
   listCustomers,
+  listExpenses,
   listProducts,
   listRiders,
   listSales,
@@ -55,6 +56,48 @@ export async function buildCreditReportRows(
       balanceMinor: credit.balanceMinor,
       status: credit.status === 'settled' ? 'Settled' : 'Outstanding',
     }))
+}
+
+/**
+ * One row per recording date per store (DEC-054): the fuel/repair/total of the
+ * recorded expenses whose recording date falls in the range. Expenses carry no
+ * expense-date field, so each record counts on its recording date.
+ */
+export interface ExpenseExcelRow {
+  date: string
+  storeId: StoreId
+  fuelMinor: number
+  repairMinor: number
+  totalMinor: number
+}
+
+export async function buildExpenseReportRows(from: string, to: string): Promise<ExpenseExcelRow[]> {
+  const expenses = await listExpenses()
+  const byDateStore = new Map<string, ExpenseExcelRow>()
+  for (const expense of expenses) {
+    const date = toDateOnly(new Date(expense.createdAt))
+    if (!inDateRange(date, from, to)) {
+      continue
+    }
+    const key = `${date}|${expense.storeId}`
+    const entry = byDateStore.get(key) ?? {
+      date,
+      storeId: expense.storeId,
+      fuelMinor: 0,
+      repairMinor: 0,
+      totalMinor: 0,
+    }
+    if (expense.type === 'fuel') {
+      entry.fuelMinor += expense.amountMinor
+    } else {
+      entry.repairMinor += expense.amountMinor
+    }
+    entry.totalMinor += expense.amountMinor
+    byDateStore.set(key, entry)
+  }
+  return [...byDateStore.values()].sort((a, b) =>
+    a.date === b.date ? (a.storeId < b.storeId ? -1 : 1) : a.date < b.date ? -1 : 1,
+  )
 }
 
 /**

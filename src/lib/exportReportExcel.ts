@@ -1,6 +1,6 @@
 import type { StoreId } from '@/domain'
 import { storeNames } from '@/store/stores'
-import type { CreditExcelRow } from '@/features/reports/reportRows'
+import type { CreditExcelRow, ExpenseExcelRow } from '@/features/reports/reportRows'
 
 export interface ReportExcelInput {
   from: string
@@ -8,6 +8,7 @@ export interface ReportExcelInput {
   storeId?: StoreId
   rows: ReportExcelRow[]
   creditRows?: CreditExcelRow[]
+  expenseRows?: ExpenseExcelRow[]
 }
 
 export interface ReportExcelRow {
@@ -116,12 +117,41 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     ]),
   ]
 
+  const expenseColumns = [
+    { header: headerStyle, label: 'Date', width: 12 },
+    { header: headerStyle, label: 'Location', width: 14 },
+    { header: headerStyle, label: 'Fuel', width: 12 },
+    { header: headerStyle, label: 'Repair', width: 12 },
+    { header: headerStyle, label: 'Total', width: 12 },
+  ]
+
+  const expenseRows = input.expenseRows ?? []
+  const expenseSheet = [
+    expenseColumns.map((col) => ({ value: col.label, ...col.header })),
+    ...expenseRows.map((row) => [
+      { value: row.date, type: String },
+      { value: storeNames[row.storeId] ?? row.storeId, type: String },
+      { value: row.fuelMinor / 100, type: Number, format: '#,##0.00' },
+      { value: row.repairMinor / 100, type: Number, format: '#,##0.00' },
+      { value: row.totalMinor / 100, type: Number, format: '#,##0.00' },
+    ]),
+  ]
+
   const columnsWidth = (cols: Array<{ width: number }>) => cols.map((col) => ({ width: col.width }))
 
   // Multi-sheet shape per write-excel-file's docs: one { data, sheet, columns } per tab.
   const salesTab = { data: salesSheet, sheet: 'Sales', columns: columnsWidth(salesColumns) }
   const creditTab = { data: creditSheet, sheet: 'Credit', columns: columnsWidth(creditColumns) }
-  const conditionalSheets = input.creditRows ? [salesTab, creditTab] : [salesTab]
+  const expenseTab = {
+    data: expenseSheet,
+    sheet: 'Expenses',
+    columns: columnsWidth(expenseColumns),
+  }
+  const conditionalSheets = input.expenseRows
+    ? [salesTab, creditTab, expenseTab]
+    : input.creditRows
+      ? [salesTab, creditTab]
+      : [salesTab]
 
   const blob = await writeExcelFile(
     conditionalSheets as unknown as Parameters<typeof writeExcelFile>[0],
