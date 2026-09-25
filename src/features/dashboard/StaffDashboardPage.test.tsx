@@ -21,7 +21,13 @@ describe('StaffDashboardPage', () => {
     renderWithProviders(<StaffDashboardPage />, { user: staffUser })
     expect(await screen.findByText("Today's sales")).toBeInTheDocument()
     expect(screen.getAllByText('₱2,395.00').length).toBeGreaterThan(0)
-    expect(screen.getByText(/Outstanding credit/)).toBeInTheDocument()
+  })
+
+  it('hides the outstanding credit card from staff (DEC-058)', async () => {
+    renderWithProviders(<StaffDashboardPage />, { user: staffUser })
+    await screen.findByText("Today's sales")
+
+    expect(screen.queryByText(/Outstanding credit/)).not.toBeInTheDocument()
   })
 
   it('shows weekly sales for the current store', async () => {

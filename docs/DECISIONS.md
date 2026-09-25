@@ -143,6 +143,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-055 | Admin-only expense deletion (migration 00014) | Accepted | 2026-09-22 |
 | DEC-056 | Admin-only expense editing (migration 00015) | Accepted | 2026-09-22 |
 | DEC-057 | Transaction date on the credit detail view (no schema change) | Accepted | 2026-09-26 |
+| DEC-058 | Hide Outstanding credit from staff dashboard; alphabetical customer lists | Accepted | 2026-09-26 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -909,6 +910,18 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Alternatives considered:** A `SECURITY DEFINER` RPC resolving the date server-side — rejected for now: it would need a migration for a read-only nicety, while the client-side fetch is exact for admins and own-store credits. Known residual: staff viewing another store's credit see the recording date (their item lines are already RLS-limited the same way); a read-only RPC remains the upgrade path if that workflow ever needs exactness.
 - **Consequences:** Every already-encoded credit immediately shows a correct-or-best-available date with no backfill. Frontend-only deploy. `docs/UI-UX.md` §7.3 updated.
 - **Related documents:** `src/domain/credit.ts`, `src/services/creditService.ts`, `src/features/credit/CreditDetailPage.tsx`, `docs/UI-UX.md`.
+
+### DEC-058 — Hide Outstanding credit from staff dashboard; alphabetical customer lists
+
+- **ID:** DEC-058
+- **Title:** Hide Outstanding credit from staff dashboard; alphabetical customer lists
+- **Status:** Accepted
+- **Date:** 2026-09-26
+- **Context:** Client asked that staff (both Amara and Zeann stores) no longer see the Total Credit metric, and that customer records on Credit and Customers read alphabetically by name.
+- **Decision:** (1) The "Outstanding credit" card is removed from the staff-only `StaffDashboardPage` (store-scoped, so both stores are covered with no user hardcoding); the outstanding-credit fetch goes with it. The admin dashboard keeps its own Outstanding credit card. (2) `listCustomers`/`searchCustomers` return name-sorted results on both backends via `sortCustomersByName` (case-insensitive `base` sensitivity; idempotent on the database's own ordering, fixes the mock's insertion order), covering the Customers page, search, and customer pickers. `CreditListPage` sorts its status-filtered rows by resolved customer name the same way. No data is modified — ordering is presentation only.
+- **Alternatives considered:** Role-conditional rendering inside a shared dashboard — rejected: the dashboards are already separate pages per role, so removal from the staff page is the exact scope.
+- **Consequences:** Frontend-only deploy. `docs/UI-UX.md` §7.7 updated (it previously listed outstanding credit on staff dashboards).
+- **Related documents:** `src/features/dashboard/StaffDashboardPage.tsx`, `src/services/customerService.ts`, `src/features/credit/CreditListPage.tsx`, `docs/UI-UX.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

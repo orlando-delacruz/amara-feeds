@@ -23,7 +23,6 @@ describe('customerService', () => {
     const results = await searchCustomers('pedro')
     expect(results.map((customer) => customer.id)).toContain(created.id)
   })
-
   it('rejects a blank name', async () => {
     await expect(createCustomer({ name: '   ' })).rejects.toMatchObject({ code: 'validation' })
   })
@@ -79,5 +78,26 @@ describe('customerService', () => {
     expect(db.sales.length).toBe(4)
     expect(db.credits.length).toBe(2)
     expect(db.payments.length).toBe(2)
+  })
+
+  it('lists and searches customers alphabetically, case-insensitively (DEC-058)', async () => {
+    await createCustomer({ name: 'Zandro Santos' })
+    await createCustomer({ name: 'aaron aquino' })
+    await createCustomer({ name: 'pedro penduko' })
+
+    expect((await listCustomers()).map((customer) => customer.name)).toEqual([
+      'aaron aquino',
+      'Ana Reyes',
+      'Juan Dela Cruz',
+      'Maria Santos',
+      'pedro penduko',
+      'Zandro Santos',
+    ])
+    expect((await searchCustomers('an')).map((customer) => customer.name)).toEqual([
+      'Ana Reyes',
+      'Juan Dela Cruz',
+      'Maria Santos',
+      'Zandro Santos',
+    ])
   })
 })

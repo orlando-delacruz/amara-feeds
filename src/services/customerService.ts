@@ -5,6 +5,16 @@ import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
 
+/**
+ * Customer lists are alphabetical by name everywhere (DEC-058), consistently
+ * across backends: the database orders by name, the mock returns insertion
+ * order, so the service sorts either way. Case-insensitive (`base`
+ * sensitivity) so "ana" and "Maria" order purely by letter.
+ */
+export function sortCustomersByName(customers: Customer[]): Customer[] {
+  return [...customers].sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }))
+}
+
 export async function listCustomers(): Promise<Customer[]> {
   if (isSupabaseConfigured && supabase) {
     const { data, error } = await supabase
@@ -14,15 +24,17 @@ export async function listCustomers(): Promise<Customer[]> {
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
-    return (data ?? []).map((row) => ({
-      id: row.id,
-      name: row.name,
-      contact: row.contact ?? undefined,
-      address: row.address ?? undefined,
-      createdAt: row.created_at,
-    }))
+    return sortCustomersByName(
+      (data ?? []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        contact: row.contact ?? undefined,
+        address: row.address ?? undefined,
+        createdAt: row.created_at,
+      })),
+    )
   }
-  return getDb().customers.map((customer) => ({ ...customer }))
+  return sortCustomersByName(getDb().customers.map((customer) => ({ ...customer })))
 }
 
 export async function getCustomer(id: CustomerId): Promise<Customer> {
@@ -47,20 +59,24 @@ export async function searchCustomers(term: string): Promise<Customer[]> {
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
-    return (data ?? []).map((row) => ({
-      id: row.id,
-      name: row.name,
-      contact: row.contact ?? undefined,
-      address: row.address ?? undefined,
-      createdAt: row.created_at,
-    }))
+    return sortCustomersByName(
+      (data ?? []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        contact: row.contact ?? undefined,
+        address: row.address ?? undefined,
+        createdAt: row.created_at,
+      })),
+    )
   }
   if (!query) {
     return listCustomers()
   }
-  return getDb()
-    .customers.filter((customer) => customer.name.toLowerCase().includes(query))
-    .map((customer) => ({ ...customer }))
+  return sortCustomersByName(
+    getDb()
+      .customers.filter((customer) => customer.name.toLowerCase().includes(query))
+      .map((customer) => ({ ...customer })),
+  )
 }
 
 export async function createCustomer(input: NewCustomerInput): Promise<Customer> {

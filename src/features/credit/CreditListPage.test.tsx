@@ -45,4 +45,22 @@ describe('CreditListPage', () => {
     expect(await screen.findByText('Ana Reyes')).toBeInTheDocument()
     expect(screen.queryByText('Maria Santos')).not.toBeInTheDocument()
   })
+
+  it('lists credit records alphabetically by customer name (DEC-058)', async () => {
+    renderWithProviders(
+      <MemoryRouter initialEntries={['/credit']}>
+        <AppRoutes />
+      </MemoryRouter>,
+      { user: staffUser },
+    )
+    await screen.findByText('Maria Santos')
+
+    const inOrder = ['Ana Reyes', 'Juan Dela Cruz', 'Maria Santos'].map(
+      (name) => screen.getByText(name) as HTMLElement,
+    )
+    for (let index = 1; index < inOrder.length; index++) {
+      const position = inOrder[index - 1].compareDocumentPosition(inOrder[index])
+      expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    }
+  })
 })

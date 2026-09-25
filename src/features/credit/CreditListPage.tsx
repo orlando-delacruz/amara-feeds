@@ -40,8 +40,20 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
     () => new Map((customers.data ?? []).map((customer) => [customer.id, customer.name])),
     [customers.data],
   )
-  const filtered =
-    credits.data?.filter((credit) => status === 'all' || credit.status === status) ?? []
+  // Credit rows read alphabetically by customer name (DEC-058); the status
+  // filter still applies first, and renderCard indexes this same array.
+  const filtered = useMemo(() => {
+    const rows = (credits.data ?? []).filter(
+      (credit) => status === 'all' || credit.status === status,
+    )
+    return rows.sort((a, b) =>
+      (customerNames.get(a.customerId) ?? '').localeCompare(
+        customerNames.get(b.customerId) ?? '',
+        'en',
+        { sensitivity: 'base' },
+      ),
+    )
+  }, [credits.data, customerNames, status])
 
   return (
     <Stack>

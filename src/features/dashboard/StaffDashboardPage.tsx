@@ -1,10 +1,5 @@
 import styled from 'styled-components'
-import {
-  getCurrentStock,
-  getDailySalesByStore,
-  getOutstandingCreditTotal,
-  getWeeklySalesByStore,
-} from '@/services'
+import { getCurrentStock, getDailySalesByStore, getWeeklySalesByStore } from '@/services'
 import type { StoreId } from '@/domain'
 import { Stack } from '@/components/ui/Stack'
 import { StatCard } from '@/components/ui/StatCard'
@@ -62,15 +57,13 @@ export function StaffDashboardPage() {
   const { store } = useStore()
   const date = todayIso()
   const data = useAsyncData(async () => {
-    const [sales, outstanding, stock, weekly] = await Promise.all([
+    const [sales, stock, weekly] = await Promise.all([
       getDailySalesByStore(date),
-      getOutstandingCreditTotal(),
       getCurrentStock(),
       getWeeklySalesByStore(date),
     ])
     return {
       storeSales: sales.find((row) => row.storeId === store),
-      outstanding,
       stockCount: stock.filter((row) => row.storeId === store).length,
       weeklySales: weekly.find((row) => row.storeId === store),
     }
@@ -92,7 +85,7 @@ export function StaffDashboardPage() {
         skeleton={
           <Stack>
             <StatsSkeleton count={1} />
-            <StatsSkeleton count={2} />
+            <StatsSkeleton count={1} />
             <StatsSkeleton count={1} />
           </Stack>
         }
@@ -111,19 +104,6 @@ export function StaffDashboardPage() {
               />
             </Stamp>
             <Plates>
-              <StatCard
-                label="Outstanding credit"
-                value={<MoneyText amountMinor={data.data.outstanding.totalMinor} />}
-                caption={`${data.data.outstanding.count} obligations`}
-                tone="brand"
-                icon={<Icon name="alert" />}
-                badge={
-                  <BalanceStateChip
-                    state={data.data.outstanding.totalMinor > 0 ? 'attention' : 'healthy'}
-                  />
-                }
-                outline
-              />
               <StatCard
                 label="Items in stock"
                 value={data.data.stockCount}
