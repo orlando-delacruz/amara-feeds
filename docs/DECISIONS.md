@@ -142,6 +142,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-054 | Expenses by-date summary on the page + Expenses sheet in the report export (no schema change) | Accepted | 2026-09-22 |
 | DEC-055 | Admin-only expense deletion (migration 00014) | Accepted | 2026-09-22 |
 | DEC-056 | Admin-only expense editing (migration 00015) | Accepted | 2026-09-22 |
+| DEC-057 | Transaction date on the credit detail view (no schema change) | Accepted | 2026-09-26 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -896,6 +897,18 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Alternatives considered:** Staff editing — rejected: same bank-style correction model as DEC-055. Allowing store reassignment on edit — rejected: keeps net attribution per store unambiguous.
 - **Consequences:** Corrected figures flow into net, by-date, and report summaries from the edited rows. Hosted rollout: `supabase db push` (00015) with the next frontend deploy. `docs/DATA-MODEL.md` §4.15, `docs/API.md` §5, and `docs/UI-UX.md` §7.11 updated.
 - **Related documents:** `supabase/migrations/20260922150000_00015_update_expense.sql`, `supabase/proofs/gate4.sql`, `src/services/expenseService.ts`, `src/features/expenses/ExpensesPage.tsx`, `docs/DATA-MODEL.md`, `docs/API.md`, `docs/UI-UX.md`.
+
+### DEC-057 — Transaction date on the credit detail view (no schema change)
+
+- **ID:** DEC-057
+- **Title:** Transaction date on the credit detail view (no schema change)
+- **Status:** Accepted
+- **Date:** 2026-09-26
+- **Context:** The credit detail view showed Due date but not Transaction date (the borrowing date staff/admin use for interest checks), even though the date is encoded on every credit.
+- **Decision:** No database changes. The transaction date is resolved at read time in `getCreditHistory` and added to `CreditHistory.transactionDate`: the originating sale's `sale_date` when the linked sale exists and is readable (charge sales and encoded legacy credits both link via `sale_id`; the legacy row carries the admin-set date), otherwise the credit's recording date (covers old sale-less obligations). The detail grid renders "Transaction date" immediately before "Due date"; the shared page covers both admin and staff routes with no permission changes.
+- **Alternatives considered:** A `SECURITY DEFINER` RPC resolving the date server-side — rejected for now: it would need a migration for a read-only nicety, while the client-side fetch is exact for admins and own-store credits. Known residual: staff viewing another store's credit see the recording date (their item lines are already RLS-limited the same way); a read-only RPC remains the upgrade path if that workflow ever needs exactness.
+- **Consequences:** Every already-encoded credit immediately shows a correct-or-best-available date with no backfill. Frontend-only deploy. `docs/UI-UX.md` §7.3 updated.
+- **Related documents:** `src/domain/credit.ts`, `src/services/creditService.ts`, `src/features/credit/CreditDetailPage.tsx`, `docs/UI-UX.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

@@ -15,7 +15,7 @@ import type {
 } from '@/domain'
 import type { StoreId } from '@/domain'
 import type { Money } from '@/lib/money'
-import { addDays } from '@/lib/dates'
+import { addDays, toDateOnly } from '@/lib/dates'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
@@ -135,8 +135,11 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
       .eq('credit_id', id)
       .order('paid_at', { ascending: false })
     // Item details come from the originating sale (a charge sale or an
-    // encoded legacy credit row) — "similarly to the Sales details".
+    // encoded legacy credit row) — "similarly to the Sales details". The
+    // same sale carries the transaction date (its sale date); when the sale
+    // is absent or unreadable (RLS), the recording date is the fallback.
     let items: CreditItem[] = []
+    let transactionDate = toDateOnly(new Date(credit.created_at))
     if (credit.sale_id) {
       const { data: lines } = await supabase
         .from('sale_lines')
@@ -148,6 +151,14 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
         quantity: line.quantity,
         unitPriceMinor: line.unit_price_minor as Money,
       }))
+      const { data: sale } = await supabase
+        .from('sales')
+        .select('sale_date')
+        .eq('id', credit.sale_id)
+        .maybeSingle()
+      if (sale?.sale_date) {
+        transactionDate = sale.sale_date
+      }
     }
     return {
       credit: {
@@ -172,6 +183,7 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
         paidAt: row.paid_at,
       })),
       items,
+      transactionDate,
     }
   }
   const credit = await getCredit(id)
@@ -186,7 +198,12 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
     quantity: line.quantity,
     unitPriceMinor: line.unitPriceMinor,
   }))
-  return { credit, payments, items }
+  return {
+    credit,
+    payments,
+    items,
+    transactionDate: sale?.saleDate ?? toDateOnly(new Date(credit.createdAt)),
+  }
 }
 
 export interface CreateObligationInput {

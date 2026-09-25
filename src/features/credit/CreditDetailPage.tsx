@@ -216,6 +216,12 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
                   </DetailValue>
                 </DetailItem>
                 <DetailItem>
+                  <DetailLabel>Transaction date</DetailLabel>
+                  <DetailValue>
+                    <DateText value={history.data?.transactionDate ?? credit.createdAt} />
+                  </DetailValue>
+                </DetailItem>
+                <DetailItem>
                   <DetailLabel>Due date</DetailLabel>
                   <DetailValue>
                     <DateText value={credit.dueDate} />

@@ -9,6 +9,7 @@ import {
 import { listPayments } from './paymentService'
 import { getStock } from './inventoryService'
 import { resetDb } from './mocks/db'
+import { toDateOnly, todayIso } from '@/lib/dates'
 
 describe('creditService', () => {
   beforeEach(() => resetDb())
@@ -133,5 +134,30 @@ describe('creditService', () => {
     })
     await voidCredit(created.id)
     await expect(voidCredit(created.id)).rejects.toMatchObject({ code: 'conflict' })
+  })
+
+  it('exposes the encoded transaction date from the legacy sale (DEC-057)', async () => {
+    const created = await createExistingCredit({
+      customerId: 'cust-1',
+      originStoreId: 'amara',
+      date: '2026-09-10',
+      dueDate: '2026-10-01',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100000 }],
+      recordedByUserId: 'user-3',
+    })
+    const history = await getCreditHistory(created.id)
+    expect(history.transactionDate).toBe('2026-09-10')
+  })
+
+  it('exposes the charge sale date for sale-linked credits (DEC-057)', async () => {
+    // cred-1 rides sale-2, recorded today.
+    const history = await getCreditHistory('cred-1')
+    expect(history.transactionDate).toBe(todayIso())
+  })
+
+  it('falls back to the recording date when no sale is linked (DEC-057)', async () => {
+    // cred-2 is a sale-less obligation.
+    const history = await getCreditHistory('cred-2')
+    expect(history.transactionDate).toBe(toDateOnly(new Date(history.credit.createdAt)))
   })
 })

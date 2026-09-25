@@ -6,6 +6,8 @@ import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
 import { renderWithProviders } from '@/test/render'
 import { __awaitSwal } from '@/test/swalMock'
+import { formatDate } from '@/lib/format'
+import { todayIso } from '@/lib/dates'
 import type { User } from '@/domain'
 
 const staffUser: User = {
@@ -17,12 +19,21 @@ const staffUser: User = {
   active: true,
 }
 
-function renderCredit(path: string) {
+const adminUser: User = {
+  id: 'user-3',
+  name: 'Owner',
+  role: 'admin',
+  storeId: 'zeann',
+  username: 'owner',
+  active: true,
+}
+
+function renderCredit(path: string, user: User = staffUser) {
   return renderWithProviders(
     <MemoryRouter initialEntries={[path]}>
       <AppRoutes />
     </MemoryRouter>,
-    { user: staffUser },
+    { user },
   )
 }
 
@@ -56,5 +67,23 @@ describe('CreditDetailPage', () => {
 
     await __awaitSwal('Payment recorded.')
     expect(await screen.findByText('₱145.00')).toBeInTheDocument()
+  })
+
+  it('shows the transaction date from the linked sale alongside the due date (DEC-057)', async () => {
+    // cred-1 rides sale-2, recorded today at Zeann; Alice (Amara staff) reads
+    // the shared credit — the date still resolves from the mock sale.
+    renderCredit('/credit/cred-1')
+
+    expect(await screen.findByText('Transaction date')).toBeInTheDocument()
+    expect(screen.getByText('Due date')).toBeInTheDocument()
+    expect(screen.getByText(formatDate(todayIso()))).toBeInTheDocument()
+  })
+
+  it('shows both dates on the admin credit view (DEC-057)', async () => {
+    renderCredit('/admin/credit/cred-1', adminUser)
+
+    expect(await screen.findByText('Transaction date')).toBeInTheDocument()
+    expect(screen.getByText('Due date')).toBeInTheDocument()
+    expect(screen.getByText(formatDate(todayIso()))).toBeInTheDocument()
   })
 })

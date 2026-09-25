@@ -121,7 +121,7 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.3 Credit / Collection
 
-- **Behavior.** View outstanding credit with its origin store; record a payment (full or partial) identifying the payment store; see the updated remaining balance and status; review the preserved shared payment history.
+- **Behavior.** View outstanding credit with its origin store; record a payment (full or partial) identifying the payment store; see the updated remaining balance and status; review the preserved shared payment history. The credit detail view shows the Transaction date (when the customer took the credit) next to the Due date (DEC-057).
 - **Cross-store payment.** The sequence makes the origin store and the payment store explicit at both recording and review time, with one traceable shared history (REQ-CRED-005 through REQ-CRED-007, REQ-PAY-001, REQ-PAY-002).
 - **Items like sales (DEC-049).** Every credit shows the specific items the customer received — item, quantity, price, and line total — whether it comes from a normal charge sale or an encoded existing balance.
 - **Existing balances (DEC-048, revised DEC-049).** Admins encode a customer's pre-system credit from the Credit page ("Add existing credit"): one or more items (product, quantity, price), the transaction date, the origin store, an admin-set due date, and an optional initial partial payment. Encoding never changes stock — inventory moves only when real sales are recorded. Encoded credits are excluded from sales lists, dashboards, and reports and settle through the normal payment flow (partial payments, fully-paid status, remaining balance). Encoded credits carry no payment terms (shown as "Existing balance" on the detail page).

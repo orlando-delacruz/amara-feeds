@@ -39,4 +39,11 @@ export interface CreditHistory {
   payments: Payment[]
   /** Item details from the originating (or encoded legacy) sale. */
   items: CreditItem[]
+  /**
+   * Transaction date (date-only): the originating sale's sale date when the
+   * linked sale exists and is readable, otherwise the credit's recording
+   * date. Encoded existing balances carry their admin-set date on the
+   * legacy sale row; sale-less obligations fall back to recording date.
+   */
+  transactionDate: string
 }
