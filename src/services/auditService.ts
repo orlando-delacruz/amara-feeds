@@ -22,6 +22,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditEvent['action'], string> = {
   'stock.deleted': 'Stock deleted',
   'stock.approved': 'Inventory approved',
   'credit.imported': 'Existing credit encoded',
+  'credit.interest_updated': 'Credit interest updated',
   'customer.updated': 'Customer updated',
   'customer.deleted': 'Customer deleted',
   'account.updated': 'Account updated',

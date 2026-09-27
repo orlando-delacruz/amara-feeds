@@ -22,6 +22,7 @@ export type AuditAction =
   | 'sale.voided'
   | 'credit.voided'
   | 'credit.imported'
+  | 'credit.interest_updated'
   | 'customer.updated'
   | 'customer.deleted'
   | 'account.updated'

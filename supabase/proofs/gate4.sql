@@ -997,4 +997,59 @@ end $$;
 rollback;
 select 'pass: receipts hold stock until approval, exactly once, grandfathered' as proof;
 
+-- --- 33. update_credit_interest: admin-only, display-only (DEC-062) ------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+do $$
+begin
+  begin
+    perform public.update_credit_interest('aaaaaaaa-0000-0000-0000-000000000101', 5000);
+    raise exception 'FAIL: staff updated credit interest';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff interest edit blocked';
+    else raise; end if;
+  end;
+end $$;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+-- Negative interest refused; balance untouched by the edit.
+do $$
+begin
+  begin
+    perform public.update_credit_interest('aaaaaaaa-0000-0000-0000-000000000101', -100);
+    raise exception 'FAIL: negative interest accepted';
+  exception when others then
+    if sqlerrm like '%cannot be negative%' then raise notice 'negative interest refused';
+    else raise; end if;
+  end;
+end $$;
+select public.update_credit_interest('aaaaaaaa-0000-0000-0000-000000000101', 5000);
+select interest_minor = 5000 as interest_saved from public.credit_obligations
+ where id = 'aaaaaaaa-0000-0000-0000-000000000101';
+select balance_minor = 19500 as balance_untouched_by_interest from public.credit_obligations
+ where id = 'aaaaaaaa-0000-0000-0000-000000000101';
+select count(*) = 1 as edit_audited from public.audit_events
+ where action = 'credit.interest_updated';
+-- Clearing returns the column to absent.
+select public.update_credit_interest('aaaaaaaa-0000-0000-0000-000000000101', null);
+select interest_minor is null as interest_cleared from public.credit_obligations
+ where id = 'aaaaaaaa-0000-0000-0000-000000000101';
+-- Voided credits refuse the change.
+select public.void_credit('aaaaaaaa-0000-0000-0000-000000000101');
+do $$
+begin
+  begin
+    perform public.update_credit_interest('aaaaaaaa-0000-0000-0000-000000000101', 100);
+    raise exception 'FAIL: voided credit interest changed';
+  exception when others then
+    if sqlerrm like '%Undone credits%' then raise notice 'voided interest edit blocked';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: credit interest edits are admin-only, display-only, audited' as proof;
+
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

@@ -7,6 +7,7 @@ import {
   listPaymentTerms,
   listUsers,
   recordPayment,
+  updateCreditInterest,
   voidCredit,
 } from '@/services'
 import { Alert } from '@/components/ui/Alert'
@@ -15,6 +16,7 @@ import { BackLink } from '@/components/ui/BackLink'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { DateText } from '@/components/ui/DateText'
+import { Dialog } from '@/components/ui/Dialog'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RecordList } from '@/components/ui/RecordList'
@@ -28,6 +30,7 @@ import { confirmAction, notifySuccess } from '@/lib/swal'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { PAYMENT_METHOD_PRESETS } from '@/domain'
+import type { CreditObligation } from '@/domain'
 import { toMinor } from '@/lib/money'
 import { concreteStoreId, isAllStores, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
@@ -78,6 +81,70 @@ const PaymentNote = styled.p`
   color: ${({ theme }) => theme.color.text.secondary};
 `
 
+/**
+ * Admin-only interest editor (DEC-062): prefilled from the credit, empty
+ * clears the value. Display-only interest — balance math never changes.
+ */
+function EditInterestDialog({
+  credit,
+  open,
+  onSaved,
+}: {
+  credit: CreditObligation | null
+  open: boolean
+  onSaved: () => void
+}) {
+  const [interest, setInterest] = useState(
+    credit?.interestMinor === undefined ? '' : String(credit.interestMinor / 100),
+  )
+  const [formError, setFormError] = useState<string | null>(null)
+  const { run, pending } = useAlertMutation(
+    (amount: string) =>
+      updateCreditInterest(credit!.id, amount.trim() === '' ? null : toMinor(Number(amount))),
+    'Could not update the interest.',
+  )
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!credit) {
+      return
+    }
+    if (interest.trim() !== '' && (!Number.isFinite(Number(interest)) || Number(interest) < 0)) {
+      setFormError('Interest must be zero or more. Leave it empty to clear.')
+      return
+    }
+    setFormError(null)
+    const saved = await run(interest)
+    if (saved) {
+      onSaved()
+    }
+  }
+
+  return (
+    <Dialog open={open && credit !== null} title="Edit interest" onClose={onSaved}>
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+      >
+        {formError && <Alert variant="danger">{formError}</Alert>}
+        <TextField
+          id="edit-credit-interest"
+          label="Interest (₱, optional)"
+          type="number"
+          min="0"
+          step="0.01"
+          value={interest}
+          onChange={(event) => setInterest(event.target.value)}
+        />
+        <Button type="submit" disabled={pending}>
+          {pending ? 'Saving…' : 'Save changes'}
+        </Button>
+      </form>
+    </Dialog>
+  )
+}
+
 export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps) {
   const { creditId } = useParams<{ creditId: string }>()
   const navigate = useNavigate()
@@ -86,6 +153,7 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<string>('Cash')
   const [customMethod, setCustomMethod] = useState('')
+  const [interestOpen, setInterestOpen] = useState(false)
 
   const history = useAsyncData(
     () => (creditId ? getCreditHistory(creditId) : Promise.resolve(null)),
@@ -98,6 +166,12 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
   const undo = useAlertMutation((id: string) => voidCredit(id), 'Could not undo the credit.')
 
   const isAdmin = user?.role === 'admin'
+
+  function handleInterestSaved() {
+    setInterestOpen(false)
+    void notifySuccess('Interest updated.')
+    history.reload()
+  }
 
   async function requestUndoCredit() {
     if (!credit) {
@@ -164,6 +238,11 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
         }
         actions={
           <>
+            {isAdmin && credit && (
+              <Button variant="secondary" size="sm" onClick={() => setInterestOpen(true)}>
+                Edit interest
+              </Button>
+            )}
             {isAdmin && credit && (
               <Button
                 variant="danger"
@@ -348,6 +427,14 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
           </>
         )}
       </AsyncBoundary>
+      {credit && (
+        <EditInterestDialog
+          key={`${credit.id}:${interestOpen}`}
+          credit={credit}
+          open={interestOpen}
+          onSaved={handleInterestSaved}
+        />
+      )}
     </Stack>
   )
 }

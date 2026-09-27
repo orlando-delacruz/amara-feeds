@@ -117,7 +117,22 @@ export function ReceivingPage() {
   // 'All stores' reviews receipts of both stores combined.
   const allMode = isAllStores(store)
   const contextStoreId = concreteStoreId(store)
-  const list = useAsyncData(() => listReceiving(allMode ? {} : { storeId: contextStoreId }), store)
+  const list = useAsyncData(
+    () =>
+      listReceiving(
+        allMode ? { status: 'approved' } : { storeId: contextStoreId, status: 'approved' },
+      ),
+    store,
+  )
+  // Pending receipts queue (DEC-063): unapproved receipts live here, never in
+  // the List tab. Rejected rows stay in the database only.
+  const pendingList = useAsyncData(
+    () =>
+      listReceiving(
+        allMode ? { status: 'pending' } : { storeId: contextStoreId, status: 'pending' },
+      ),
+    store,
+  )
   const products = useAsyncData(() => listProducts())
   const users = useAsyncData(() => listUsers())
   const receive = useAlertMutation(createReceiving, 'Could not record the receipt.')
@@ -223,6 +238,7 @@ export function ReceivingPage() {
           : 'Receiving recorded.',
       )
       list.reload()
+      pendingList.reload()
     }
   }
 
@@ -275,6 +291,7 @@ export function ReceivingPage() {
     if (reviewed) {
       void notifySuccess(approve ? 'Receipt approved. Inventory updated.' : 'Receipt rejected.')
       list.reload()
+      pendingList.reload()
     }
   }
 
@@ -299,6 +316,8 @@ export function ReceivingPage() {
   const myPendingProducts = pendingProducts.filter(
     (product: Product) => product.createdByUserId === user?.id,
   )
+  const pendingReceipts = pendingList.data ?? []
+  const myPendingReceipts = pendingReceipts.filter((record) => record.recordedByUserId === user?.id)
 
   return (
     <Stack>
@@ -454,27 +473,93 @@ export function ReceivingPage() {
                 )}
               />
             )}
+            {pendingReceipts.length === 0 ? (
+              <Alert variant="success">No receipts awaiting approval.</Alert>
+            ) : (
+              <RecordList
+                caption="Receipts awaiting approval"
+                columns={[
+                  { key: 'product', header: 'Item' },
+                  ...(allMode ? ([{ key: 'store', header: 'Store' }] as const) : []),
+                  { key: 'quantity', header: 'Quantity' },
+                  { key: 'supplier', header: 'Supplier' },
+                  { key: 'recordedBy', header: 'Recorded by' },
+                  { key: 'receivedAt', header: 'Received' },
+                  { key: 'actions', header: 'Actions' },
+                ]}
+                rows={pendingReceipts.map((record) => ({
+                  product: productNames.get(record.productId) ?? 'Not available',
+                  ...(allMode ? { store: storeNames[record.storeId] } : {}),
+                  quantity: String(record.quantity),
+                  supplier: record.supplier,
+                  recordedBy: userNames.get(record.recordedByUserId) ?? 'Not available',
+                  receivedAt: <DateText value={record.receivedAt} />,
+                  actions: (
+                    <RowActions>
+                      <Button
+                        size="sm"
+                        disabled={reviewReceipt.pending}
+                        onClick={() => void handleReceiptDecision(record, 'approve')}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        disabled={reviewReceipt.pending}
+                        onClick={() => void handleReceiptDecision(record, 'reject')}
+                      >
+                        Reject
+                      </Button>
+                    </RowActions>
+                  ),
+                }))}
+              />
+            )}
           </>
-        ) : myPendingProducts.length === 0 ? (
+        ) : myPendingProducts.length === 0 && myPendingReceipts.length === 0 ? (
           <Alert variant="success">No pending items.</Alert>
         ) : (
-          <RecordList
-            caption="Your pending items"
-            columns={[
-              { key: 'name', header: 'Item' },
-              { key: 'status', header: 'Status' },
-            ]}
-            rows={myPendingProducts.map((product) => ({
-              name: product.name,
-              status: <StatusBadge status={product.status} />,
-            }))}
-            renderCard={(row) => (
-              <PendingCardHeader>
-                <PendingCardName>{row.name}</PendingCardName>
-                {row.status}
-              </PendingCardHeader>
+          <>
+            {myPendingProducts.length > 0 && (
+              <RecordList
+                caption="Your pending items"
+                columns={[
+                  { key: 'name', header: 'Item' },
+                  { key: 'status', header: 'Status' },
+                ]}
+                rows={myPendingProducts.map((product) => ({
+                  name: product.name,
+                  status: <StatusBadge status={product.status} />,
+                }))}
+                renderCard={(row) => (
+                  <PendingCardHeader>
+                    <PendingCardName>{row.name}</PendingCardName>
+                    {row.status}
+                  </PendingCardHeader>
+                )}
+              />
             )}
-          />
+            {myPendingReceipts.length > 0 && (
+              <RecordList
+                caption="Your pending receipts"
+                columns={[
+                  { key: 'product', header: 'Item' },
+                  { key: 'quantity', header: 'Quantity' },
+                  { key: 'supplier', header: 'Supplier' },
+                  { key: 'receivedAt', header: 'Received' },
+                  { key: 'status', header: 'Status' },
+                ]}
+                rows={myPendingReceipts.map((record) => ({
+                  product: productNames.get(record.productId) ?? 'Not available',
+                  quantity: String(record.quantity),
+                  supplier: record.supplier,
+                  receivedAt: <DateText value={record.receivedAt} />,
+                  status: <StatusBadge status={record.status} />,
+                }))}
+              />
+            )}
+          </>
         )
       ) : (
         <AsyncBoundary

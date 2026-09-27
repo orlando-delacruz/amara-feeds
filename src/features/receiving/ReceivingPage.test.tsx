@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetDb } from '@/services/mocks/db'
@@ -102,8 +102,9 @@ describe('ReceivingPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await __awaitSwal('Receiving recorded.')
-    await showListItems(user)
-    expect(await screen.findByText('New Supplier Co')).toBeInTheDocument()
+    // New receipts wait on the Pending tab until approved.
+    expect(await screen.findByText('Your pending receipts')).toBeInTheDocument()
+    expect(screen.getByText('New Supplier Co')).toBeInTheDocument()
   })
 
   it('records a receipt with a custom new item', async () => {
@@ -120,7 +121,8 @@ describe('ReceivingPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await __awaitSwal('New item submitted for admin approval. Receiving recorded.')
-    expect(await screen.findByText('Hog Pellets 50kg')).toBeInTheDocument()
+    // The new product waits under pending items and its receipt under pending receipts.
+    expect(await screen.findAllByText('Hog Pellets 50kg')).toHaveLength(2)
   })
 
   it('surfaces a rejected quantity', async () => {
@@ -222,11 +224,15 @@ describe('ReceivingPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await __awaitSwal('Receiving recorded.')
-    await showListItems(user)
-    expect(await screen.findByText('Pending Mill Co')).toBeInTheDocument()
+    // The submission stays on the Pending tab — never the List tab.
+    expect(await screen.findByText('Your pending receipts')).toBeInTheDocument()
+    expect(screen.getByText('Pending Mill Co')).toBeInTheDocument()
     expect(screen.getAllByText('Pending').length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reject' })).not.toBeInTheDocument()
+    await showListItems(user)
+    expect(await screen.findByText('Receiving history — Amara')).toBeInTheDocument()
+    expect(screen.queryByText('Pending Mill Co')).not.toBeInTheDocument()
   })
 
   it('lets an admin approve a pending receipt into inventory (DEC-061)', async () => {
@@ -240,17 +246,19 @@ describe('ReceivingPage', () => {
       recordedByUserId: 'user-1',
     })
     renderWithProviders(<ReceivingPage />, { user: adminUser, store: 'amara' })
-    await showListItems(user)
     const note = await screen.findByText('Approval Mill Co')
     const row = note.closest('tr, [role="row"], article, li')
     expect(row).not.toBeNull()
     await user.click(within(row as HTMLElement).getByRole('button', { name: 'Approve' }))
 
     await __awaitSwal('Receipt approved. Inventory updated.')
-    const approvedNote = await screen.findByText('Approval Mill Co')
-    const approvedRow = approvedNote.closest('tr, [role="row"], article, li')
-    expect(approvedRow).not.toBeNull()
-    expect(within(approvedRow as HTMLElement).getByText('Approved')).toBeInTheDocument()
+    // Gone from Pending, present (Approved) in List Items.
+    await waitFor(() => expect(screen.queryByText('Approval Mill Co')).not.toBeInTheDocument())
+    await showListItems(user)
+    const listedNote = await screen.findByText('Approval Mill Co')
+    const listedRow = listedNote.closest('tr, [role="row"], article, li')
+    expect(listedRow).not.toBeNull()
+    expect(within(listedRow as HTMLElement).getByText('Approved')).toBeInTheDocument()
     expect((await getStock('amara', 'prod-1')).quantity).toBe(20 + 5)
   })
 
@@ -265,13 +273,37 @@ describe('ReceivingPage', () => {
       recordedByUserId: 'user-1',
     })
     renderWithProviders(<ReceivingPage />, { user: adminUser, store: 'amara' })
-    await showListItems(user)
     const note = await screen.findByText('Rejection Mill Co')
     const row = note.closest('tr, [role="row"], article, li')
     expect(row).not.toBeNull()
     await user.click(within(row as HTMLElement).getByRole('button', { name: 'Reject' }))
 
     await __awaitSwal('Receipt rejected.')
+    // Gone from Pending and absent from List Items.
+    await waitFor(() => expect(screen.queryByText('Rejection Mill Co')).not.toBeInTheDocument())
+    await showListItems(user)
+    expect(await screen.findByText('Receiving history — Amara')).toBeInTheDocument()
+    expect(screen.queryByText('Rejection Mill Co')).not.toBeInTheDocument()
     expect((await getStock('amara', 'prod-1')).quantity).toBe(20)
+  })
+
+  it('keeps pending receipts out of List Items (DEC-063)', async () => {
+    const user = userEvent.setup()
+    await createReceiving({
+      storeId: 'amara',
+      productId: 'prod-1',
+      quantity: 5,
+      supplier: 'Tab Mill Co',
+      costPriceMinor: 100000,
+      recordedByUserId: 'user-1',
+    })
+    renderWithProviders(<ReceivingPage />, { user: adminUser, store: 'amara' })
+    // Pending tab shows it with review actions...
+    expect(await screen.findByText('Tab Mill Co')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Approve' }).length).toBeGreaterThan(0)
+    // ...List Items does not.
+    await showListItems(user)
+    expect(await screen.findByText('Receiving history — Amara')).toBeInTheDocument()
+    expect(screen.queryByText('Tab Mill Co')).not.toBeInTheDocument()
   })
 })

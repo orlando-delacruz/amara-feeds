@@ -245,6 +245,40 @@ export interface CreateExistingCreditItem {
 }
 
 /**
+ * Admin-only credit interest edit (DEC-062): sets, changes, or clears
+ * (null) the display-only interest from the credit detail view. Balance,
+ * payments, and status are never touched; voided credits refuse the change.
+ */
+export async function updateCreditInterest(
+  id: CreditId,
+  interestMinor: Money | null,
+): Promise<CreditObligation> {
+  if (interestMinor !== null && interestMinor < 0) {
+    throw new ServiceError('validation', 'Credit interest cannot be negative.')
+  }
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('update_credit_interest', {
+      p_credit_id: id,
+      p_interest_minor: interestMinor,
+    })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (await getCreditHistory(id)).credit
+  }
+  const db = getDb()
+  const credit = db.credits.find((item) => item.id === id)
+  if (!credit) {
+    throw new ServiceError('not_found', 'Credit not found.')
+  }
+  if (credit.status === 'voided') {
+    throw new ServiceError('conflict', 'Undone credits cannot be changed.')
+  }
+  credit.interestMinor = interestMinor ?? undefined
+  return { ...credit }
+}
+
+/**
  * Admin-only credit undo (DEC-050, bank-style correction): voids the credit,
  * its payment rows, and its underlying sale. Only system charge-sale credits
  * restore stock — encoded legacy credits never touched inventory, so undoing

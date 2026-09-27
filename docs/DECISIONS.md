@@ -147,6 +147,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-059 | Dashboard cash/GCash/bank split; sales item detail; manual credit interest | Accepted | 2026-09-26 |
 | DEC-060 | Per-store Inventory Excel export of receiving history | Accepted | 2026-09-27 |
 | DEC-061 | Pending stock receipts with admin approval (no premature inventory) | Accepted | 2026-09-27 |
+| DEC-062 | Editable credit interest on the detail page (no schema change) | Accepted | 2026-09-27 |
+| DEC-063 | Pending receipts queue on the Pending tab; List tab shows approved only | Accepted | 2026-09-27 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -961,6 +963,30 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Alternatives considered:** Keeping the immediate-stock design with clarification only — rejected: it left the reported problem unsolved. A void/undo model for receipts — rejected: prevention (never add) is what was asked, and nothing needs reversing. Hard-deleting rejected rows — rejected per client choice (kept with status, DEC-051 precedent).
 - **Consequences:** Live `stock_levels` rows are never rewritten by the migration; only new submissions flow through pending. This amends DEC-048's "receiving is the normal workflow" for quantities (receiving now stages, approval applies). Hosted rollout: `supabase db push` (00017) with the next frontend deploy in one window — old frontends tolerate the new DB (same RPC signatures), but the new frontend requires the new RPCs. `docs/DATA-MODEL.md` §4.9, `docs/API.md` §5, `docs/UI-UX.md` §7.5 updated.
 - **Related documents:** `supabase/migrations/20260927120000_00017_pending_receipts.sql`, `supabase/proofs/gate4.sql`, `src/services/receivingService.ts`, `src/features/receiving/ReceivingPage.tsx`, `src/domain/receiving.ts`, `docs/DATA-MODEL.md`, `docs/API.md`, `docs/UI-UX.md`.
+
+### DEC-062 — Editable credit interest on the detail page (no schema change)
+
+- **ID:** DEC-062
+- **Title:** Editable credit interest on the detail page (no schema change)
+- **Status:** Accepted
+- **Date:** 2026-09-27
+- **Context:** The interest column (DEC-059) could only be set while encoding; the client could not find any Interest input on the admin credit detail page and needs interest entered manually per borrowing date.
+- **Decision:** Migration `00018`, verified by Gate-4 proof section 33: new admin-only `update_credit_interest` RPC setting, changing, or clearing (`null`) the display-only interest — balance, payments, and status untouched; voided credits refused; `credit.interest_updated` audit event (label registered so History renders it). UI: the shared credit detail page gains an admin-only "Edit interest" action opening a prefilled dialog (empty clears); staff keep the read-only Interest display. Mock service and tests mirror the semantics, including reopen persistence.
+- **Alternatives considered:** Staff editing — rejected: interest correction follows the bank-style admin-only model (DEC-050/055/056). Recomputing interest automatically — rejected: no rate rule exists; manual entry only.
+- **Consequences:** Frontend + migration ship together (`db push` 00018 with the deploy; same signature pattern as house RPCs). `docs/DATA-MODEL.md` §4.6, `docs/API.md` §5, `docs/UI-UX.md` §7.3 updated.
+- **Related documents:** `supabase/migrations/20260927150000_00018_update_credit_interest.sql`, `supabase/proofs/gate4.sql`, `src/services/creditService.ts`, `src/features/credit/CreditDetailPage.tsx`, `src/domain/audit.ts`, `docs/DATA-MODEL.md`, `docs/API.md`, `docs/UI-UX.md`.
+
+### DEC-063 — Pending receipts queue on the Pending tab; List tab shows approved only
+
+- **ID:** DEC-063
+- **Title:** Pending receipts queue on the Pending tab; List tab shows approved only
+- **Status:** Accepted
+- **Date:** 2026-09-27
+- **Context:** After DEC-061 introduced receipt statuses, pending receipts still appeared under List Items (with badges), reading as approved before review. The client expects unapproved items under Pending Items, moving to List Items only on approval.
+- **Decision:** No database changes (status column and RPCs from DEC-061 stand). The List Items query filters `status = 'approved'`; the Pending Items tab gains a receipts queue beside the existing product queue — admin sees all pending receipts with Approve/Reject (reusing `handleReceiptDecision`), staff see their own pending receipts read-only. Rejected rows appear in neither tab (kept in the database, export, and audit). Recording now also reloads the pending queue (a miss caught by tests).
+- **Alternatives considered:** Showing rejected rows on the Pending tab — rejected: the tab promises actionable pending work; rejections stay traceable via History. Filtering the List tab client-side instead of in the query — rejected: the service filter is the established pattern and keeps both backends consistent.
+- **Consequences:** Frontend-only deploy (no migration in this change). `docs/UI-UX.md` §7.5 updated.
+- **Related documents:** `src/features/receiving/ReceivingPage.tsx`, `src/services/receivingService.ts`, `docs/UI-UX.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

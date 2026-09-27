@@ -4,6 +4,7 @@ import {
   getCreditHistory,
   listCredits,
   listPaymentTerms,
+  updateCreditInterest,
   voidCredit,
 } from './creditService'
 import { listPayments } from './paymentService'
@@ -196,5 +197,34 @@ describe('creditService', () => {
         recordedByUserId: 'user-3',
       }),
     ).rejects.toMatchObject({ code: 'validation' })
+  })
+
+  it('updates interest without touching the balance (DEC-062)', async () => {
+    const updated = await updateCreditInterest('cred-1', 7500)
+    expect(updated.interestMinor).toBe(7500)
+    expect(updated.balanceMinor).toBe(19500)
+    expect(updated.originalAmountMinor).toBe(19500)
+    const history = await getCreditHistory('cred-1')
+    expect(history.credit.interestMinor).toBe(7500)
+    expect(history.credit.balanceMinor).toBe(19500)
+  })
+
+  it('clears interest back to absent (DEC-062)', async () => {
+    await updateCreditInterest('cred-1', 7500)
+    const cleared = await updateCreditInterest('cred-1', null)
+    expect(cleared.interestMinor).toBeUndefined()
+  })
+
+  it('refuses negative, voided, and unknown interest edits (DEC-062)', async () => {
+    await expect(updateCreditInterest('cred-1', -1)).rejects.toMatchObject({
+      code: 'validation',
+    })
+    await voidCredit('cred-1')
+    await expect(updateCreditInterest('cred-1', 100)).rejects.toMatchObject({
+      code: 'conflict',
+    })
+    await expect(updateCreditInterest('cred-missing', 100)).rejects.toMatchObject({
+      code: 'not_found',
+    })
   })
 })

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -109,5 +109,33 @@ describe('CreditDetailPage', () => {
     renderCredit('/credit/cred-1')
 
     expect(await screen.findByText('Interest')).toBeInTheDocument()
+  })
+
+  it('hides interest editing from staff (DEC-062)', async () => {
+    renderCredit('/credit/cred-1')
+
+    expect(await screen.findByText('Interest')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit interest' })).not.toBeInTheDocument()
+  })
+
+  it('edits interest as admin and keeps it on reopen (DEC-062)', async () => {
+    const user = userEvent.setup()
+    renderCredit('/admin/credit/cred-1', adminUser)
+    await screen.findByText('Interest')
+
+    await user.click(screen.getByRole('button', { name: 'Edit interest' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Edit interest' })
+    const input = within(dialog).getByLabelText(/Interest/) as HTMLInputElement
+    expect(input.value).toBe('')
+    await user.type(input, '75')
+    await user.click(within(dialog).getByRole('button', { name: 'Save changes' }))
+
+    await __awaitSwal('Interest updated.')
+    expect(await screen.findByText('₱75.00')).toBeInTheDocument()
+
+    // Reopening shows the saved value prefilled.
+    await user.click(screen.getByRole('button', { name: 'Edit interest' }))
+    const reopened = await screen.findByRole('dialog', { name: 'Edit interest' })
+    expect((within(reopened).getByLabelText(/Interest/) as HTMLInputElement).value).toBe('75')
   })
 })
