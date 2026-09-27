@@ -1,4 +1,5 @@
 import type {
+  CashSalesByMethod,
   CollectionByMethod,
   DailySalesByStore,
   OverallDailySales,
@@ -350,20 +351,28 @@ export async function getSalesByPaymentMethodInRange(
     .sort((a, b) => a.method.localeCompare(b.method, 'en'))
 }
 
+function isGcashMethod(method: string | null | undefined): boolean {
+  return (method ?? '').trim().toLowerCase() === 'gcash'
+}
+
+function isBankMethod(method: string | null | undefined): boolean {
+  return (method ?? '').trim().toLowerCase() === 'bank transfer'
+}
+
 /**
- * Dashboard payment buckets (DEC-059). Total Cash Sales sums cash-type sales;
- * GCash/Bank buckets sum non-voided collection payments by method (preset
- * names matched case-insensitively). Same live-sale/payment filters as the
- * other summaries: no legacy rows, no voided rows.
+ * Cash-type sales split by receiving method (DEC-059 amendment): GCash- and
+ * bank-transfer-method sales bucket separately so they can join the GCash
+ * Paid / Bank Payment totals; everything else cash counts as cash sales.
+ * Charge sales are never cash received and stay excluded.
  */
-export async function getCashSalesTotal(
+export async function getCashSalesByMethod(
   filter: {
     date?: string
     from?: string
     to?: string
     storeId?: string
   } = {},
-): Promise<{ totalMinor: number; saleCount: number }> {
+): Promise<CashSalesByMethod> {
   const rows = await fetchSalesForSummary()
   const inScope = (day: string, store: string) =>
     (!filter.date || day === filter.date) &&
@@ -375,7 +384,19 @@ export async function getCashSalesTotal(
       (row) => row.payment_type === 'cash' && inScope(row.sale_date, row.store_id),
     )
     return {
-      totalMinor: sumMinor(sales.map((sale) => sale.total_minor)),
+      cashMinor: sumMinor(
+        sales
+          .filter(
+            (sale) => !isGcashMethod(sale.payment_method) && !isBankMethod(sale.payment_method),
+          )
+          .map((sale) => sale.total_minor),
+      ),
+      gcashMinor: sumMinor(
+        sales.filter((sale) => isGcashMethod(sale.payment_method)).map((sale) => sale.total_minor),
+      ),
+      bankMinor: sumMinor(
+        sales.filter((sale) => isBankMethod(sale.payment_method)).map((sale) => sale.total_minor),
+      ),
       saleCount: sales.length,
     }
   }
@@ -383,17 +404,19 @@ export async function getCashSalesTotal(
     (sale) => sale.paymentType === 'cash' && inScope(sale.saleDate, sale.storeId),
   )
   return {
-    totalMinor: sumMinor(sales.map((sale) => sale.totalMinor)),
+    cashMinor: sumMinor(
+      sales
+        .filter((sale) => !isGcashMethod(sale.paymentMethod) && !isBankMethod(sale.paymentMethod))
+        .map((sale) => sale.totalMinor),
+    ),
+    gcashMinor: sumMinor(
+      sales.filter((sale) => isGcashMethod(sale.paymentMethod)).map((sale) => sale.totalMinor),
+    ),
+    bankMinor: sumMinor(
+      sales.filter((sale) => isBankMethod(sale.paymentMethod)).map((sale) => sale.totalMinor),
+    ),
     saleCount: sales.length,
   }
-}
-
-function isGcashMethod(method: string | null | undefined): boolean {
-  return (method ?? '').trim().toLowerCase() === 'gcash'
-}
-
-function isBankMethod(method: string | null | undefined): boolean {
-  return (method ?? '').trim().toLowerCase() === 'bank transfer'
 }
 
 export async function getCollectionByMethod(

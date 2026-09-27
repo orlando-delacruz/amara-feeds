@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
-  getCashSalesTotal,
+  getCashSalesByMethod,
   getCollectionByMethod,
   getCurrentStock,
   getDailySalesByStore,
@@ -17,6 +17,7 @@ import {
   getWeeklySalesByStore,
 } from './dashboardService'
 import { recordPayment } from './paymentService'
+import { createSale } from './saleService'
 import { resetDb } from './mocks/db'
 import { todayIso } from '@/lib/dates'
 
@@ -111,17 +112,30 @@ describe('dashboardService', () => {
     expect(received.every((row) => row.productName !== 'Unknown')).toBe(true)
   })
 
-  it('totals cash-type sales with date and store scope (DEC-059)', async () => {
-    // Seed cash sales: sale-1 (230000, amara, today) + sale-3 (9500, amara,
-    // today) + sale-4 (120000, zeann, yesterday); sale-2 is charge.
-    const today = await getCashSalesTotal({ date: todayIso() })
-    expect(today).toEqual({ totalMinor: 239500, saleCount: 2 })
+  it('buckets cash-type sales by receiving method (DEC-059)', async () => {
+    // Seed cash sales: sale-1 (230000 Cash, amara, today) + sale-3 (9500 Cash,
+    // amara, today) + sale-4 (120000 Maya, zeann, yesterday); sale-2 is charge.
+    const today = await getCashSalesByMethod({ date: todayIso() })
+    expect(today).toEqual({ cashMinor: 239500, gcashMinor: 0, bankMinor: 0, saleCount: 2 })
 
-    const amara = await getCashSalesTotal({ date: todayIso(), storeId: 'amara' })
-    expect(amara).toEqual({ totalMinor: 239500, saleCount: 2 })
+    const wide = await getCashSalesByMethod({ from: '2000-01-01', to: '2999-01-01' })
+    expect(wide.cashMinor).toBe(359500)
+    expect(wide.saleCount).toBe(3)
+  })
 
-    const wide = await getCashSalesTotal({ from: '2000-01-01', to: '2999-01-01' })
-    expect(wide).toEqual({ totalMinor: 359500, saleCount: 3 })
+  it('counts GCash and bank-method sales in their buckets (DEC-059)', async () => {
+    await createSale({
+      storeId: 'amara',
+      saleDate: todayIso(),
+      paymentType: 'cash',
+      paymentMethod: 'GCash',
+      lines: [{ productId: 'prod-4', quantity: 1, unitPriceMinor: 9500 }],
+      recordedByUserId: 'user-1',
+    })
+    const today = await getCashSalesByMethod({ date: todayIso() })
+    expect(today.gcashMinor).toBe(9500)
+    expect(today.cashMinor).toBe(239500)
+    expect(today.saleCount).toBe(3)
   })
 
   it('splits collections into GCash and bank buckets (DEC-059)', async () => {

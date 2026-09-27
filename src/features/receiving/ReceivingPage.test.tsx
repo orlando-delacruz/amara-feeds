@@ -196,4 +196,14 @@ describe('ReceivingPage', () => {
 
     await __awaitSwal('Cooking Oil 1L was rejected and removed.')
   })
+
+  it('exports the store inventory history as Excel (DEC-060)', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ReceivingPage />, { user: staffUser })
+    await screen.findByText('Your pending items')
+
+    await user.click(screen.getByRole('button', { name: 'Export Excel' }))
+
+    await __awaitSwal('Inventory exported.')
+  })
 })

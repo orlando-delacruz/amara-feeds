@@ -25,13 +25,16 @@ import { ListSkeleton } from '@/components/ui/Skeletons'
 import { Stack } from '@/components/ui/Stack'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { TextField } from '@/components/ui/TextField'
+import { Icon } from '@/components/ui/icons'
 import { StoreControl, useAsyncData, useAlertMutation } from '@/features/shared'
 import { confirmAction, notifyError, notifySuccess } from '@/lib/swal'
+import { exportReceivingExcel } from '@/lib/exportReceivingExcel'
 import { getDisplayName } from '@/features/session/displayName'
 import { useSession } from '@/features/session/useSession'
 import { toMinor } from '@/lib/money'
 import { concreteStoreId, isAllStores, storeLabel, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
+import { buildReceivingReportRows } from './receivingReportRows'
 import type { Product } from '@/domain'
 
 export const NEW_RECEIVING_ITEM_VALUE = '__new__'
@@ -108,6 +111,7 @@ export function ReceivingPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [tab, setTab] = useState<'pending' | 'received'>('pending')
   const [formError, setFormError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
   // 'All stores' reviews receipts of both stores combined.
   const allMode = isAllStores(store)
   const contextStoreId = concreteStoreId(store)
@@ -130,6 +134,26 @@ export function ReceivingPage() {
     setDialogOpen(false)
     setForm(emptyForm)
     setFormError(null)
+  }
+
+  // Inventory Excel export (DEC-060): the current store context's receiving
+  // history. In the unreachable 'all' context this falls back to the default
+  // admin store, matching the recording form's target.
+  async function handleExport() {
+    if (exporting) {
+      return
+    }
+    setExporting(true)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    try {
+      const rows = await buildReceivingReportRows(contextStoreId)
+      await exportReceivingExcel({ storeId: contextStoreId, rows })
+      void notifySuccess('Inventory exported.', 'The inventory Excel file has been downloaded.')
+    } catch {
+      void notifyError('Could not export the inventory.', 'Please try again.')
+    } finally {
+      setExporting(false)
+    }
   }
 
   const isCustomItem = form.productId === NEW_RECEIVING_ITEM_VALUE
@@ -257,6 +281,12 @@ export function ReceivingPage() {
           isAdmin
             ? `Record stock received at ${storeLabel(store)}. Review staff-submitted items below.`
             : `Record stock received at ${storeLabel(store)}. New items stay pending until an admin approves them.`
+        }
+        actions={
+          <Button variant="secondary" onClick={handleExport} disabled={exporting}>
+            <Icon name="download" />
+            {exporting ? 'Exporting…' : 'Export Excel'}
+          </Button>
         }
         size="compact"
       />

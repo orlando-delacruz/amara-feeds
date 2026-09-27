@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
+import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { MoneyText } from '@/components/ui/MoneyText'
@@ -11,8 +12,8 @@ import { Stack } from '@/components/ui/Stack'
 import { StatCard } from '@/components/ui/StatCard'
 import { Icon } from '@/components/ui/icons'
 import { ListSkeleton, StatsSkeleton } from '@/components/ui/Skeletons'
-import { getCashSalesTotal, getCollectionByMethod } from '@/services'
-import { todayIso } from '@/lib/dates'
+import { getCashSalesByMethod, getCollectionByMethod } from '@/services'
+import { startOfMonthOnly, startOfWeekWindowOnly, todayIso } from '@/lib/dates'
 import { storeNames } from '@/store/stores'
 import type { StoreId } from '@/domain'
 import { useAsyncData } from '@/features/shared'
@@ -154,25 +155,26 @@ export function AdminDashboardPage() {
           }
     : null
 
-  // Payment split follows the same period (DEC-059): cash-type sales plus
-  // GCash/bank collections received in the range.
+  // Payment split follows the same period (DEC-059). The range derives from
+  // the date alone (never from the summaries result) so the fetch key always
+  // reflects the range being loaded — a data-derived range once left these
+  // cards stuck at zero.
   const paymentRange =
-    !data || !periodSales
-      ? null
-      : period === 'today'
-        ? { date }
-        : period === 'weekly'
-          ? { from: data.weekly.overall.startDate, to: data.weekly.overall.endDate }
-          : { from: data.monthly.overall.startDate, to: data.monthly.overall.endDate }
+    period === 'today'
+      ? { date }
+      : period === 'weekly'
+        ? { from: startOfWeekWindowOnly(date), to: date }
+        : { from: startOfMonthOnly(date), to: date }
   const paymentSplit = useAsyncData(async () => {
-    if (!paymentRange) {
-      return null
-    }
-    const [cash, collections] = await Promise.all([
-      getCashSalesTotal(paymentRange),
+    const [sales, collections] = await Promise.all([
+      getCashSalesByMethod(paymentRange),
       getCollectionByMethod(paymentRange),
     ])
-    return { cash, collections }
+    return {
+      cash: { totalMinor: sales.cashMinor, saleCount: sales.saleCount },
+      gcash: sales.gcashMinor + collections.gcashMinor,
+      bank: sales.bankMinor + collections.bankMinor,
+    }
   }, `${period}:${date}`)
 
   return (
@@ -246,6 +248,9 @@ export function AdminDashboardPage() {
             </DepotBoard>
 
             <Section title="Sales by payment" variant="flush">
+              {paymentSplit.error && (
+                <Alert variant="danger">The payment split could not be loaded.</Alert>
+              )}
               <DepotBoard>
                 <StatCard
                   label="Total Cash Sales"
@@ -256,16 +261,16 @@ export function AdminDashboardPage() {
                 />
                 <StatCard
                   label="GCash Paid"
-                  value={<MoneyText amountMinor={paymentSplit.data?.collections.gcashMinor ?? 0} />}
+                  value={<MoneyText amountMinor={paymentSplit.data?.gcash ?? 0} />}
                   valueScale="large"
-                  caption="collections via GCash"
+                  caption="sales + collections via GCash"
                   icon={<Icon name="card" />}
                 />
                 <StatCard
                   label="Bank Payment"
-                  value={<MoneyText amountMinor={paymentSplit.data?.collections.bankMinor ?? 0} />}
+                  value={<MoneyText amountMinor={paymentSplit.data?.bank ?? 0} />}
                   valueScale="large"
-                  caption="collections via bank transfer"
+                  caption="sales + collections via bank transfer"
                   icon={<Icon name="card" />}
                 />
               </DepotBoard>

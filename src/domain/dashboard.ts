@@ -46,6 +46,17 @@ export interface CollectionByMethod {
   bankMinor: Money
 }
 
+/** Cash-type sales split by receiving method (DEC-059 amendment). */
+export interface CashSalesByMethod {
+  /** Cash sales not via GCash/Bank (Cash, Maya, Check, Other, blank). */
+  cashMinor: Money
+  /** Cash sales received via GCash. */
+  gcashMinor: Money
+  /** Cash sales received via bank transfer. */
+  bankMinor: Money
+  saleCount: number
+}
+
 export interface PaymentMethodSalesRow {
   /** Sale payment method (Cash, GCash, Maya, Bank Transfer, Check, or a custom value). */
   method: string

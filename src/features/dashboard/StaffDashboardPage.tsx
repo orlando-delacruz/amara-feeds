@@ -1,6 +1,6 @@
 import styled from 'styled-components'
 import {
-  getCashSalesTotal,
+  getCashSalesByMethod,
   getCollectionByMethod,
   getCurrentStock,
   getDailySalesByStore,
@@ -75,13 +75,18 @@ export function StaffDashboardPage() {
       weeklySales: weekly.find((row) => row.storeId === store),
     }
   }, `${store}:${date}`)
-  // Payment split for today at this store (DEC-059).
+  // Payment split for today at this store (DEC-059): cash sales plus
+  // GCash/bank collections and same-method sales.
   const paymentSplit = useAsyncData(async () => {
-    const [cash, collections] = await Promise.all([
-      getCashSalesTotal({ date, storeId }),
+    const [sales, collections] = await Promise.all([
+      getCashSalesByMethod({ date, storeId }),
       getCollectionByMethod({ date, storeId }),
     ])
-    return { cash, collections }
+    return {
+      cash: { totalMinor: sales.cashMinor, saleCount: sales.saleCount },
+      gcash: sales.gcashMinor + collections.gcashMinor,
+      bank: sales.bankMinor + collections.bankMinor,
+    }
   }, `${store}:${date}`)
 
   return (
@@ -142,16 +147,16 @@ export function StaffDashboardPage() {
                 />
                 <StatCard
                   label="GCash Paid"
-                  value={<MoneyText amountMinor={paymentSplit.data?.collections.gcashMinor ?? 0} />}
-                  caption="collections via GCash today"
+                  value={<MoneyText amountMinor={paymentSplit.data?.gcash ?? 0} />}
+                  caption="sales + collections via GCash today"
                   tone="brand"
                   icon={<Icon name="card" />}
                   outline
                 />
                 <StatCard
                   label="Bank Payment"
-                  value={<MoneyText amountMinor={paymentSplit.data?.collections.bankMinor ?? 0} />}
-                  caption="collections via bank transfer today"
+                  value={<MoneyText amountMinor={paymentSplit.data?.bank ?? 0} />}
+                  caption="sales + collections via bank transfer today"
                   tone="brand"
                   icon={<Icon name="card" />}
                   outline
