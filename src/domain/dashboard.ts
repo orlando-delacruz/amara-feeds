@@ -40,6 +40,12 @@ export interface PaymentsSummary {
   count: number
 }
 
+/** Collections split for the dashboard payment buckets (DEC-059). */
+export interface CollectionByMethod {
+  gcashMinor: Money
+  bankMinor: Money
+}
+
 export interface PaymentMethodSalesRow {
   /** Sale payment method (Cash, GCash, Maya, Bank Transfer, Check, or a custom value). */
   method: string

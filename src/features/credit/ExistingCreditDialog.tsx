@@ -79,7 +79,8 @@ function parseMoney(value: string): number | null {
  * Admin-only encoding of a customer's pre-system credit with complete
  * transaction details (DEC-049): item lines like a sale, an admin-set due
  * date, and an optional initial partial payment. Encoding never changes
- * stock; the balance settles through the normal payment flow.
+ * stock; the balance settles through the normal payment flow. An optional
+ * manually entered interest (DEC-059) is display-only.
  */
 export function ExistingCreditDialog({
   open,
@@ -96,6 +97,7 @@ export function ExistingCreditDialog({
   const [items, setItems] = useState([{ productId: '', quantity: '', price: '' }])
   const [initialPayment, setInitialPayment] = useState('')
   const [initialPaymentMethod, setInitialPaymentMethod] = useState('Cash')
+  const [interest, setInterest] = useState('')
   const { run, pending } = useAlertMutation(createExistingCredit, 'Could not encode the credit.')
 
   function updateItem(index: number, patch: Partial<(typeof items)[number]>) {
@@ -113,6 +115,10 @@ export function ExistingCreditDialog({
   const paymentMinor =
     parseMoney(initialPayment) === null ? 0 : toMinor(parseMoney(initialPayment) ?? 0)
   const balanceMinor = totalMinor - paymentMinor
+  // Manual interest (DEC-059): display-only, never added to the balance.
+  const interestValid =
+    interest.trim() === '' || (Number.isFinite(Number(interest)) && Number(interest) >= 0)
+  const interestMinor = interest.trim() === '' ? undefined : toMinor(Number(interest))
   const itemsComplete = items.every(
     (item) =>
       item.productId && parseMoney(item.quantity) !== null && parseMoney(item.price) !== null,
@@ -122,7 +128,8 @@ export function ExistingCreditDialog({
     itemsComplete &&
     items.length > 0 &&
     totalMinor > 0 &&
-    paymentMinor <= totalMinor
+    paymentMinor <= totalMinor &&
+    interestValid
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -145,12 +152,14 @@ export function ExistingCreditDialog({
             initialPaymentMethod: initialPaymentMethod || undefined,
           }
         : {}),
+      ...(interestMinor !== undefined ? { interestMinor } : {}),
       recordedByUserId: '', // unused on the Supabase path (admin caller is server-derived)
     })
     if (created) {
       setCustomerId('')
       setItems([{ productId: '', quantity: '', price: '' }])
       setInitialPayment('')
+      setInterest('')
       setDueDate(todayIso())
       onCreated()
     }
@@ -284,6 +293,18 @@ export function ExistingCreditDialog({
           value={dueDate}
           onChange={setDueDate}
           required
+        />
+        <TextField
+          id="existing-credit-interest"
+          label="Interest (₱, optional)"
+          type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
+          autoComplete="off"
+          value={interest}
+          onChange={(event) => setInterest(event.target.value)}
+          error={interestValid ? undefined : 'Interest must be zero or more.'}
         />
         <Summary>
           <span>

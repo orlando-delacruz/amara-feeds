@@ -63,7 +63,7 @@ export async function listCredits(
     let query = supabase
       .from('credit_obligations')
       .select(
-        'id, customer_id, origin_store_id, sale_id, terms_id, due_date, original_amount_minor, balance_minor, status, created_at',
+        'id, customer_id, origin_store_id, sale_id, terms_id, due_date, original_amount_minor, balance_minor, status, interest_minor, created_at',
       )
       // Voided (admin-reverted) credits are corrections, not standing records.
       .neq('status', 'voided')
@@ -90,6 +90,7 @@ export async function listCredits(
       originalAmountMinor: row.original_amount_minor,
       balanceMinor: row.balance_minor,
       status: row.status as CreditStatus,
+      interestMinor: row.interest_minor ?? undefined,
       createdAt: row.created_at,
     }))
   }
@@ -119,7 +120,7 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
     const { data: credit, error } = await supabase
       .from('credit_obligations')
       .select(
-        'id, customer_id, origin_store_id, sale_id, terms_id, due_date, original_amount_minor, balance_minor, status, created_at',
+        'id, customer_id, origin_store_id, sale_id, terms_id, due_date, original_amount_minor, balance_minor, status, interest_minor, created_at',
       )
       .eq('id', id)
       .maybeSingle()
@@ -171,6 +172,7 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
         originalAmountMinor: credit.original_amount_minor,
         balanceMinor: credit.balance_minor,
         status: credit.status as CreditStatus,
+        interestMinor: credit.interest_minor ?? undefined,
         createdAt: credit.created_at,
       },
       payments: (payments ?? []).map((row) => ({
@@ -296,6 +298,8 @@ export interface CreateExistingCreditInput {
   lines: CreateExistingCreditItem[]
   initialPaymentMinor?: Money
   initialPaymentMethod?: string
+  /** Manually entered interest (display-only, never added to the balance). */
+  interestMinor?: Money
   recordedByUserId: UserId
 }
 
@@ -324,6 +328,7 @@ export async function createExistingCredit(
       })),
       p_initial_payment_minor: input.initialPaymentMinor ?? null,
       p_initial_payment_method: input.initialPaymentMethod?.trim() || null,
+      p_interest_minor: input.interestMinor ?? null,
     })
     if (error) {
       throw serviceErrorFromSupabase(error)
@@ -342,6 +347,7 @@ export async function createExistingCredit(
       originalAmountMinor: totalMinor,
       balanceMinor: (data?.balance_minor as Money) ?? totalMinor,
       status: (data?.status as CreditStatus) ?? 'outstanding',
+      interestMinor: input.interestMinor,
       createdAt: new Date().toISOString(),
     }
   }
@@ -370,6 +376,9 @@ export async function createExistingCredit(
   if (input.initialPaymentMinor !== undefined && input.initialPaymentMinor > totalMinor) {
     throw new ServiceError('validation', 'The initial payment cannot exceed the credit amount.')
   }
+  if (input.interestMinor !== undefined && input.interestMinor < 0) {
+    throw new ServiceError('validation', 'Credit interest cannot be negative.')
+  }
 
   const createdAt = new Date().toISOString()
   const sale: Sale = {
@@ -396,6 +405,7 @@ export async function createExistingCredit(
     originalAmountMinor: totalMinor,
     balanceMinor: totalMinor,
     status: 'outstanding',
+    interestMinor: input.interestMinor,
     createdAt,
   }
   getDb().credits.push(obligation)

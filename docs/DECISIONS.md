@@ -144,6 +144,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-056 | Admin-only expense editing (migration 00015) | Accepted | 2026-09-22 |
 | DEC-057 | Transaction date on the credit detail view (no schema change) | Accepted | 2026-09-26 |
 | DEC-058 | Hide Outstanding credit from staff dashboard; alphabetical customer lists | Accepted | 2026-09-26 |
+| DEC-059 | Dashboard cash/GCash/bank split; sales item detail; manual credit interest | Accepted | 2026-09-26 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -922,6 +923,18 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Alternatives considered:** Role-conditional rendering inside a shared dashboard — rejected: the dashboards are already separate pages per role, so removal from the staff page is the exact scope.
 - **Consequences:** Frontend-only deploy. `docs/UI-UX.md` §7.7 updated (it previously listed outstanding credit on staff dashboards).
 - **Related documents:** `src/features/dashboard/StaffDashboardPage.tsx`, `src/services/customerService.ts`, `src/features/credit/CreditListPage.tsx`, `docs/UI-UX.md`.
+
+### DEC-059 — Dashboard cash/GCash/bank split; sales item detail; manual credit interest
+
+- **ID:** DEC-059
+- **Title:** Dashboard cash/GCash/bank split; sales item detail; manual credit interest
+- **Status:** Accepted
+- **Date:** 2026-09-26
+- **Context:** Client asked for three things: (1) dashboard totals split into Total Cash Sales, GCash Paid, and Bank Payment; (2) sales rows showing item, quantity/bags, price, and totals; (3) manually entered credit interest. No interest field, logic, or UI existed anywhere, so interest required a schema addition.
+- **Decision:** (1) New `getCashSalesTotal` (cash-type sales, same live-sale filters) and `getCollectionByMethod` (non-voided payments bucketed by exact preset method names, case-insensitive) in `dashboardService`, both backends, with optional date/range/store scope. Admin dashboard gains a "Sales by payment" section following the Today/Weekly/Monthly toggle; staff dashboard shows the same three cards store-scoped for today. (2) `SaleListPage` rows expand Items into per-line `Product × qty @ price = line total` lines plus a bags total (sum of quantities), with product names via `listProducts`. (3) Migration `00016`: nullable `credit_obligations.interest_minor` (display-only, never in balance math); `record_existing_credit` re-signed with optional trailing `p_interest_minor` (drop-old-signature precedent from 00009); encode dialog gains an optional Interest field (admin-only); detail view shows Interest (— when absent); report Credit sheet gains an Interest column. Interest is set at encode time only — there is no credit-edit feature and charge checkout is untouched.
+- **Alternatives considered:** Deriving buckets from sales payment_method alone — rejected per client choice (cash sales + GCash/bank collections mix). Auto-computed interest — rejected: no rate rule exists; manual entry only. Adding interest to the balance owed — rejected per client choice (display-only).
+- **Consequences:** Migration `00016` ships via `db push` + frontend deploy in one window (Gate-4 section 31 written; **local DB proof run was not possible — Docker unavailable in this environment — and must be run before push**). `docs/DATA-MODEL.md` §4.6, `docs/API.md` §5, `docs/UI-UX.md` §§7.2/7.3/7.7 updated.
+- **Related documents:** `supabase/migrations/20260926200000_00016_credit_interest.sql`, `supabase/proofs/gate4.sql`, `src/services/dashboardService.ts`, `src/services/creditService.ts`, `src/features/dashboard/AdminDashboardPage.tsx`, `src/features/dashboard/StaffDashboardPage.tsx`, `src/features/sales/SaleListPage.tsx`, `src/features/credit/ExistingCreditDialog.tsx`, `src/features/credit/CreditDetailPage.tsx`, `src/features/reports/reportRows.ts`, `src/lib/exportReportExcel.ts`, `docs/DATA-MODEL.md`, `docs/API.md`, `docs/UI-UX.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

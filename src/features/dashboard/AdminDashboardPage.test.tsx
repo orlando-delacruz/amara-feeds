@@ -27,6 +27,8 @@ describe('AdminDashboardPage', () => {
     )
     expect(await screen.findByText('Overall daily sales')).toBeInTheDocument()
     expect(screen.getByText('₱2,590.00')).toBeInTheDocument()
+    // Today's cash sales (sale-1 + sale-3) repeat in the payment split.
+    expect(screen.getAllByText('₱2,395.00').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Amara').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Zeann').length).toBeGreaterThan(0)
     expect(screen.queryByText('Overall weekly sales')).not.toBeInTheDocument()
@@ -95,5 +97,30 @@ describe('AdminDashboardPage', () => {
       .closest('section') as HTMLElement
     expect(within(receivedSection).getAllByRole('row')).toHaveLength(6)
     expect(within(receivedSection).getByRole('button', { name: 'View all' })).toBeInTheDocument()
+  })
+
+  it('splits sales into cash, GCash, and bank buckets per period (DEC-059)', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>,
+      { user: adminUser },
+    )
+    await screen.findByText('Overall daily sales')
+
+    expect(screen.getByText('Total Cash Sales')).toBeInTheDocument()
+    expect(screen.getByText('GCash Paid')).toBeInTheDocument()
+    expect(screen.getByText('Bank Payment')).toBeInTheDocument()
+    // Seed cash sales today: sale-1 + sale-3 (charge sale-2 excluded).
+    expect(screen.getAllByText('₱2,395.00').length).toBeGreaterThanOrEqual(1)
+
+    await user.click(screen.getByRole('radio', { name: 'Weekly' }))
+    expect(await screen.findByText('Overall weekly sales')).toBeInTheDocument()
+    // Weekly cash adds yesterday's Zeann sale; weekly collections add the
+    // seeded GCash and bank payments.
+    expect(screen.getAllByText('₱3,595.00').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('₱200.00').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('₱120.00').length).toBeGreaterThanOrEqual(1)
   })
 })

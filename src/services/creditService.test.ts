@@ -160,4 +160,41 @@ describe('creditService', () => {
     const history = await getCreditHistory('cred-2')
     expect(history.transactionDate).toBe(toDateOnly(new Date(history.credit.createdAt)))
   })
+
+  it('saves manually entered interest without touching the balance (DEC-059)', async () => {
+    const created = await createExistingCredit({
+      customerId: 'cust-1',
+      originStoreId: 'amara',
+      date: '2026-09-10',
+      dueDate: '2026-10-01',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100000 }],
+      interestMinor: 5000,
+      recordedByUserId: 'user-3',
+    })
+    expect(created.interestMinor).toBe(5000)
+    expect(created.balanceMinor).toBe(100000)
+    expect(created.originalAmountMinor).toBe(100000)
+    const history = await getCreditHistory(created.id)
+    expect(history.credit.interestMinor).toBe(5000)
+    expect(history.credit.balanceMinor).toBe(100000)
+  })
+
+  it('leaves interest absent when none is entered (DEC-059)', async () => {
+    const history = await getCreditHistory('cred-1')
+    expect(history.credit.interestMinor).toBeUndefined()
+  })
+
+  it('refuses negative interest (DEC-059)', async () => {
+    await expect(
+      createExistingCredit({
+        customerId: 'cust-1',
+        originStoreId: 'amara',
+        date: '2026-09-10',
+        dueDate: '2026-10-01',
+        lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100000 }],
+        interestMinor: -100,
+        recordedByUserId: 'user-3',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+  })
 })

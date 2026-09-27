@@ -80,6 +80,7 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     { header: headerStyle, label: 'Paid', width: 12 },
     { header: headerStyle, label: 'Balance', width: 12 },
     { header: headerStyle, label: 'Status', width: 12 },
+    { header: headerStyle, label: 'Interest', width: 12 },
   ]
 
   const salesSheet = [
@@ -114,6 +115,11 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
       { value: row.paidMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.balanceMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.status, type: String },
+      {
+        value: row.interestMinor === undefined ? '—' : row.interestMinor / 100,
+        type: row.interestMinor === undefined ? String : Number,
+        ...(row.interestMinor === undefined ? {} : { format: '#,##0.00' }),
+      },
     ]),
   ]
 

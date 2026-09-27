@@ -35,4 +35,15 @@ describe('StaffDashboardPage', () => {
     expect(await screen.findByRole('heading', { name: 'Weekly sales' })).toBeInTheDocument()
     expect(screen.getByText(/last 7 days/)).toBeInTheDocument()
   })
+
+  it('splits today sales into cash, GCash, and bank buckets (DEC-059)', async () => {
+    renderWithProviders(<StaffDashboardPage />, { user: staffUser })
+    await screen.findByText("Today's sales")
+
+    expect(await screen.findByText('Total Cash Sales')).toBeInTheDocument()
+    expect(screen.getByText('GCash Paid')).toBeInTheDocument()
+    expect(screen.getByText('Bank Payment')).toBeInTheDocument()
+    // Amara cash sales today: sale-1 + sale-3.
+    expect(screen.getAllByText('₱2,395.00').length).toBeGreaterThanOrEqual(2)
+  })
 })

@@ -24,6 +24,11 @@ export interface CreditObligation {
   originalAmountMinor: Money
   balanceMinor: Money
   status: CreditStatus
+  /**
+   * Manually entered interest (DEC-059, encoded balances only). Display-only:
+   * never added to balances or totals. Absent means no interest was entered.
+   */
+  interestMinor?: Money
   createdAt: string
 }
 

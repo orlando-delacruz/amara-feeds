@@ -11,9 +11,11 @@ import { Stack } from '@/components/ui/Stack'
 import { StatCard } from '@/components/ui/StatCard'
 import { Icon } from '@/components/ui/icons'
 import { ListSkeleton, StatsSkeleton } from '@/components/ui/Skeletons'
+import { getCashSalesTotal, getCollectionByMethod } from '@/services'
 import { todayIso } from '@/lib/dates'
 import { storeNames } from '@/store/stores'
 import type { StoreId } from '@/domain'
+import { useAsyncData } from '@/features/shared'
 import { useBusinessSummaries } from './useBusinessSummaries'
 import { RouteBoard } from './RouteBoard'
 import { BalanceStateChip } from './BalanceState'
@@ -152,6 +154,27 @@ export function AdminDashboardPage() {
           }
     : null
 
+  // Payment split follows the same period (DEC-059): cash-type sales plus
+  // GCash/bank collections received in the range.
+  const paymentRange =
+    !data || !periodSales
+      ? null
+      : period === 'today'
+        ? { date }
+        : period === 'weekly'
+          ? { from: data.weekly.overall.startDate, to: data.weekly.overall.endDate }
+          : { from: data.monthly.overall.startDate, to: data.monthly.overall.endDate }
+  const paymentSplit = useAsyncData(async () => {
+    if (!paymentRange) {
+      return null
+    }
+    const [cash, collections] = await Promise.all([
+      getCashSalesTotal(paymentRange),
+      getCollectionByMethod(paymentRange),
+    ])
+    return { cash, collections }
+  }, `${period}:${date}`)
+
   return (
     <Stack>
       <RouteBoard
@@ -173,6 +196,7 @@ export function AdminDashboardPage() {
         skeleton={
           <Stack>
             <StatsSkeleton count={1} />
+            <StatsSkeleton count={2} />
             <StatsSkeleton count={2} />
             <StatsSkeleton count={2} />
             <StatsSkeleton count={2} />
@@ -220,6 +244,32 @@ export function AdminDashboardPage() {
                 </StoreColumn>
               ))}
             </DepotBoard>
+
+            <Section title="Sales by payment" variant="flush">
+              <DepotBoard>
+                <StatCard
+                  label="Total Cash Sales"
+                  value={<MoneyText amountMinor={paymentSplit.data?.cash.totalMinor ?? 0} />}
+                  valueScale="large"
+                  caption={`${paymentSplit.data?.cash.saleCount ?? 0} cash sales`}
+                  icon={<Icon name="card" />}
+                />
+                <StatCard
+                  label="GCash Paid"
+                  value={<MoneyText amountMinor={paymentSplit.data?.collections.gcashMinor ?? 0} />}
+                  valueScale="large"
+                  caption="collections via GCash"
+                  icon={<Icon name="card" />}
+                />
+                <StatCard
+                  label="Bank Payment"
+                  value={<MoneyText amountMinor={paymentSplit.data?.collections.bankMinor ?? 0} />}
+                  valueScale="large"
+                  caption="collections via bank transfer"
+                  icon={<Icon name="card" />}
+                />
+              </DepotBoard>
+            </Section>
 
             <Section title="Credit & payments" variant="flush">
               <DepotBoard>

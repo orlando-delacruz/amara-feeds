@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  getCashSalesTotal,
+  getCollectionByMethod,
   getCurrentStock,
   getDailySalesByStore,
   getMonthlySalesByStore,
@@ -107,5 +109,37 @@ describe('dashboardService', () => {
     const received = await getReceivedStock({ date: todayIso() })
     expect(received.length).toBeGreaterThan(0)
     expect(received.every((row) => row.productName !== 'Unknown')).toBe(true)
+  })
+
+  it('totals cash-type sales with date and store scope (DEC-059)', async () => {
+    // Seed cash sales: sale-1 (230000, amara, today) + sale-3 (9500, amara,
+    // today) + sale-4 (120000, zeann, yesterday); sale-2 is charge.
+    const today = await getCashSalesTotal({ date: todayIso() })
+    expect(today).toEqual({ totalMinor: 239500, saleCount: 2 })
+
+    const amara = await getCashSalesTotal({ date: todayIso(), storeId: 'amara' })
+    expect(amara).toEqual({ totalMinor: 239500, saleCount: 2 })
+
+    const wide = await getCashSalesTotal({ from: '2000-01-01', to: '2999-01-01' })
+    expect(wide).toEqual({ totalMinor: 359500, saleCount: 3 })
+  })
+
+  it('splits collections into GCash and bank buckets (DEC-059)', async () => {
+    // Seed payments: GCash 20000 (zeann), Cash 10000 (amara), Bank 12000 (amara).
+    const wide = await getCollectionByMethod({ from: '2000-01-01', to: '2999-01-01' })
+    expect(wide).toEqual({ gcashMinor: 20000, bankMinor: 12000 })
+
+    const amara = await getCollectionByMethod({
+      from: '2000-01-01',
+      to: '2999-01-01',
+      storeId: 'amara',
+    })
+    expect(amara).toEqual({ gcashMinor: 0, bankMinor: 12000 })
+
+    // Seed payments were recorded 1–2 days ago, so today is empty.
+    expect(await getCollectionByMethod({ date: todayIso() })).toEqual({
+      gcashMinor: 0,
+      bankMinor: 0,
+    })
   })
 })

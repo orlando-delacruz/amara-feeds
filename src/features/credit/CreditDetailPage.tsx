@@ -234,6 +234,16 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
                   </DetailValue>
                 </DetailItem>
                 <DetailItem>
+                  <DetailLabel>Interest</DetailLabel>
+                  <DetailValue>
+                    {credit.interestMinor === undefined ? (
+                      '—'
+                    ) : (
+                      <MoneyText amountMinor={credit.interestMinor} />
+                    )}
+                  </DetailValue>
+                </DetailItem>
+                <DetailItem>
                   <DetailLabel>Remaining balance</DetailLabel>
                   <DetailValue>
                     <MoneyText amountMinor={credit.balanceMinor} />

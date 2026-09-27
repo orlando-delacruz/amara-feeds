@@ -86,4 +86,14 @@ describe('SaleListPage', () => {
     await user.click(screen.getByRole('button', { name: 'New sale' }))
     expect(await screen.findByRole('heading', { name: 'New sale' })).toBeInTheDocument()
   })
+
+  it('expands each sale into item, quantity, price, and bags totals (DEC-059)', async () => {
+    renderAt('/sales')
+    await screen.findByText('Maria Santos')
+
+    // sale-1: Rice 25kg × 2 @ ₱1,150.00.
+    expect(screen.getByText(/Rice 25kg/)).toBeInTheDocument()
+    expect(screen.getByText(/₱1,150\.00/)).toBeInTheDocument()
+    expect(screen.getByText(/2 bags total/)).toBeInTheDocument()
+  })
 })

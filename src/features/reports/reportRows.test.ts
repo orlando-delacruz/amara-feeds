@@ -143,6 +143,25 @@ describe('buildCreditReportRows', () => {
     expect(mira).toHaveLength(1)
     expect(mira[0]?.originStoreId).toBe('amara')
   })
+
+  it('carries manually entered interest through to the export rows (DEC-059)', async () => {
+    const customer = await createCustomer({ name: 'Nadia Ramos' })
+    await createExistingCredit({
+      customerId: customer.id,
+      originStoreId: 'amara',
+      date: todayIso(),
+      dueDate: todayIso(),
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100000 }],
+      interestMinor: 7500,
+      recordedByUserId: 'user-3',
+    })
+
+    const rows = (await buildCreditReportRows(todayIso(), todayIso())).filter(
+      (row) => row.customerName === 'Nadia Ramos',
+    )
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({ interestMinor: 7500, balanceMinor: 100000 })
+  })
 })
 
 describe('buildExpenseReportRows', () => {

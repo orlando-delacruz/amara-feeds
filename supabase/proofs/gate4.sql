@@ -891,4 +891,41 @@ select count(*) = 1 as edit_audited from public.audit_events
 rollback;
 select 'pass: expense edit is admin-only, validated, audited' as proof;
 
+-- --- 31. record_existing_credit stores manual interest (DEC-059) --------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.record_existing_credit('aaaaaaaa-0000-0000-0000-000000000001', 'amara',
+  current_date, current_date + 30,
+  '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":1,"unit_price_minor":100000}]',
+  null, null, 5000) as interest_credit \gset
+select interest_minor = 5000 as interest_saved from public.credit_obligations
+ where id = (:'interest_credit'::jsonb->>'credit_id')::uuid;
+select balance_minor = 100000 as balance_untouched_by_interest from public.credit_obligations
+ where id = (:'interest_credit'::jsonb->>'credit_id')::uuid;
+-- Negative interest is refused.
+do $$
+begin
+  begin
+    perform public.record_existing_credit('aaaaaaaa-0000-0000-0000-000000000001', 'amara',
+      current_date, current_date + 30,
+      '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":1,"unit_price_minor":100000}]',
+      null, null, -100);
+    raise exception 'FAIL: negative interest accepted';
+  exception when others then
+    if sqlerrm like '%cannot be negative%' then raise notice 'negative interest refused';
+    else raise; end if;
+  end;
+end $$;
+-- Omitting the interest leaves it absent (old callers unchanged).
+select public.record_existing_credit('aaaaaaaa-0000-0000-0000-000000000001', 'amara',
+  current_date, current_date + 30,
+  '[{"product_id":"bbbbbbbb-0000-0000-0000-000000000001","quantity":1,"unit_price_minor":100000}]'
+) as plain_credit \gset
+select interest_minor is null as interest_absent_by_default from public.credit_obligations
+ where id = (:'plain_credit'::jsonb->>'credit_id')::uuid;
+rollback;
+select 'pass: manual credit interest saved, display-only, optional' as proof;
+
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

@@ -27,6 +27,8 @@ export interface CreditExcelRow {
   paidMinor: number
   balanceMinor: number
   status: string
+  /** Manually entered interest, if any (display-only, DEC-059). */
+  interestMinor?: number
 }
 
 function inDateRange(date: string, from: string, to: string): boolean {
@@ -55,6 +57,7 @@ export async function buildCreditReportRows(
       paidMinor: credit.originalAmountMinor - credit.balanceMinor,
       balanceMinor: credit.balanceMinor,
       status: credit.status === 'settled' ? 'Settled' : 'Outstanding',
+      interestMinor: credit.interestMinor,
     }))
 }
 

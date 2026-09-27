@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
 import { resetDb } from '@/services/mocks/db'
+import { createExistingCredit } from '@/services/creditService'
 import { renderWithProviders } from '@/test/render'
 import { __awaitSwal } from '@/test/swalMock'
 import { formatDate } from '@/lib/format'
@@ -85,5 +86,28 @@ describe('CreditDetailPage', () => {
     expect(await screen.findByText('Transaction date')).toBeInTheDocument()
     expect(screen.getByText('Due date')).toBeInTheDocument()
     expect(screen.getByText(formatDate(todayIso()))).toBeInTheDocument()
+  })
+
+  it('shows manually entered interest without changing the balance (DEC-059)', async () => {
+    const created = await createExistingCredit({
+      customerId: 'cust-1',
+      originStoreId: 'amara',
+      date: '2026-09-10',
+      dueDate: '2026-10-01',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100000 }],
+      interestMinor: 5000,
+      recordedByUserId: 'user-3',
+    })
+    renderCredit(`/credit/${created.id}`)
+
+    expect(await screen.findByText('Interest')).toBeInTheDocument()
+    expect(screen.getByText('₱50.00')).toBeInTheDocument()
+    expect(screen.getAllByText('₱1,000.00').length).toBeGreaterThan(0)
+  })
+
+  it('shows no interest marker when none was entered (DEC-059)', async () => {
+    renderCredit('/credit/cred-1')
+
+    expect(await screen.findByText('Interest')).toBeInTheDocument()
   })
 })

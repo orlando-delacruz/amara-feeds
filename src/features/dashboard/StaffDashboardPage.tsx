@@ -1,5 +1,11 @@
 import styled from 'styled-components'
-import { getCurrentStock, getDailySalesByStore, getWeeklySalesByStore } from '@/services'
+import {
+  getCashSalesTotal,
+  getCollectionByMethod,
+  getCurrentStock,
+  getDailySalesByStore,
+  getWeeklySalesByStore,
+} from '@/services'
 import type { StoreId } from '@/domain'
 import { Stack } from '@/components/ui/Stack'
 import { StatCard } from '@/components/ui/StatCard'
@@ -56,6 +62,7 @@ function stockState(count: number): BalanceState {
 export function StaffDashboardPage() {
   const { store } = useStore()
   const date = todayIso()
+  const storeId = concreteStoreId(store)
   const data = useAsyncData(async () => {
     const [sales, stock, weekly] = await Promise.all([
       getDailySalesByStore(date),
@@ -67,6 +74,14 @@ export function StaffDashboardPage() {
       stockCount: stock.filter((row) => row.storeId === store).length,
       weeklySales: weekly.find((row) => row.storeId === store),
     }
+  }, `${store}:${date}`)
+  // Payment split for today at this store (DEC-059).
+  const paymentSplit = useAsyncData(async () => {
+    const [cash, collections] = await Promise.all([
+      getCashSalesTotal({ date, storeId }),
+      getCollectionByMethod({ date, storeId }),
+    ])
+    return { cash, collections }
   }, `${store}:${date}`)
 
   return (
@@ -86,6 +101,7 @@ export function StaffDashboardPage() {
           <Stack>
             <StatsSkeleton count={1} />
             <StatsSkeleton count={1} />
+            <StatsSkeleton count={2} />
             <StatsSkeleton count={1} />
           </Stack>
         }
@@ -114,6 +130,34 @@ export function StaffDashboardPage() {
                 outline
               />
             </Plates>
+            <Section title="Sales by payment" variant="flush">
+              <Plates>
+                <StatCard
+                  label="Total Cash Sales"
+                  value={<MoneyText amountMinor={paymentSplit.data?.cash.totalMinor ?? 0} />}
+                  caption={`${paymentSplit.data?.cash.saleCount ?? 0} cash sales today`}
+                  tone="brand"
+                  icon={<Icon name="card" />}
+                  outline
+                />
+                <StatCard
+                  label="GCash Paid"
+                  value={<MoneyText amountMinor={paymentSplit.data?.collections.gcashMinor ?? 0} />}
+                  caption="collections via GCash today"
+                  tone="brand"
+                  icon={<Icon name="card" />}
+                  outline
+                />
+                <StatCard
+                  label="Bank Payment"
+                  value={<MoneyText amountMinor={paymentSplit.data?.collections.bankMinor ?? 0} />}
+                  caption="collections via bank transfer today"
+                  tone="brand"
+                  icon={<Icon name="card" />}
+                  outline
+                />
+              </Plates>
+            </Section>
             <Section title="Weekly sales" variant="flush">
               <Plates>
                 <StatCard

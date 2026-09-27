@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { voidSale, listCustomers, listSales, listUsers } from '@/services'
+import styled from 'styled-components'
+import { voidSale, listCustomers, listProducts, listSales, listUsers } from '@/services'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
 import { DatePicker } from '@/components/ui/DatePicker'
@@ -18,12 +19,23 @@ import { confirmAction, notifySuccess } from '@/lib/swal'
 import { useSession } from '@/features/session/useSession'
 import { todayIso } from '@/lib/dates'
 import { formatDate } from '@/lib/format'
+import { formatPeso } from '@/lib/money'
 import { concreteStoreId, isAllStores, storeNames, storeLabel } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 
 interface SaleListPageProps {
   basePath?: string
 }
+
+const SaleLines = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space.xs};
+`
+
+const BagsTotal = styled.span`
+  font-weight: ${({ theme }) => theme.font.weight.semibold};
+`
 
 export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
   const navigate = useNavigate()
@@ -39,6 +51,7 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
     `${store}:${date}`,
   )
   const customers = useAsyncData(() => listCustomers())
+  const products = useAsyncData(() => listProducts())
   const users = useAsyncData(() => listUsers())
   const remove = useAlertMutation((saleId: string) => voidSale(saleId), 'Could not undo the sale.')
 
@@ -62,6 +75,11 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
   const customerNames = useMemo(
     () => new Map((customers.data ?? []).map((customer) => [customer.id, customer.name])),
     [customers.data],
+  )
+
+  const productNames = useMemo(
+    () => new Map((products.data ?? []).map((product) => [product.id, product.name])),
+    [products.data],
   )
 
   const userNames = useMemo(
@@ -110,36 +128,52 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
               { key: 'createdAt', header: 'Recorded' },
               ...(isAdmin ? ([{ key: 'actions', header: 'Actions' }] as const) : []),
             ]}
-            rows={sales.data.map((sale) => ({
-              customer: sale.customerId
-                ? (customerNames.get(sale.customerId) ?? 'Not available')
-                : 'No customer',
-              ...(allMode ? { store: storeNames[sale.storeId] } : {}),
-              payment: sale.paymentType === 'charge' ? 'Charge' : 'Cash',
-              items: String(sale.lines.length),
-              total: <MoneyText amountMinor={sale.totalMinor} />,
-              recordedBy: userNames.get(sale.recordedByUserId) ?? 'Not available',
-              createdAt: <DateText value={sale.createdAt} />,
-              ...(isAdmin
-                ? {
-                    actions: (
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        disabled={remove.pending}
-                        onClick={() =>
-                          void requestUndo(
-                            sale.id,
-                            customerNames.get(sale.customerId ?? '') ?? 'this sale',
-                          )
-                        }
-                      >
-                        Undo
-                      </Button>
-                    ),
-                  }
-                : {}),
-            }))}
+            rows={sales.data.map((sale) => {
+              const totalBags = sale.lines.reduce((total, line) => total + line.quantity, 0)
+              return {
+                customer: sale.customerId
+                  ? (customerNames.get(sale.customerId) ?? 'Not available')
+                  : 'No customer',
+                ...(allMode ? { store: storeNames[sale.storeId] } : {}),
+                payment: sale.paymentType === 'charge' ? 'Charge' : 'Cash',
+                items: (
+                  <SaleLines>
+                    {sale.lines.map((line) => (
+                      <span key={line.productId}>
+                        {productNames.get(line.productId) ?? 'Item'} × {line.quantity} @{' '}
+                        {formatPeso(line.unitPriceMinor)} ={' '}
+                        {formatPeso(line.quantity * line.unitPriceMinor)}
+                      </span>
+                    ))}
+                    <BagsTotal>
+                      {totalBags} bag{totalBags === 1 ? '' : 's'} total
+                    </BagsTotal>
+                  </SaleLines>
+                ),
+                total: <MoneyText amountMinor={sale.totalMinor} />,
+                recordedBy: userNames.get(sale.recordedByUserId) ?? 'Not available',
+                createdAt: <DateText value={sale.createdAt} />,
+                ...(isAdmin
+                  ? {
+                      actions: (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          disabled={remove.pending}
+                          onClick={() =>
+                            void requestUndo(
+                              sale.id,
+                              customerNames.get(sale.customerId ?? '') ?? 'this sale',
+                            )
+                          }
+                        >
+                          Undo
+                        </Button>
+                      ),
+                    }
+                  : {}),
+              }
+            })}
           />
         )}
       </AsyncBoundary>

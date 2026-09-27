@@ -1,4 +1,5 @@
 import type {
+  CollectionByMethod,
   DailySalesByStore,
   OverallDailySales,
   OverallPeriodSales,
@@ -347,6 +348,115 @@ export async function getSalesByPaymentMethodInRange(
   return [...byMethod.entries()]
     .map(([method, row]) => ({ method, saleCount: row.saleCount, totalMinor: row.totalMinor }))
     .sort((a, b) => a.method.localeCompare(b.method, 'en'))
+}
+
+/**
+ * Dashboard payment buckets (DEC-059). Total Cash Sales sums cash-type sales;
+ * GCash/Bank buckets sum non-voided collection payments by method (preset
+ * names matched case-insensitively). Same live-sale/payment filters as the
+ * other summaries: no legacy rows, no voided rows.
+ */
+export async function getCashSalesTotal(
+  filter: {
+    date?: string
+    from?: string
+    to?: string
+    storeId?: string
+  } = {},
+): Promise<{ totalMinor: number; saleCount: number }> {
+  const rows = await fetchSalesForSummary()
+  const inScope = (day: string, store: string) =>
+    (!filter.date || day === filter.date) &&
+    (!filter.from || day >= filter.from) &&
+    (!filter.to || day <= filter.to) &&
+    (!filter.storeId || store === filter.storeId)
+  if (isSupabaseConfigured && supabase) {
+    const sales = rows.filter(
+      (row) => row.payment_type === 'cash' && inScope(row.sale_date, row.store_id),
+    )
+    return {
+      totalMinor: sumMinor(sales.map((sale) => sale.total_minor)),
+      saleCount: sales.length,
+    }
+  }
+  const sales = liveSales().filter(
+    (sale) => sale.paymentType === 'cash' && inScope(sale.saleDate, sale.storeId),
+  )
+  return {
+    totalMinor: sumMinor(sales.map((sale) => sale.totalMinor)),
+    saleCount: sales.length,
+  }
+}
+
+function isGcashMethod(method: string | null | undefined): boolean {
+  return (method ?? '').trim().toLowerCase() === 'gcash'
+}
+
+function isBankMethod(method: string | null | undefined): boolean {
+  return (method ?? '').trim().toLowerCase() === 'bank transfer'
+}
+
+export async function getCollectionByMethod(
+  filter: {
+    date?: string
+    from?: string
+    to?: string
+    storeId?: string
+  } = {},
+): Promise<CollectionByMethod> {
+  if (isSupabaseConfigured && supabase) {
+    let query = supabase
+      .from('payments')
+      .select('amount_minor, method, paid_at, store_id')
+      .eq('is_voided', false)
+    if (filter.date) {
+      query = query
+        .gte('paid_at', `${filter.date}T00:00:00`)
+        .lte('paid_at', `${filter.date}T23:59:59`)
+    }
+    if (filter.from) {
+      query = query.gte('paid_at', `${filter.from}T00:00:00`)
+    }
+    if (filter.to) {
+      query = query.lte('paid_at', `${filter.to}T23:59:59`)
+    }
+    if (filter.storeId) {
+      query = query.eq('store_id', filter.storeId)
+    }
+    const { data, error } = await query
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    const rows = data ?? []
+    return {
+      gcashMinor: sumMinor(
+        rows.filter((row) => isGcashMethod(row.method)).map((row) => row.amount_minor),
+      ),
+      bankMinor: sumMinor(
+        rows.filter((row) => isBankMethod(row.method)).map((row) => row.amount_minor),
+      ),
+    }
+  }
+  const payments = getDb().payments.filter(
+    (payment) =>
+      !payment.isVoided &&
+      (!filter.date || isSameDate(payment.paidAt, filter.date)) &&
+      (!filter.from || toDateOnly(new Date(payment.paidAt)) >= filter.from) &&
+      (!filter.to || toDateOnly(new Date(payment.paidAt)) <= filter.to) &&
+      (!filter.storeId || payment.storeId === filter.storeId),
+  )
+  return {
+    gcashMinor: sumMinor(
+      payments
+        .filter((payment) => isGcashMethod(payment.method))
+        .map((payment) => payment.amountMinor),
+    ),
+    bankMinor: sumMinor(
+      payments
+        .filter((payment) => isBankMethod(payment.method))
+        .map((payment) => payment.amountMinor),
+    ),
+  }
 }
 
 export async function getCurrentStock(): Promise<StockSummaryRow[]> {
