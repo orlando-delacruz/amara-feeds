@@ -2,6 +2,8 @@ import type { ProductId, ReceivingId, RiderId, UserId, VehicleId } from './ids'
 import type { StoreId } from './store'
 import type { Money } from '@/lib/money'
 
+export type ReceivingStatus = 'pending' | 'approved' | 'rejected'
+
 export interface ReceivingRecord {
   id: ReceivingId
   storeId: StoreId
@@ -27,6 +29,11 @@ export interface ReceivingRecord {
   /** assumed: staff member who recorded the receipt; staff cannot modify another staff's records */
   recordedByUserId: UserId
   receivedAt: string
+  /**
+   * Approval state (DEC-060): new receipts start pending and never affect
+   * inventory until approved; grandfathered rows are approved.
+   */
+  status: ReceivingStatus
 }
 
 export interface NewReceivingInput {

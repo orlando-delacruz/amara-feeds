@@ -928,4 +928,73 @@ select interest_minor is null as interest_absent_by_default from public.credit_o
 rollback;
 select 'pass: manual credit interest saved, display-only, optional' as proof;
 
+-- --- 32. Pending receipts: hold stock until approval, exactly once (DEC-061)
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+-- Staff submits: receipt pending, stock untouched.
+select public.record_receiving('amara', 'bbbbbbbb-0000-0000-0000-000000000001',
+  5, 'Proof Mill', 100000, 130000, null, null) as pending_receipt \gset
+select status = 'pending' as receipt_pending from public.receiving_records
+ where id = (:'pending_receipt'::jsonb->>'receiving_id')::uuid;
+select quantity = 20 as stock_untouched_by_pending from public.stock_levels
+ where store_id = 'amara' and product_id = 'bbbbbbbb-0000-0000-0000-000000000001';
+-- Staff cannot approve.
+set local app.pending_receipt = :'pending_receipt';
+do $$
+begin
+  begin
+    perform public.approve_receipt(
+      (nullif(current_setting('app.pending_receipt', true), '')::jsonb->>'receiving_id')::uuid);
+    raise exception 'FAIL: staff approved a receipt';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff receipt approval blocked';
+    else raise; end if;
+  end;
+end $$;
+-- Admin approves: stock +5 exactly once (price follows the receipt).
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+select public.approve_receipt((:'pending_receipt'::jsonb->>'receiving_id')::uuid);
+select quantity = 25 as stock_after_approval from public.stock_levels
+ where store_id = 'amara' and product_id = 'bbbbbbbb-0000-0000-0000-000000000001';
+select price_minor = 130000 as price_after_approval from public.stock_levels
+ where store_id = 'amara' and product_id = 'bbbbbbbb-0000-0000-0000-000000000001';
+do $$
+begin
+  begin
+    perform public.approve_receipt(
+      (nullif(current_setting('app.pending_receipt', true), '')::jsonb->>'receiving_id')::uuid);
+    raise exception 'FAIL: double approval allowed';
+  exception when others then
+    if sqlerrm like '%Only pending%' then raise notice 'double approval refused';
+    else raise; end if;
+  end;
+end $$;
+select quantity = 25 as stock_still_once from public.stock_levels
+ where store_id = 'amara' and product_id = 'bbbbbbbb-0000-0000-0000-000000000001';
+-- Reject path: no stock movement, row kept.
+select public.record_receiving('amara', 'bbbbbbbb-0000-0000-0000-000000000001',
+  7, 'Reject Mill', 100000, null, null, null) as doomed_receipt \gset
+select public.reject_receipt((:'doomed_receipt'::jsonb->>'receiving_id')::uuid);
+select status = 'rejected' as receipt_rejected from public.receiving_records
+ where id = (:'doomed_receipt'::jsonb->>'receiving_id')::uuid;
+select quantity = 25 as stock_untouched_by_reject from public.stock_levels
+ where store_id = 'amara' and product_id = 'bbbbbbbb-0000-0000-0000-000000000001';
+-- Grandfathered seed rows are approved and can never be re-approved.
+do $$
+begin
+  begin
+    perform public.approve_receipt('eeeeeeee-0000-0000-0000-000000000001');
+    raise exception 'FAIL: grandfathered receipt re-approved';
+  exception when others then
+    if sqlerrm like '%Only pending%' then raise notice 'grandfathered rows stay approved';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: receipts hold stock until approval, exactly once, grandfathered' as proof;
+
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

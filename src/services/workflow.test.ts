@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { approveProduct, createProduct, listProducts } from './productService'
 import { createSale } from './saleService'
 import { getStock } from './inventoryService'
-import { createReceiving } from './receivingService'
+import { createReceiving, approveReceipt } from './receivingService'
 import { getCredit, getCreditHistory, listCredits } from './creditService'
 import { recordPayment } from './paymentService'
 import { resetDb } from './mocks/db'
@@ -72,10 +72,10 @@ describe('confirmed workflows (Gate 2)', () => {
     expect(result.payment.storeId).toBe('amara')
   })
 
-  it('receiving -> increases the correct store stock only', async () => {
+  it('receiving -> stays pending until approval, then increases stock once (DEC-060)', async () => {
     const amaraBefore = await getStock('amara', 'prod-4')
     const zeannBefore = await getStock('zeann', 'prod-4')
-    await createReceiving({
+    const record = await createReceiving({
       storeId: 'zeann',
       productId: 'prod-4',
       quantity: 7,
@@ -85,6 +85,9 @@ describe('confirmed workflows (Gate 2)', () => {
       vehicleId: 'vehicle-3',
       recordedByUserId: 'user-2',
     })
+    expect(record.status).toBe('pending')
+    expect((await getStock('zeann', 'prod-4')).quantity).toBe(zeannBefore.quantity)
+    await approveReceipt(record.id)
     expect((await getStock('zeann', 'prod-4')).quantity).toBe(zeannBefore.quantity + 7)
     expect((await getStock('amara', 'prod-4')).quantity).toBe(amaraBefore.quantity)
   })

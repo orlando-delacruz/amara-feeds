@@ -2,6 +2,7 @@ import { useState } from 'react'
 import styled from 'styled-components'
 import {
   approveProduct,
+  approveReceipt,
   createProduct,
   createReceiving,
   listProducts,
@@ -9,6 +10,7 @@ import {
   listUsers,
   logAuditEvent,
   rejectProduct,
+  rejectReceipt,
 } from '@/services'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
@@ -35,7 +37,7 @@ import { toMinor } from '@/lib/money'
 import { concreteStoreId, isAllStores, storeLabel, storeNames } from '@/store/stores'
 import { useStore } from '@/store/useStore'
 import { buildReceivingReportRows } from './receivingReportRows'
-import type { Product } from '@/domain'
+import type { Product, ReceivingRecord } from '@/domain'
 
 export const NEW_RECEIVING_ITEM_VALUE = '__new__'
 
@@ -123,6 +125,11 @@ export function ReceivingPage() {
     (input: { id: string; action: 'approve' | 'reject' }) =>
       input.action === 'approve' ? approveProduct(input.id) : rejectProduct(input.id),
     'Could not review the item.',
+  )
+  const reviewReceipt = useAlertMutation(
+    (input: { id: string; action: 'approve' | 'reject' }) =>
+      input.action === 'approve' ? approveReceipt(input.id) : rejectReceipt(input.id),
+    'Could not review the receipt.',
   )
   const isAdmin = user?.role === 'admin'
 
@@ -248,6 +255,26 @@ export function ReceivingPage() {
         approve ? `${saved.name} is now active.` : `${saved.name} was rejected and removed.`,
       )
       products.reload()
+    }
+  }
+
+  async function handleReceiptDecision(record: ReceivingRecord, action: 'approve' | 'reject') {
+    const approve = action === 'approve'
+    const confirmed = await confirmAction({
+      title: approve ? 'Approve receipt?' : 'Reject receipt?',
+      text: approve
+        ? `Add ${record.quantity} pcs to inventory? This can only be done once.`
+        : `Reject this receipt of ${record.quantity} pcs? It stays recorded but never reaches inventory.`,
+      confirmLabel: approve ? 'Approve' : 'Reject',
+      danger: !approve,
+    })
+    if (!confirmed) {
+      return
+    }
+    const reviewed = await reviewReceipt.run({ id: record.id, action })
+    if (reviewed) {
+      void notifySuccess(approve ? 'Receipt approved. Inventory updated.' : 'Receipt rejected.')
+      list.reload()
     }
   }
 
@@ -477,6 +504,8 @@ export function ReceivingPage() {
                 { key: 'selling', header: 'Selling price' },
                 { key: 'recordedBy', header: 'Recorded by' },
                 { key: 'receivedAt', header: 'Received' },
+                { key: 'status', header: 'Status' },
+                ...(isAdmin ? ([{ key: 'actions', header: 'Actions' }] as const) : []),
               ]}
               rows={list.data.map((record) => ({
                 product: productNames.get(record.productId) ?? 'Not available',
@@ -492,6 +521,31 @@ export function ReceivingPage() {
                   ),
                 recordedBy: userNames.get(record.recordedByUserId) ?? 'Not available',
                 receivedAt: <DateText value={record.receivedAt} />,
+                status: <StatusBadge status={record.status} />,
+                ...(isAdmin
+                  ? {
+                      actions:
+                        record.status === 'pending' ? (
+                          <RowActions>
+                            <Button
+                              size="sm"
+                              disabled={reviewReceipt.pending}
+                              onClick={() => void handleReceiptDecision(record, 'approve')}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="danger"
+                              disabled={reviewReceipt.pending}
+                              onClick={() => void handleReceiptDecision(record, 'reject')}
+                            >
+                              Reject
+                            </Button>
+                          </RowActions>
+                        ) : null,
+                    }
+                  : {}),
               }))}
             />
           )}

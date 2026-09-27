@@ -1,7 +1,7 @@
 import styled from 'styled-components'
-import type { CreditStatus, ProductStatus } from '@/domain'
+import type { CreditStatus, ProductStatus, ReceivingStatus } from '@/domain'
 
-export type StatusBadgeStatus = ProductStatus | CreditStatus
+export type StatusBadgeStatus = ProductStatus | CreditStatus | ReceivingStatus
 
 interface StatusBadgeProps {
   status: StatusBadgeStatus
@@ -10,6 +10,7 @@ interface StatusBadgeProps {
 const labels: Record<StatusBadgeStatus, string> = {
   pending: 'Pending',
   active: 'Active',
+  approved: 'Approved',
   rejected: 'Rejected',
   outstanding: 'Outstanding',
   settled: 'Settled',
@@ -19,6 +20,7 @@ const labels: Record<StatusBadgeStatus, string> = {
 const tones: Record<StatusBadgeStatus, 'warning' | 'success'> = {
   pending: 'warning',
   active: 'success',
+  approved: 'success',
   rejected: 'warning',
   outstanding: 'warning',
   settled: 'success',

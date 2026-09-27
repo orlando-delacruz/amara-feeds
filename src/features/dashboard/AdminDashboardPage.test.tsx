@@ -74,6 +74,7 @@ describe('AdminDashboardPage', () => {
         sellingPriceMinor: 1200,
         recordedByUserId: 'user-1',
         receivedAt: new Date().toISOString(),
+        status: 'approved',
       })
     }
 

@@ -138,7 +138,7 @@ No pixel sizes, breakpoints, colors, typography, or component dimensions are def
 
 ### 7.5 Receiving Stock
 
-- **Behavior.** Record a receipt around store, item, quantity, supplier, purchase/cost price (REQ-RCV-001), and the required delivery rider and vehicle that brought the stock to the store (REQ-RCV-002), then confirm success or report failure with entered data preserved where practical. An Export Excel action downloads the current store's receiving history (date added, store, item, quantity, supplier, cost/selling prices, recorded-by) as an Inventory workbook (DEC-060).
+- **Behavior.** Record a receipt around store, item, quantity, supplier, purchase/cost price (REQ-RCV-001), and the required delivery rider and vehicle that brought the stock to the store (REQ-RCV-002), then confirm success or report failure with entered data preserved where practical. New receipts stay Pending with no inventory effect until an admin approves (quantity added once) or rejects (row kept, inventory untouched) them from the receiving history (DEC-061). An Export Excel action downloads the current store's receiving history (date added, store, item, quantity, supplier, cost/selling prices, recorded-by) as an Inventory workbook (DEC-060).
 - **Constraints.** Rider and vehicle selects show only the current store's active entries; the form cannot save without both selected.
 
 ### 7.6 Products

@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createReceiving, listReceiving, listStorePrices } from './receivingService'
+import {
+  approveReceipt,
+  createReceiving,
+  listReceiving,
+  listStorePrices,
+  rejectReceipt,
+} from './receivingService'
 import { getStock } from './inventoryService'
 import { resetDb } from './mocks/db'
 
@@ -21,8 +27,8 @@ describe('receivingService', () => {
     expect(zeann['prod-2']).toBe(6500)
   })
 
-  it('uses the most recent receipt when a product was received more than once', async () => {
-    await createReceiving({
+  it('uses the most recent approved receipt for pricing (DEC-060)', async () => {
+    const created = await createReceiving({
       storeId: 'amara',
       productId: 'prod-1',
       quantity: 2,
@@ -31,6 +37,9 @@ describe('receivingService', () => {
       sellingPriceMinor: 130000,
       recordedByUserId: 'user-1',
     })
+    // Pending receipts feed neither stock nor prices.
+    expect((await listStorePrices('amara'))['prod-1']).toBe(115000)
+    await approveReceipt(created.id)
     const prices = await listStorePrices('amara')
     expect(prices['prod-1']).toBe(130000)
   })
@@ -50,7 +59,7 @@ describe('receivingService', () => {
     expect(after['prod-3']).toBeUndefined()
   })
 
-  it('records a receipt and increases the correct store stock only', async () => {
+  it('records a receipt as pending without touching stock (DEC-060)', async () => {
     const before = await getStock('zeann', 'prod-1')
     const record = await createReceiving({
       storeId: 'zeann',
@@ -61,10 +70,50 @@ describe('receivingService', () => {
       recordedByUserId: 'user-2',
     })
     expect(record.id).toBeTruthy()
+    expect(record.status).toBe('pending')
     expect(record.riderId).toBeUndefined()
     expect(record.vehicleId).toBeUndefined()
-    expect((await getStock('zeann', 'prod-1')).quantity).toBe(before.quantity + 5)
+    expect((await getStock('zeann', 'prod-1')).quantity).toBe(before.quantity)
     expect((await getStock('amara', 'prod-1')).quantity).toBe(20)
+  })
+
+  it('approves a receipt exactly once (DEC-060)', async () => {
+    const before = await getStock('zeann', 'prod-1')
+    const record = await createReceiving({
+      storeId: 'zeann',
+      productId: 'prod-1',
+      quantity: 5,
+      supplier: 'Central Supply',
+      costPriceMinor: 110000,
+      recordedByUserId: 'user-2',
+    })
+    await approveReceipt(record.id)
+    expect((await getStock('zeann', 'prod-1')).quantity).toBe(before.quantity + 5)
+    await expect(approveReceipt(record.id)).rejects.toMatchObject({ code: 'conflict' })
+    expect((await getStock('zeann', 'prod-1')).quantity).toBe(before.quantity + 5)
+    await expect(approveReceipt('recv-1')).rejects.toMatchObject({ code: 'conflict' })
+  })
+
+  it('rejects a receipt without touching stock and keeps the row (DEC-060)', async () => {
+    const before = await getStock('zeann', 'prod-1')
+    const record = await createReceiving({
+      storeId: 'zeann',
+      productId: 'prod-1',
+      quantity: 5,
+      supplier: 'Central Supply',
+      costPriceMinor: 110000,
+      recordedByUserId: 'user-2',
+    })
+    await rejectReceipt(record.id)
+    expect((await getStock('zeann', 'prod-1')).quantity).toBe(before.quantity)
+    const [listed] = await listReceiving({ status: 'rejected' })
+    expect(listed?.id).toBe(record.id)
+    await expect(approveReceipt(record.id)).rejects.toMatchObject({ code: 'conflict' })
+  })
+
+  it('throws not_found for unknown receipt ids (DEC-060)', async () => {
+    await expect(approveReceipt('recv-missing')).rejects.toMatchObject({ code: 'not_found' })
+    await expect(rejectReceipt('recv-missing')).rejects.toMatchObject({ code: 'not_found' })
   })
 
   it('persists an optional selling price on the receipt', async () => {

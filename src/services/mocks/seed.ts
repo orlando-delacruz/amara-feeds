@@ -115,6 +115,8 @@ export function createSeedData(): MockDatabase {
       vehicleId: 'vehicle-1',
       recordedByUserId: 'user-1',
       receivedAt: today,
+      // Grandfathered as approved (DEC-060): seed stock already counts these.
+      status: 'approved',
     },
     {
       id: 'recv-2',
@@ -128,6 +130,7 @@ export function createSeedData(): MockDatabase {
       vehicleId: 'vehicle-3',
       recordedByUserId: 'user-2',
       receivedAt: today,
+      status: 'approved',
     },
     {
       id: 'recv-3',
@@ -141,6 +144,7 @@ export function createSeedData(): MockDatabase {
       vehicleId: 'vehicle-2',
       recordedByUserId: 'user-1',
       receivedAt: addDays(today, -3),
+      status: 'approved',
     },
     {
       id: 'recv-4',
@@ -154,6 +158,7 @@ export function createSeedData(): MockDatabase {
       vehicleId: 'vehicle-3',
       recordedByUserId: 'user-2',
       receivedAt: today,
+      status: 'approved',
     },
     {
       id: 'recv-5',
@@ -167,6 +172,7 @@ export function createSeedData(): MockDatabase {
       vehicleId: 'vehicle-1',
       recordedByUserId: 'user-1',
       receivedAt: today,
+      status: 'approved',
     },
     {
       id: 'recv-6',
@@ -180,6 +186,7 @@ export function createSeedData(): MockDatabase {
       vehicleId: 'vehicle-3',
       recordedByUserId: 'user-2',
       receivedAt: today,
+      status: 'approved',
     },
     {
       id: 'recv-7',
@@ -193,6 +200,7 @@ export function createSeedData(): MockDatabase {
       vehicleId: 'vehicle-1',
       recordedByUserId: 'user-1',
       receivedAt: yesterday,
+      status: 'approved',
     },
   ]
 

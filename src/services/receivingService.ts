@@ -1,4 +1,4 @@
-import type { NewReceivingInput, ProductId, ReceivingRecord } from '@/domain'
+import type { NewReceivingInput, ProductId, ReceivingRecord, ReceivingStatus } from '@/domain'
 import type { Money } from '@/lib/money'
 import type { StoreId } from '@/domain'
 import { getDb } from './mocks/db'
@@ -10,19 +10,22 @@ import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
 
 export async function listReceiving(
-  filter: { storeId?: StoreId; productId?: ProductId } = {},
+  filter: { storeId?: StoreId; productId?: ProductId; status?: ReceivingStatus } = {},
 ): Promise<ReceivingRecord[]> {
   if (isSupabaseConfigured && supabase) {
     let query = supabase
       .from('receiving_records')
       .select(
-        'id, store_id, product_id, quantity, supplier, cost_price_minor, selling_price_minor, rider_id, vehicle_id, recorded_by_user_id, received_at',
+        'id, store_id, product_id, quantity, supplier, cost_price_minor, selling_price_minor, rider_id, vehicle_id, recorded_by_user_id, received_at, status',
       )
     if (filter.storeId) {
       query = query.eq('store_id', filter.storeId)
     }
     if (filter.productId) {
       query = query.eq('product_id', filter.productId)
+    }
+    if (filter.status) {
+      query = query.eq('status', filter.status)
     }
     const { data, error } = await query.order('received_at', { ascending: false })
     if (error) {
@@ -40,13 +43,15 @@ export async function listReceiving(
       vehicleId: row.vehicle_id ?? undefined,
       recordedByUserId: row.recorded_by_user_id,
       receivedAt: row.received_at,
+      status: row.status as ReceivingStatus,
     }))
   }
   return getDb()
     .receiving.filter(
       (record) =>
         (!filter.storeId || record.storeId === filter.storeId) &&
-        (!filter.productId || record.productId === filter.productId),
+        (!filter.productId || record.productId === filter.productId) &&
+        (!filter.status || record.status === filter.status),
     )
     .map((record) => ({ ...record }))
 }
@@ -54,8 +59,9 @@ export async function listReceiving(
 /**
  * Returns the selling price per product for a store. A stock row's current
  * price (editable inventory, DEC-049) wins; rows without one fall back to
- * the latest priced receiving record (the automatic-price rule). Products
- * with neither are omitted.
+ * the latest priced receiving record (the automatic-price rule). Only
+ * approved receipts feed prices (DEC-060) — pending rows must not price
+ * sales. Products with neither are omitted.
  */
 export async function listStorePrices(storeId: StoreId): Promise<Record<string, Money>> {
   if (isSupabaseConfigured && supabase) {
@@ -76,6 +82,7 @@ export async function listStorePrices(storeId: StoreId): Promise<Record<string, 
       .from('receiving_records')
       .select('product_id, selling_price_minor, received_at')
       .eq('store_id', storeId)
+      .eq('status', 'approved')
       .not('selling_price_minor', 'is', null)
       .order('received_at', { ascending: false })
     if (error) {
@@ -96,7 +103,12 @@ export async function listStorePrices(storeId: StoreId): Promise<Record<string, 
     }
   }
   const records = db.receiving
-    .filter((record) => record.storeId === storeId && record.sellingPriceMinor !== undefined)
+    .filter(
+      (record) =>
+        record.storeId === storeId &&
+        record.status === 'approved' &&
+        record.sellingPriceMinor !== undefined,
+    )
     .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
   for (const record of records) {
     if (prices[record.productId] === undefined) {
@@ -133,6 +145,8 @@ export async function createReceiving(input: NewReceivingInput): Promise<Receivi
       vehicleId: input.vehicleId,
       recordedByUserId: input.recordedByUserId,
       receivedAt: new Date().toISOString(),
+      // Pending by default (DEC-060): inventory moves only on admin approval.
+      status: 'pending' as ReceivingStatus,
     }
   }
   assertActiveRecorder(input.recordedByUserId)
@@ -176,17 +190,72 @@ export async function createReceiving(input: NewReceivingInput): Promise<Receivi
     ...(input.vehicleId ? { vehicleId: input.vehicleId } : {}),
     recordedByUserId: input.recordedByUserId,
     receivedAt: new Date().toISOString(),
+    // Pending by default (DEC-060): stock and price move only on approval.
+    status: 'pending',
   }
   getDb().receiving.push(record)
-  applyStockDelta(input.storeId, input.productId, input.quantity)
-  // Receiving maintains the stock row's current selling price (DEC-049).
-  if (input.sellingPriceMinor !== undefined) {
+  return { ...record }
+}
+
+/**
+ * Applies a receipt's quantity (and selling price, when present) to inventory
+ * exactly once: only pending receipts move, and the status flip + delta share
+ * the call so approval can never double-count. Mirrors approve_receipt.
+ */
+function applyReceiptApproval(record: ReceivingRecord): void {
+  if (record.status !== 'pending') {
+    throw new ServiceError(
+      'conflict',
+      record.status === 'approved'
+        ? 'This receipt was already approved.'
+        : 'Only pending receipts can be reviewed.',
+    )
+  }
+  applyStockDelta(record.storeId, record.productId, record.quantity)
+  if (record.sellingPriceMinor !== undefined) {
     const level = getDb().stock.find(
-      (row) => row.storeId === input.storeId && row.productId === input.productId,
+      (row) => row.storeId === record.storeId && row.productId === record.productId,
     )
     if (level) {
-      level.priceMinor = input.sellingPriceMinor
+      level.priceMinor = record.sellingPriceMinor
     }
   }
-  return { ...record }
+  record.status = 'approved'
+}
+
+export async function approveReceipt(id: string): Promise<string> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('approve_receipt', { p_receipt_id: id })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return id
+  }
+  const db = getDb()
+  const record = db.receiving.find((item) => item.id === id)
+  if (!record) {
+    throw new ServiceError('not_found', 'Receipt not found.')
+  }
+  applyReceiptApproval(record)
+  return id
+}
+
+export async function rejectReceipt(id: string): Promise<string> {
+  if (isSupabaseConfigured && supabase) {
+    const { error } = await supabase.rpc('reject_receipt', { p_receipt_id: id })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return id
+  }
+  const db = getDb()
+  const record = db.receiving.find((item) => item.id === id)
+  if (!record) {
+    throw new ServiceError('not_found', 'Receipt not found.')
+  }
+  if (record.status !== 'pending') {
+    throw new ServiceError('conflict', 'Only pending receipts can be reviewed.')
+  }
+  record.status = 'rejected'
+  return id
 }

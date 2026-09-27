@@ -146,6 +146,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-058 | Hide Outstanding credit from staff dashboard; alphabetical customer lists | Accepted | 2026-09-26 |
 | DEC-059 | Dashboard cash/GCash/bank split; sales item detail; manual credit interest | Accepted | 2026-09-26 |
 | DEC-060 | Per-store Inventory Excel export of receiving history | Accepted | 2026-09-27 |
+| DEC-061 | Pending stock receipts with admin approval (no premature inventory) | Accepted | 2026-09-27 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -948,6 +949,18 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Alternatives considered:** Adding the sheet to the admin Reports workbook — rejected per client choice (staff need it where they work; Reports is admin-only). A current-stock snapshot sheet — rejected per client choice (history only); `stock_levels` carries no dates, so it could not answer "date added" anyway.
 - **Consequences:** Frontend-only deploy. `docs/UI-UX.md` §7.5 and `docs/API.md` §5 updated.
 - **Related documents:** `src/features/receiving/receivingReportRows.ts`, `src/lib/exportReceivingExcel.ts`, `src/features/receiving/ReceivingPage.tsx`, `docs/UI-UX.md`, `docs/API.md`.
+
+### DEC-061 — Pending stock receipts with admin approval (no premature inventory)
+
+- **ID:** DEC-061
+- **Title:** Pending stock receipts with admin approval (no premature inventory)
+- **Status:** Accepted
+- **Date:** 2026-09-27
+- **Context:** The client reported staff-submitted stock appearing in Inventory before admin approval, with nothing pending for review. Investigation confirmed this was long-standing design, not a regression: `record_receiving` always upserted `stock_levels` immediately, `receiving_records` never had a status, the "Pending items" tab covers products (not receipts), and `approve_stock` is a count-verified marker that never moves quantity. The client chose to build a real hold-back as the safest approach for live data.
+- **Decision:** Migration `00017` (additive only), verified by Gate-4 proof section 32: `receiving_records.status` (`pending`/`approved`/`rejected`, default `'approved'` grandfathering all live rows in place); `record_receiving` (same signature) inserts `'pending'` rows and no longer touches stock; new admin-only `approve_receipt` (row-locked, pending-only guard, applies quantity + price rule exactly once) and `reject_receipt` (keeps the row, never touches stock). Receipt approval and product approval stay independent. Pending receipts are also excluded from automatic sale pricing (`listStorePrices` reads approved rows only, both backends). UI: the receiving history gains a Status badge plus admin-only Approve/Reject on pending rows; staff see their own pending rows read-only. Mock service, seed (grandfathered `approved`), and tests mirror the semantics.
+- **Alternatives considered:** Keeping the immediate-stock design with clarification only — rejected: it left the reported problem unsolved. A void/undo model for receipts — rejected: prevention (never add) is what was asked, and nothing needs reversing. Hard-deleting rejected rows — rejected per client choice (kept with status, DEC-051 precedent).
+- **Consequences:** Live `stock_levels` rows are never rewritten by the migration; only new submissions flow through pending. This amends DEC-048's "receiving is the normal workflow" for quantities (receiving now stages, approval applies). Hosted rollout: `supabase db push` (00017) with the next frontend deploy in one window — old frontends tolerate the new DB (same RPC signatures), but the new frontend requires the new RPCs. `docs/DATA-MODEL.md` §4.9, `docs/API.md` §5, `docs/UI-UX.md` §7.5 updated.
+- **Related documents:** `supabase/migrations/20260927120000_00017_pending_receipts.sql`, `supabase/proofs/gate4.sql`, `src/services/receivingService.ts`, `src/features/receiving/ReceivingPage.tsx`, `src/domain/receiving.ts`, `docs/DATA-MODEL.md`, `docs/API.md`, `docs/UI-UX.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.
