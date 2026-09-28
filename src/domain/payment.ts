@@ -18,6 +18,12 @@ export interface Payment {
   creditId: CreditId
   storeId: StoreId
   amountMinor: Money
+  /**
+   * Manually entered interest recorded with this payment (DEC-064).
+   * Display-only: never part of balance math. Absent means none was entered.
+   * Distinct from the credit-level display interest (DEC-059/062).
+   */
+  interestMinor?: Money
   /** Admin reverted (DEC-050): excluded from balances, history, and summaries. */
   isVoided?: boolean
   /**
@@ -37,6 +43,8 @@ export interface RecordPaymentInput {
   amountMinor: Money
   /** assumed: collection method; see Payment.method */
   method?: string
+  /** Manually entered interest recorded with this payment (DEC-064). */
+  interestMinor?: Money
   /** assumed: signed-in staff member recording the payment */
   recordedByUserId: UserId
 }

@@ -138,4 +138,31 @@ describe('CreditDetailPage', () => {
     const reopened = await screen.findByRole('dialog', { name: 'Edit interest' })
     expect((within(reopened).getByLabelText(/Interest/) as HTMLInputElement).value).toBe('75')
   })
+
+  it('records a payment with manual interest for staff (DEC-064)', async () => {
+    const user = userEvent.setup()
+    renderCredit('/credit/cred-1')
+
+    await user.type(await screen.findByLabelText(/Payment amount/), '50')
+    await user.type(screen.getByLabelText(/Interest \(₱/), '15')
+    await user.click(screen.getByRole('button', { name: 'Record payment' }))
+
+    await __awaitSwal('Payment recorded.')
+    // Interest rides the payment row; the balance drops by the amount only.
+    expect(await screen.findByText('₱15.00')).toBeInTheDocument()
+    expect(await screen.findByText('₱145.00')).toBeInTheDocument()
+  })
+
+  it('records a payment with manual interest for admin (DEC-064)', async () => {
+    const user = userEvent.setup()
+    renderCredit('/admin/credit/cred-1', adminUser)
+
+    await user.type(await screen.findByLabelText(/Payment amount/), '60')
+    await user.type(screen.getByLabelText(/Interest \(₱/), '20')
+    await user.click(screen.getByRole('button', { name: 'Record payment' }))
+
+    await __awaitSwal('Payment recorded.')
+    expect(await screen.findByText('₱20.00')).toBeInTheDocument()
+    expect(await screen.findByText('₱135.00')).toBeInTheDocument()
+  })
 })

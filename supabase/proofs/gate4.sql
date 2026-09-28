@@ -1052,4 +1052,37 @@ end $$;
 rollback;
 select 'pass: credit interest edits are admin-only, display-only, audited' as proof;
 
+-- --- 34. record_payment stores manual interest, balance math intact ------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+-- Staff records a payment on cred-1 (19500 balance) with interest.
+select public.record_payment('aaaaaaaa-0000-0000-0000-000000000101', 'amara',
+  5000, 'Cash', 1500) as paid_with_interest \gset
+select interest_minor = 1500 as payment_interest_saved from public.payments
+ where id = (:'paid_with_interest'::jsonb->>'payment_id')::uuid;
+-- Balance drops by the amount only (19500 - 5000 = 14500), never by interest.
+select balance_minor = 14500 as balance_excludes_interest from public.credit_obligations
+ where id = 'aaaaaaaa-0000-0000-0000-000000000101';
+-- Negative interest refused.
+do $$
+begin
+  begin
+    perform public.record_payment('aaaaaaaa-0000-0000-0000-000000000101', 'amara',
+      100, 'Cash', -100);
+    raise exception 'FAIL: negative payment interest accepted';
+  exception when others then
+    if sqlerrm like '%cannot be negative%' then raise notice 'negative payment interest refused';
+    else raise; end if;
+  end;
+end $$;
+-- Old 4-argument callers still work: interest stays absent.
+select public.record_payment('aaaaaaaa-0000-0000-0000-000000000101', 'amara',
+  1000, 'Cash') as paid_without_interest \gset
+select interest_minor is null as interest_absent_by_default from public.payments
+ where id = (:'paid_without_interest'::jsonb->>'payment_id')::uuid;
+rollback;
+select 'pass: payment interest stored per payment, balance math unchanged' as proof;
+
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

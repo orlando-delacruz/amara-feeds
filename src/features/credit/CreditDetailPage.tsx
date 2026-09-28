@@ -153,6 +153,7 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState<string>('Cash')
   const [customMethod, setCustomMethod] = useState('')
+  const [interest, setInterest] = useState('')
   const [interestOpen, setInterestOpen] = useState(false)
 
   const history = useAsyncData(
@@ -208,17 +209,26 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
       return
     }
     const resolvedMethod = method === 'Other' ? customMethod.trim() : method
+    // Manual interest (DEC-064): optional, recorded with the payment row,
+    // never part of the balance math. Non-numeric input is treated as absent;
+    // negatives are refused by the service/data layer with clear copy.
+    const interestText = interest.trim()
+    const parsedInterest = Number(interestText)
+    const interestMinor =
+      interestText !== '' && Number.isFinite(parsedInterest) ? toMinor(parsedInterest) : undefined
     const result = await pay.run({
       creditId: credit.id,
       storeId: concreteStoreId(store),
       amountMinor: toMinor(Number(amount)),
       method: resolvedMethod,
+      ...(interestMinor !== undefined ? { interestMinor } : {}),
       recordedByUserId: user?.id ?? '',
     })
     if (result) {
       setAmount('')
       setMethod('Cash')
       setCustomMethod('')
+      setInterest('')
       void notifySuccess('Payment recorded.')
       history.reload()
     }
@@ -390,6 +400,15 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
                           required
                         />
                       )}
+                      <TextField
+                        id="payment-interest"
+                        label="Interest (₱, optional)"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={interest}
+                        onChange={(event) => setInterest(event.target.value)}
+                      />
                       <PaymentNote>
                         {!isAllStores(store)
                           ? `Payment will be recorded at ${storeNames[concreteStoreId(store)]}.`
@@ -411,6 +430,7 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
               columns={[
                 { key: 'store', header: 'Payment store' },
                 { key: 'amount', header: 'Amount' },
+                { key: 'interest', header: 'Interest' },
                 { key: 'method', header: 'Method' },
                 { key: 'recordedBy', header: 'Recorded by' },
                 { key: 'paidAt', header: 'Date' },
@@ -418,6 +438,12 @@ export function CreditDetailPage({ basePath = '/credit' }: CreditDetailPageProps
               rows={(history.data?.payments ?? []).map((payment) => ({
                 store: storeNames[payment.storeId],
                 amount: <MoneyText amountMinor={payment.amountMinor} />,
+                interest:
+                  payment.interestMinor === undefined ? (
+                    '—'
+                  ) : (
+                    <MoneyText amountMinor={payment.interestMinor} />
+                  ),
                 method: payment.method ?? 'Not listed',
                 recordedBy: userNames.get(payment.recordedByUserId) ?? 'Not available',
                 paidAt: <DateText value={payment.paidAt} />,

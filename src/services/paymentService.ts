@@ -13,7 +13,9 @@ export async function listPayments(
   if (isSupabaseConfigured && supabase) {
     let query = supabase
       .from('payments')
-      .select('id, credit_id, store_id, amount_minor, method, recorded_by_user_id, paid_at')
+      .select(
+        'id, credit_id, store_id, amount_minor, method, recorded_by_user_id, paid_at, interest_minor',
+      )
       // Voided (admin-reverted) payments are corrections, not history (DEC-050).
       .eq('is_voided', false)
     if (filter.creditId) {
@@ -31,6 +33,7 @@ export async function listPayments(
       creditId: row.credit_id,
       storeId: row.store_id as StoreId,
       amountMinor: row.amount_minor,
+      interestMinor: row.interest_minor ?? undefined,
       method: row.method ?? undefined,
       recordedByUserId: row.recorded_by_user_id,
       paidAt: row.paid_at,
@@ -55,6 +58,7 @@ export async function recordPayment(
       p_store_id: input.storeId,
       p_amount_minor: input.amountMinor,
       p_method: input.method?.trim() || null,
+      p_interest_minor: input.interestMinor ?? null,
     })
     if (error) {
       throw serviceErrorFromSupabase(error)
@@ -65,6 +69,7 @@ export async function recordPayment(
         creditId: input.creditId,
         storeId: input.storeId,
         amountMinor: input.amountMinor,
+        interestMinor: input.interestMinor,
         method: input.method?.trim() || undefined,
         recordedByUserId: input.recordedByUserId,
         paidAt: new Date().toISOString(),
@@ -110,12 +115,16 @@ export async function recordPayment(
   if (method && method.length > 40) {
     throw new ServiceError('validation', 'Payment method must be 40 characters or fewer.')
   }
+  if (input.interestMinor !== undefined && input.interestMinor < 0) {
+    throw new ServiceError('validation', 'Credit interest cannot be negative.')
+  }
 
   const payment: Payment = {
     id: nextId('pay'),
     creditId: credit.id,
     storeId: input.storeId,
     amountMinor: input.amountMinor,
+    ...(input.interestMinor !== undefined ? { interestMinor: input.interestMinor } : {}),
     ...(method ? { method } : {}),
     recordedByUserId: input.recordedByUserId,
     paidAt: new Date().toISOString(),

@@ -149,6 +149,7 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-061 | Pending stock receipts with admin approval (no premature inventory) | Accepted | 2026-09-27 |
 | DEC-062 | Editable credit interest on the detail page (no schema change) | Accepted | 2026-09-27 |
 | DEC-063 | Pending receipts queue on the Pending tab; List tab shows approved only | Accepted | 2026-09-27 |
+| DEC-064 | Manual payment interest recorded with the payment (migration 00019) | Accepted | 2026-09-27 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -987,6 +988,18 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Alternatives considered:** Showing rejected rows on the Pending tab — rejected: the tab promises actionable pending work; rejections stay traceable via History. Filtering the List tab client-side instead of in the query — rejected: the service filter is the established pattern and keeps both backends consistent.
 - **Consequences:** Frontend-only deploy (no migration in this change). `docs/UI-UX.md` §7.5 updated.
 - **Related documents:** `src/features/receiving/ReceivingPage.tsx`, `src/services/receivingService.ts`, `docs/UI-UX.md`.
+
+### DEC-064 — Manual payment interest recorded with the payment (migration 00019)
+
+- **ID:** DEC-064
+- **Title:** Manual payment interest recorded with the payment
+- **Status:** Accepted
+- **Date:** 2026-09-27
+- **Context:** The client asked for an Interest input in the payment-recording form on `/credit/:id`, available to both admin and staff, saved with the payment row and displayed with the payment details. The existing interest fields are credit-scoped (`credit_obligations.interest_minor`, DEC-059/062: display-only, admin-only editing) and cannot carry per-payment values entered by payment recorders, so reusing them would conflate two data concepts and bypass the admin-only rule.
+- **Decision:** Migration `00019`, verified by Gate-4 proof section 34: nullable `payments.interest_minor` (>= 0 check) plus `record_payment` re-signed with an optional trailing `p_interest_minor` (create-new + drop-old, the 00016 precedent — old 4-argument callers behave identically). Interest is stored per payment row and never participates in the guarded balance decrement. UI: the shared payment form on the credit detail page gains an optional "Interest (₱)" field for whoever records payments (admin and staff, following existing payment permissions); the payment history gains an Interest column (— when absent). The credit-level display interest is untouched and remains separate.
+- **Alternatives considered:** Reusing the credit-level interest field — rejected: wrong scope (per-payment display required), overwritten by later payments, and would let staff mutate an admin-only value through the payment flow. Auto-calculating interest — rejected: no rate rule exists; manual entry only.
+- **Consequences:** Payment interest appears only where payments are shown (credit detail history); it is not added to balances, summaries, or reports. Hosted rollout: `db push` (00019) with the next frontend deploy. `docs/DATA-MODEL.md` §4.7, `docs/API.md` §5, `docs/UI-UX.md` §7.3 updated.
+- **Related documents:** `supabase/migrations/20260927180000_00019_payment_interest.sql`, `supabase/proofs/gate4.sql`, `src/domain/payment.ts`, `src/services/paymentService.ts`, `src/services/creditService.ts`, `src/features/credit/CreditDetailPage.tsx`, `docs/DATA-MODEL.md`, `docs/API.md`, `docs/UI-UX.md`.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

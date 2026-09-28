@@ -132,7 +132,9 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
     }
     const { data: payments } = await supabase
       .from('payments')
-      .select('id, credit_id, store_id, amount_minor, method, recorded_by_user_id, paid_at')
+      .select(
+        'id, credit_id, store_id, amount_minor, method, recorded_by_user_id, paid_at, interest_minor',
+      )
       .eq('credit_id', id)
       .order('paid_at', { ascending: false })
     // Item details come from the originating sale (a charge sale or an
@@ -180,6 +182,7 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
         creditId: row.credit_id,
         storeId: row.store_id as StoreId,
         amountMinor: row.amount_minor,
+        interestMinor: row.interest_minor ?? undefined,
         method: row.method ?? undefined,
         recordedByUserId: row.recorded_by_user_id,
         paidAt: row.paid_at,

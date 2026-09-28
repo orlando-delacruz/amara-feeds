@@ -114,4 +114,39 @@ describe('paymentService', () => {
       }),
     ).rejects.toMatchObject({ code: 'validation' })
   })
+
+  it('records manual interest with the payment, untouched by balance math (DEC-064)', async () => {
+    const result = await recordPayment({
+      creditId: 'cred-1',
+      storeId: 'amara',
+      amountMinor: 5000,
+      method: 'Cash',
+      interestMinor: 1500,
+      recordedByUserId: 'user-1',
+    })
+    expect(result.payment.interestMinor).toBe(1500)
+    // Balance drops by the payment amount only.
+    expect(result.credit.balanceMinor).toBe(14500)
+    const listed = await listPayments({ creditId: 'cred-1' })
+    expect(listed.find((payment) => payment.id === result.payment.id)?.interestMinor).toBe(1500)
+  })
+
+  it('leaves interest absent when none is entered and refuses negatives (DEC-064)', async () => {
+    const result = await recordPayment({
+      creditId: 'cred-1',
+      storeId: 'amara',
+      amountMinor: 5000,
+      recordedByUserId: 'user-1',
+    })
+    expect(result.payment.interestMinor).toBeUndefined()
+    await expect(
+      recordPayment({
+        creditId: 'cred-1',
+        storeId: 'amara',
+        amountMinor: 100,
+        interestMinor: -1,
+        recordedByUserId: 'user-1',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+  })
 })

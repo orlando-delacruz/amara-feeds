@@ -70,7 +70,7 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 ### 4.7 Payment — Confirmed
 
-- **Concept:** a full or partial payment against a shared credit obligation, recorded through either store, carrying the payment store and contributing to one traceable shared history with updated balance and status. Payments are staff-recorded; only admins can revert them — via the credit Undo, which voids the payment rows (kept for traceability, excluded from balances, history, and summaries) while restoring the credit's balance effect (DEC-050).
+- **Concept:** a full or partial payment against a shared credit obligation, recorded through either store, carrying the payment store and contributing to one traceable shared history with updated balance and status. A payment may carry a manually entered interest (`interest_minor`, nullable, display-only and never part of balance math — DEC-064), distinct from the credit-level display interest. Payments are staff-recorded; only admins can revert them — via the credit Undo, which voids the payment rows (kept for traceability, excluded from balances, history, and summaries) while restoring the credit's balance effect (DEC-050).
 - **Source:** REQ-PAY-001–002, REQ-CRED-005–007; `docs/PROJECT.md` §2; payment reversion per client request (DEC-050).
 - **Boundary:** exact payment information, methods, and direct reversal behavior beyond the admin credit undo are Confirmation Required.
 
