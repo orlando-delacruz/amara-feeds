@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { getDb, resetDb } from '@/services/mocks/db'
+import { createSale } from '@/services/saleService'
 import { renderWithProviders } from '@/test/render'
 import type { User } from '@/domain'
 import { AdminDashboardPage } from './AdminDashboardPage'
@@ -98,6 +99,29 @@ describe('AdminDashboardPage', () => {
       .closest('section') as HTMLElement
     expect(within(receivedSection).getAllByRole('row')).toHaveLength(6)
     expect(within(receivedSection).getByRole('button', { name: 'View all' })).toBeInTheDocument()
+  })
+
+  it('keeps charge sales out of Total Cash Sales (cash/charge regression)', async () => {
+    await createSale({
+      storeId: 'amara',
+      paymentType: 'charge',
+      customerId: 'cust-1',
+      termsId: 'terms-15',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 115000 }],
+      recordedByUserId: 'user-1',
+    })
+    renderWithProviders(
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>,
+      { user: adminUser },
+    )
+    await screen.findByText('Overall daily sales')
+
+    expect(screen.getByText('Total Cash Sales')).toBeInTheDocument()
+    // Seed cash sales today (sale-1 + sale-3); the new charge sale adds no cash.
+    expect(screen.getAllByText('₱2,395.00').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('2 cash sales')).toBeInTheDocument()
   })
 
   it('splits sales into cash, GCash, and bank buckets per period (DEC-059)', async () => {

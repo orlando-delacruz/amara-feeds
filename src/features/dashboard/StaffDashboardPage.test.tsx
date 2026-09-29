@@ -45,5 +45,6 @@ describe('StaffDashboardPage', () => {
     expect(screen.getByText('Bank Payment')).toBeInTheDocument()
     // Amara cash sales today: sale-1 + sale-3.
     expect(screen.getAllByText('₱2,395.00').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('2 cash sales today')).toBeInTheDocument()
   })
 })

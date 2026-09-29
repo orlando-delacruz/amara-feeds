@@ -135,7 +135,44 @@ describe('dashboardService', () => {
     const today = await getCashSalesByMethod({ date: todayIso() })
     expect(today.gcashMinor).toBe(9500)
     expect(today.cashMinor).toBe(239500)
-    expect(today.saleCount).toBe(3)
+    // Only the cash-bucket sales are counted (the GCash-method sale is not).
+    expect(today.saleCount).toBe(2)
+  })
+
+  it('excludes charge sales from Total Cash Sales (cash/charge regression)', async () => {
+    const date = todayIso()
+    const before = await getCashSalesByMethod({ date })
+    const overallBefore = await getOverallDailySales(date)
+
+    const charge = await createSale({
+      storeId: 'amara',
+      saleDate: date,
+      customerId: 'cust-1',
+      paymentType: 'charge',
+      termsId: 'terms-15',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 115000 }],
+      recordedByUserId: 'user-1',
+    })
+    // A charge sale is credit, not cash received: no payment bucket moves.
+    expect(await getCashSalesByMethod({ date })).toEqual(before)
+    // ...while the gross daily sales hero still reflects it.
+    const overallAfterCharge = await getOverallDailySales(date)
+    expect(overallAfterCharge.totalMinor).toBe(overallBefore.totalMinor + charge.totalMinor)
+    expect(overallAfterCharge.saleCount).toBe(overallBefore.saleCount + 1)
+
+    const cash = await createSale({
+      storeId: 'amara',
+      saleDate: date,
+      paymentType: 'cash',
+      paymentMethod: 'Cash',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 115000 }],
+      recordedByUserId: 'user-1',
+    })
+    const after = await getCashSalesByMethod({ date })
+    expect(after.cashMinor).toBe(before.cashMinor + cash.totalMinor)
+    expect(after.saleCount).toBe(before.saleCount + 1)
+    expect(after.gcashMinor).toBe(before.gcashMinor)
+    expect(after.bankMinor).toBe(before.bankMinor)
   })
 
   it('splits collections into GCash and bank buckets (DEC-059)', async () => {

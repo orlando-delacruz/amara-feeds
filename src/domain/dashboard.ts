@@ -54,6 +54,7 @@ export interface CashSalesByMethod {
   gcashMinor: Money
   /** Cash sales received via bank transfer. */
   bankMinor: Money
+  /** Number of sales summed into cashMinor (charge sales and GCash/bank-method sales excluded). */
   saleCount: number
 }
 

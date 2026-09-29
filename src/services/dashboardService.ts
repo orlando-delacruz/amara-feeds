@@ -363,7 +363,8 @@ function isBankMethod(method: string | null | undefined): boolean {
  * Cash-type sales split by receiving method (DEC-059 amendment): GCash- and
  * bank-transfer-method sales bucket separately so they can join the GCash
  * Paid / Bank Payment totals; everything else cash counts as cash sales.
- * Charge sales are never cash received and stay excluded.
+ * Charge sales are never cash received and stay excluded. saleCount covers
+ * only the sales summed into cashMinor so the card caption matches its value.
  */
 export async function getCashSalesByMethod(
   filter: {
@@ -383,39 +384,35 @@ export async function getCashSalesByMethod(
     const sales = rows.filter(
       (row) => row.payment_type === 'cash' && inScope(row.sale_date, row.store_id),
     )
+    const cashSales = sales.filter(
+      (sale) => !isGcashMethod(sale.payment_method) && !isBankMethod(sale.payment_method),
+    )
     return {
-      cashMinor: sumMinor(
-        sales
-          .filter(
-            (sale) => !isGcashMethod(sale.payment_method) && !isBankMethod(sale.payment_method),
-          )
-          .map((sale) => sale.total_minor),
-      ),
+      cashMinor: sumMinor(cashSales.map((sale) => sale.total_minor)),
       gcashMinor: sumMinor(
         sales.filter((sale) => isGcashMethod(sale.payment_method)).map((sale) => sale.total_minor),
       ),
       bankMinor: sumMinor(
         sales.filter((sale) => isBankMethod(sale.payment_method)).map((sale) => sale.total_minor),
       ),
-      saleCount: sales.length,
+      saleCount: cashSales.length,
     }
   }
   const sales = liveSales().filter(
     (sale) => sale.paymentType === 'cash' && inScope(sale.saleDate, sale.storeId),
   )
+  const cashSales = sales.filter(
+    (sale) => !isGcashMethod(sale.paymentMethod) && !isBankMethod(sale.paymentMethod),
+  )
   return {
-    cashMinor: sumMinor(
-      sales
-        .filter((sale) => !isGcashMethod(sale.paymentMethod) && !isBankMethod(sale.paymentMethod))
-        .map((sale) => sale.totalMinor),
-    ),
+    cashMinor: sumMinor(cashSales.map((sale) => sale.totalMinor)),
     gcashMinor: sumMinor(
       sales.filter((sale) => isGcashMethod(sale.paymentMethod)).map((sale) => sale.totalMinor),
     ),
     bankMinor: sumMinor(
       sales.filter((sale) => isBankMethod(sale.paymentMethod)).map((sale) => sale.totalMinor),
     ),
-    saleCount: sales.length,
+    saleCount: cashSales.length,
   }
 }
 
