@@ -13,7 +13,7 @@ import { StatCard } from '@/components/ui/StatCard'
 import { Icon } from '@/components/ui/icons'
 import { ListSkeleton, StatsSkeleton } from '@/components/ui/Skeletons'
 import { getCashSalesByMethod, getCollectionByMethod } from '@/services'
-import { startOfMonthOnly, startOfWeekWindowOnly, todayIso } from '@/lib/dates'
+import { startOfMonthOnly, startOfWeekOnly, todayIso } from '@/lib/dates'
 import { storeNames } from '@/store/stores'
 import type { StoreId } from '@/domain'
 import { useAsyncData } from '@/features/shared'
@@ -143,8 +143,8 @@ export function AdminDashboardPage() {
             overall: data.weekly.overall,
             perStore: data.weekly.perStore,
             heroLabel: 'Overall weekly sales',
-            rangeCaption: 'sales · last 7 days',
-            columnCaption: 'last 7 days',
+            rangeCaption: 'sales · Sunday–Saturday',
+            columnCaption: 'Sunday–Saturday',
           }
         : {
             overall: data.monthly.overall,
@@ -163,7 +163,7 @@ export function AdminDashboardPage() {
     period === 'today'
       ? { date }
       : period === 'weekly'
-        ? { from: startOfWeekWindowOnly(date), to: date }
+        ? { from: startOfWeekOnly(date), to: date }
         : { from: startOfMonthOnly(date), to: date }
   const paymentSplit = useAsyncData(async () => {
     const [sales, collections] = await Promise.all([

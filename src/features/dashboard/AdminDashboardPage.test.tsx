@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { getDb, resetDb } from '@/services/mocks/db'
 import { createSale } from '@/services/saleService'
@@ -17,7 +17,17 @@ const adminUser: User = {
 }
 
 describe('AdminDashboardPage', () => {
-  beforeEach(() => resetDb())
+  beforeEach(() => {
+    // A fixed mid-week date (Thursday 2026-10-08) keeps the Sunday–Saturday
+    // week and the seed's relative dates deterministic (DEC-066).
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date(2026, 9, 8, 10, 0, 0))
+    resetDb()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
 
   it('shows today sales by default across both stores', async () => {
     renderWithProviders(
@@ -48,8 +58,9 @@ describe('AdminDashboardPage', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Weekly' }))
     expect(await screen.findByText('Overall weekly sales')).toBeInTheDocument()
-    expect(screen.getAllByText(/last 7 days/).length).toBeGreaterThan(0)
-    // Weekly overall includes yesterday's Zeann sale (today 259000 + yesterday 120000).
+    expect(screen.getAllByText(/Sunday–Saturday/).length).toBeGreaterThan(0)
+    // Week-to-date (Sun Oct 4 → Thu Oct 8) includes yesterday's Zeann sale
+    // (today 259000 + yesterday 120000).
     expect(screen.getAllByText('₱3,790.00').length).toBeGreaterThan(0)
 
     await user.click(screen.getByRole('radio', { name: 'Monthly' }))
@@ -58,6 +69,49 @@ describe('AdminDashboardPage', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Today' }))
     expect(await screen.findByText('Overall daily sales')).toBeInTheDocument()
+  })
+
+  it('counts the current Sunday week only, not a trailing 7 days', async () => {
+    const db = getDb()
+    // Monday of the current week (included) and the previous Saturday (excluded).
+    db.sales.push({
+      id: 'sale-week-mon',
+      storeId: 'amara',
+      saleDate: '2026-10-05',
+      paymentType: 'cash',
+      paymentMethod: 'Cash',
+      lines: [],
+      totalMinor: 50000,
+      recordedByUserId: 'user-1',
+      createdAt: '2026-10-05T08:00:00.000Z',
+    })
+    db.sales.push({
+      id: 'sale-prev-sat',
+      storeId: 'amara',
+      saleDate: '2026-10-03',
+      paymentType: 'cash',
+      paymentMethod: 'Cash',
+      lines: [],
+      totalMinor: 70000,
+      recordedByUserId: 'user-1',
+      createdAt: '2026-10-03T08:00:00.000Z',
+    })
+
+    const user = userEvent.setup()
+    renderWithProviders(
+      <MemoryRouter>
+        <AdminDashboardPage />
+      </MemoryRouter>,
+      { user: adminUser },
+    )
+    await screen.findByText('Overall daily sales')
+    await user.click(screen.getByRole('radio', { name: 'Weekly' }))
+
+    expect(await screen.findByText('Overall weekly sales')).toBeInTheDocument()
+    // Today 259000 + yesterday 120000 + Monday Oct 5 50000; the previous
+    // Saturday (Oct 3, within a trailing 7 days) is excluded.
+    expect(screen.getAllByText('₱4,290.00').length).toBeGreaterThan(0)
+    expect(screen.queryByText('₱4,990.00')).not.toBeInTheDocument()
   })
 
   it('caps stock lists at five rows with View all shortcuts (DEC-046)', async () => {

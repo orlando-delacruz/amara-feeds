@@ -28,9 +28,12 @@ export function startOfMonthOnly(dateOnly: string): string {
   return `${dateOnly.slice(0, 7)}-01`
 }
 
-/** Start of the trailing 7-day window ending on `dateOnly` (inclusive). */
-export function startOfWeekWindowOnly(dateOnly: string): string {
-  return subDaysDateOnly(dateOnly, 6)
+/** Sunday (YYYY-MM-DD) of the calendar week (Sunday–Saturday) containing `dateOnly`. */
+export function startOfWeekOnly(dateOnly: string): string {
+  const date = new Date(`${dateOnly}T00:00:00`)
+  const daysSinceSunday = date.getDay()
+  date.setDate(date.getDate() - daysSinceSunday)
+  return toDateOnly(date)
 }
 
 export function isDateOnlyInRange(

@@ -33,7 +33,7 @@ describe('StaffDashboardPage', () => {
   it('shows weekly sales for the current store', async () => {
     renderWithProviders(<StaffDashboardPage />, { user: staffUser })
     expect(await screen.findByRole('heading', { name: 'Weekly sales' })).toBeInTheDocument()
-    expect(screen.getByText(/last 7 days/)).toBeInTheDocument()
+    expect(screen.getByText(/Sunday–Saturday/)).toBeInTheDocument()
   })
 
   it('splits today sales into cash, GCash, and bank buckets (DEC-059)', async () => {

@@ -150,6 +150,8 @@ No formal decision records existed before Phase 0. The following records were cr
 | DEC-062 | Editable credit interest on the detail page (no schema change) | Accepted | 2026-09-27 |
 | DEC-063 | Pending receipts queue on the Pending tab; List tab shows approved only | Accepted | 2026-09-27 |
 | DEC-064 | Manual payment interest recorded with the payment (migration 00019) | Accepted | 2026-09-27 |
+| DEC-065 | Calendar-week Weekly and month-to-date Monthly dashboard periods | Superseded by DEC-066 (weekly start) | 2026-10-01 |
+| DEC-066 | Weekly dashboard period starts Sunday (Sunday–Saturday) | Accepted | 2026-10-01 |
 
 ### DEC-001 — Frontend tooling and verification execution
 
@@ -1000,6 +1002,33 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Alternatives considered:** Reusing the credit-level interest field — rejected: wrong scope (per-payment display required), overwritten by later payments, and would let staff mutate an admin-only value through the payment flow. Auto-calculating interest — rejected: no rate rule exists; manual entry only.
 - **Consequences:** Payment interest appears only where payments are shown (credit detail history); it is not added to balances, summaries, or reports. Hosted rollout: `db push` (00019) with the next frontend deploy. `docs/DATA-MODEL.md` §4.7, `docs/API.md` §5, `docs/UI-UX.md` §7.3 updated.
 - **Related documents:** `supabase/migrations/20260927180000_00019_payment_interest.sql`, `supabase/proofs/gate4.sql`, `src/domain/payment.ts`, `src/services/paymentService.ts`, `src/services/creditService.ts`, `src/features/credit/CreditDetailPage.tsx`, `docs/DATA-MODEL.md`, `docs/API.md`, `docs/UI-UX.md`.
+
+### DEC-065 — Calendar-week Weekly and month-to-date Monthly dashboard periods
+
+- **ID:** DEC-065
+- **Title:** Calendar-week Weekly and month-to-date Monthly dashboard periods
+- **Status:** Superseded
+- **Date:** 2026-10-01
+- **Context:** The client reported that Today Sales and Monthly Sales showed the same total. Investigation confirmed the three dashboard periods already ran distinct read-only windows (`sale_date === date`; a trailing 7-day window; first-of-month → today), so the equality was the expected month-start collapse (on October 1, month-to-date equals today) rather than a shared filter. The client then fixed the intended business definitions: Weekly must be the current calendar week (Monday through today), not a trailing 7-day window; Monthly must be the current calendar month to date, not the full future month; Today stays the current day.
+- **Decision:** No schema or data changes — a read-only dashboard/query-layer correction. `src/lib/dates.ts` replaces `startOfWeekWindowOnly` (trailing 7 days) with `startOfWeekOnly` (Monday of the containing week, derived from the local device date, month/year safe); `getWeeklySalesByStore`/`getOverallWeeklySales` and the admin dashboard's weekly payment range use it on both Supabase and mock backends, so Weekly = Monday → today and resets each Monday. `getMonthlySalesByStore`/`getOverallMonthlySales` keep first-of-month → today (already month-to-date) and now pin that boundary in tests. Weekly UI captions read "this week". Sale amounts, `sale_date`, cash/charge classification, GCash/bank handling, credit behavior, legacy/voided filters, store-level calculations, and permissions are untouched.
+- **Alternatives considered:** Full future calendar month for Monthly (1st → month end) — rejected by the client: the dashboard reports accumulated sales to date, and month-to-date intentionally equals Today on the 1st. Sunday-start week — rejected: the business week starts Monday. Keeping the trailing 7-day window — rejected: the week must reset every Monday.
+- **Consequences:** Weekly and its payment split now exclude sales before Monday (for example the previous Sunday) even when within 7 days; both dashboards share the corrected services. Deterministic regression tests pin daily, Monday week-to-date, month-to-date, and month/year boundary behavior with fixed dates and controlled fixtures. Frontend-only deploy — no hosted DB push needed.
+- **Related documents:** `src/lib/dates.ts`, `src/services/dashboardService.ts`, `src/features/dashboard/AdminDashboardPage.tsx`, `src/features/dashboard/StaffDashboardPage.tsx`, `docs/UI-UX.md` §7.7.
+- **Open questions or follow-up:** The summaries still fetch all live sales and filter in the browser, so Supabase's default 1,000-row API cap could eventually truncate totals — flagged for a follow-up, deliberately not addressed here.
+- **Supersedes / Superseded by:** Superseded by DEC-066 (weekly start only; the Daily and Monthly definitions stand).
+
+### DEC-066 — Weekly dashboard period starts Sunday (Sunday–Saturday)
+
+- **ID:** DEC-066
+- **Title:** Weekly dashboard period starts Sunday (Sunday–Saturday)
+- **Status:** Accepted
+- **Date:** 2026-10-01
+- **Context:** One day after DEC-065 set the weekly window to Monday-start, the client corrected the business week: the current calendar week runs Sunday through Saturday, so Weekly Sales must start every Sunday, end every Saturday, and accumulate from Sunday through today.
+- **Decision:** No schema or data changes — a read-only dashboard/query-layer correction. `startOfWeekOnly` now returns the Sunday of the containing week (`date.getDay()`, Sunday = 0), so `getWeeklySalesByStore`/`getOverallWeeklySales` and the admin dashboard's weekly payment range cover Sunday → today on both Supabase and mock backends, with the window ending Saturday and a new one starting each Sunday. Weekly dashboard captions read "Sunday–Saturday" instead of "this week" so the range is explicit. The Daily and Monthly definitions from DEC-065 stand unchanged; sale amounts, `sale_date`, cash/charge classification, GCash/bank handling, legacy/voided filters, store-level calculations, and permissions are untouched.
+- **Alternatives considered:** Keeping the Monday-start week (DEC-065) — superseded by the client's correction. Trailing 7 days — rejected: the week must reset on Sunday, not float.
+- **Consequences:** Weekly and its payment split include the current week's Sunday and exclude the previous Saturday even when within 7 days; both dashboards share the corrected services. Deterministic regression tests cover the Sunday reset, the Saturday end, and month/year boundary crossings. Frontend-only deploy — no hosted DB push needed.
+- **Related documents:** `src/lib/dates.ts`, `src/services/dashboardService.ts`, `src/features/dashboard/AdminDashboardPage.tsx`, `src/features/dashboard/StaffDashboardPage.tsx`, `docs/UI-UX.md` §7.7.
+- **Supersedes / Superseded by:** Supersedes DEC-065's weekly start (Monday); DEC-065's Daily and Monthly definitions remain in force.
 
 - **Technology:** adoptions and changes link to `docs/TECH-STACK.md`; conditional items stay conditional until activated by confirmation, documented here when activated.
 - **Architecture:** changes recorded here and linked to `docs/ARCHITECTURE.md`; no schemas, endpoints, or components defined.

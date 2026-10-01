@@ -13,7 +13,7 @@ import type {
   StockSummaryRow,
 } from '@/domain'
 import { storeIds } from '@/domain/store'
-import { isSameDate, startOfMonthOnly, startOfWeekWindowOnly, toDateOnly } from '@/lib/dates'
+import { isSameDate, startOfMonthOnly, startOfWeekOnly, toDateOnly } from '@/lib/dates'
 import { sumMinor } from '@/lib/money'
 import { getDb } from './mocks/db'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
@@ -157,7 +157,7 @@ export async function getOverallSalesInRange(
 }
 
 export async function getWeeklySalesByStore(date: string): Promise<PeriodSalesByStore[]> {
-  const startDate = startOfWeekWindowOnly(date)
+  const startDate = startOfWeekOnly(date)
   const rows = await fetchSalesForSummary()
   if (isSupabaseConfigured && supabase) {
     const sales = inRangeRows(rows, startDate, date)
@@ -186,7 +186,7 @@ export async function getWeeklySalesByStore(date: string): Promise<PeriodSalesBy
 }
 
 export async function getOverallWeeklySales(date: string): Promise<OverallPeriodSales> {
-  const startDate = startOfWeekWindowOnly(date)
+  const startDate = startOfWeekOnly(date)
   const rows = await fetchSalesForSummary()
   if (isSupabaseConfigured && supabase) {
     const sales = inRangeRows(rows, startDate, date)

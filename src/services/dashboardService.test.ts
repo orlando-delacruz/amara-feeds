@@ -18,8 +18,29 @@ import {
 } from './dashboardService'
 import { recordPayment } from './paymentService'
 import { createSale } from './saleService'
-import { resetDb } from './mocks/db'
+import { getDb, resetDb } from './mocks/db'
 import { todayIso } from '@/lib/dates'
+import type { Sale } from '@/domain'
+
+/** Replaces the seed's sales with controlled fixtures for date-range tests. */
+function seedSales(sales: Sale[]): void {
+  const db = getDb()
+  db.sales.splice(0, db.sales.length, ...sales)
+}
+
+function saleAt(id: string, saleDate: string, totalMinor: number): Sale {
+  return {
+    id,
+    storeId: 'amara',
+    saleDate,
+    paymentType: 'cash',
+    paymentMethod: 'Cash',
+    lines: [],
+    totalMinor,
+    recordedByUserId: 'user-1',
+    createdAt: `${saleDate}T08:00:00.000Z`,
+  }
+}
 
 describe('dashboardService', () => {
   beforeEach(() => resetDb())
@@ -62,18 +83,121 @@ describe('dashboardService', () => {
     expect(rows.every((row) => row.totalMinor > 0)).toBe(true)
   })
 
-  it('reports weekly sales as the trailing 7 days including yesterday', async () => {
-    const date = todayIso()
-    const perStore = await getWeeklySalesByStore(date)
-    const amara = perStore.find((row) => row.storeId === 'amara')
-    const zeann = perStore.find((row) => row.storeId === 'zeann')
-    expect(amara?.saleCount).toBe(2)
-    expect(zeann?.saleCount).toBe(2)
+  it('includes only the current day for daily sales', async () => {
+    seedSales([saleAt('d-today', '2026-10-08', 1000), saleAt('d-yesterday', '2026-10-07', 2000)])
 
-    const overall = await getOverallWeeklySales(date)
-    expect(overall.saleCount).toBe(4)
-    expect(overall.totalMinor).toBe((amara?.totalMinor ?? 0) + (zeann?.totalMinor ?? 0))
-    expect(overall.endDate).toBe(date)
+    const perStore = await getDailySalesByStore('2026-10-08')
+    expect(perStore.find((row) => row.storeId === 'amara')).toEqual({
+      storeId: 'amara',
+      date: '2026-10-08',
+      totalMinor: 1000,
+      saleCount: 1,
+    })
+    expect(await getOverallDailySales('2026-10-08')).toEqual({
+      date: '2026-10-08',
+      totalMinor: 1000,
+      saleCount: 1,
+    })
+  })
+
+  it('reports weekly sales from Sunday through today, not a trailing 7 days', async () => {
+    seedSales([
+      saleAt('w-thu', '2026-10-08', 1000), // today
+      saleAt('w-wed', '2026-10-07', 2000),
+      saleAt('w-sun', '2026-10-04', 3000), // this week's Sunday
+      saleAt('w-sat', '2026-10-03', 4000), // previous week (within 7 days)
+      saleAt('w-prev-thu', '2026-10-01', 5000), // exactly 7 days ago, previous week
+    ])
+
+    const perStore = await getWeeklySalesByStore('2026-10-08')
+    expect(perStore.find((row) => row.storeId === 'amara')).toEqual({
+      storeId: 'amara',
+      startDate: '2026-10-04',
+      endDate: '2026-10-08',
+      totalMinor: 6000,
+      saleCount: 3,
+    })
+    expect(await getOverallWeeklySales('2026-10-08')).toEqual({
+      startDate: '2026-10-04',
+      endDate: '2026-10-08',
+      totalMinor: 6000,
+      saleCount: 3,
+    })
+  })
+
+  it('resets the weekly window on Sunday', async () => {
+    seedSales([
+      saleAt('w-sat', '2026-10-03', 4000), // previous week's Saturday
+      saleAt('w-sun', '2026-10-04', 3000),
+      saleAt('w-mon', '2026-10-05', 2000),
+    ])
+
+    // Sunday: the week has just reset, so only Sunday counts.
+    expect(await getOverallWeeklySales('2026-10-04')).toEqual({
+      startDate: '2026-10-04',
+      endDate: '2026-10-04',
+      totalMinor: 3000,
+      saleCount: 1,
+    })
+    // Saturday ends the week: Sunday onward accumulates; the previous
+    // Saturday (Oct 3) stays out of the week.
+    expect(await getOverallWeeklySales('2026-10-10')).toEqual({
+      startDate: '2026-10-04',
+      endDate: '2026-10-10',
+      totalMinor: 5000,
+      saleCount: 2,
+    })
+  })
+
+  it('spans month and year boundaries for the weekly window', async () => {
+    seedSales([
+      saleAt('m-sun', '2026-09-27', 100), // Sunday in the previous month
+      saleAt('m-sat', '2026-09-26', 200), // Saturday before it
+      saleAt('m-fri', '2026-10-02', 400),
+    ])
+    expect(await getOverallWeeklySales('2026-10-02')).toEqual({
+      startDate: '2026-09-27',
+      endDate: '2026-10-02',
+      totalMinor: 500,
+      saleCount: 2,
+    })
+
+    seedSales([
+      saleAt('y-sun', '2025-12-28', 10), // Sunday in the previous year
+      saleAt('y-sat', '2025-12-27', 20),
+      saleAt('y-thu', '2026-01-01', 30),
+    ])
+    expect(await getOverallWeeklySales('2026-01-01')).toEqual({
+      startDate: '2025-12-28',
+      endDate: '2026-01-01',
+      totalMinor: 40,
+      saleCount: 2,
+    })
+  })
+
+  it('reports monthly sales from the first of the month through today', async () => {
+    seedSales([
+      saleAt('mo-1', '2026-10-01', 100),
+      saleAt('mo-5', '2026-10-05', 200),
+      saleAt('mo-15', '2026-10-15', 300), // today
+      saleAt('mo-prev', '2026-09-30', 400),
+      saleAt('mo-future', '2026-10-31', 500), // future-dated: month-to-date excludes it
+    ])
+
+    const perStore = await getMonthlySalesByStore('2026-10-15')
+    expect(perStore.find((row) => row.storeId === 'amara')).toEqual({
+      storeId: 'amara',
+      startDate: '2026-10-01',
+      endDate: '2026-10-15',
+      totalMinor: 600,
+      saleCount: 3,
+    })
+    expect(await getOverallMonthlySales('2026-10-15')).toEqual({
+      startDate: '2026-10-01',
+      endDate: '2026-10-15',
+      totalMinor: 600,
+      saleCount: 3,
+    })
   })
 
   it('reports monthly sales from the first of the month', async () => {
@@ -84,6 +208,7 @@ describe('dashboardService', () => {
 
     const overall = await getOverallMonthlySales(date)
     expect(overall.saleCount).toBeGreaterThanOrEqual(3)
+    expect(overall.endDate).toBe(date)
     expect(overall.totalMinor).toBe(perStore.reduce((sum, row) => sum + row.totalMinor, 0))
   })
 

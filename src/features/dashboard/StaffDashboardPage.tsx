@@ -168,7 +168,7 @@ export function StaffDashboardPage() {
                 <StatCard
                   label="Weekly sales"
                   value={<MoneyText amountMinor={data.data.weeklySales?.totalMinor ?? 0} />}
-                  caption={`${data.data.weeklySales?.saleCount ?? 0} sales · last 7 days`}
+                  caption={`${data.data.weeklySales?.saleCount ?? 0} sales · Sunday–Saturday`}
                   tone={concreteStoreId(store)}
                   icon={<Icon name="calendar" />}
                 />
