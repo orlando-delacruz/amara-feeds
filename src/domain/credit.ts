@@ -1,4 +1,4 @@
-import type { CreditId, CustomerId, PaymentTermsId, ProductId, SaleId } from './ids'
+import type { CreditId, CustomerId, PaymentTermsId, ProductId, SaleId, UserId } from './ids'
 import type { StoreId } from './store'
 import type { Money } from '@/lib/money'
 import type { Payment } from './payment'
@@ -37,6 +37,23 @@ export interface CreditItem {
   productName: string
   quantity: number
   unitPriceMinor: Money
+}
+
+/**
+ * A credit obligation joined with the item details and the encoder of its
+ * originating sale. Read-only projection for the reports export (DEC-067):
+ * nothing new is stored — `credit_obligations` carries no encoder column, and
+ * both paths that create an obligation (`record_sale`, DEC-049 legacy encode)
+ * write one on the linked `sales` row.
+ *
+ * Sale-less obligations (seed rows) have no items and no encoder; they are
+ * reported as such rather than dropped.
+ */
+export interface CreditRecord extends CreditObligation {
+  /** Item lines of the originating (or encoded legacy) sale; empty when absent. */
+  items: CreditItem[]
+  /** Projection of the linked sale's recorded_by_user_id. */
+  recordedByUserId?: UserId
 }
 
 export interface CreditHistory {

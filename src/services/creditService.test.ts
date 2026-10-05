@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   createExistingCredit,
   getCreditHistory,
+  listCreditRecords,
   listCredits,
   listPaymentTerms,
   updateCreditInterest,
@@ -9,7 +10,7 @@ import {
 } from './creditService'
 import { listPayments } from './paymentService'
 import { getStock } from './inventoryService'
-import { resetDb } from './mocks/db'
+import { getDb, resetDb } from './mocks/db'
 import { toDateOnly, todayIso } from '@/lib/dates'
 
 describe('creditService', () => {
@@ -34,6 +35,67 @@ describe('creditService', () => {
     const terms = await listPaymentTerms()
     expect(terms.length).toBeGreaterThan(0)
     expect(terms[0]).toHaveProperty('label')
+  })
+
+  it('returns credit records with the item lines and encoder of their sale (DEC-067)', async () => {
+    const created = await createExistingCredit({
+      customerId: 'cust-1',
+      originStoreId: 'amara',
+      date: '2026-09-10',
+      dueDate: '2026-10-01',
+      lines: [
+        { productId: 'prod-1', quantity: 2, unitPriceMinor: 100000 },
+        { productId: 'prod-2', quantity: 1, unitPriceMinor: 50000 },
+      ],
+      recordedByUserId: 'user-3',
+    })
+
+    const record = (await listCreditRecords()).find((credit) => credit.id === created.id)
+
+    expect(record?.recordedByUserId).toBe('user-3')
+    expect(record?.items).toEqual([
+      { productId: 'prod-1', productName: 'Rice 25kg', quantity: 2, unitPriceMinor: 100000 },
+      { productId: 'prod-2', productName: 'Sugar 1kg', quantity: 1, unitPriceMinor: 50000 },
+    ])
+    // The item lines match what the credit detail view already shows.
+    expect(record?.items).toEqual((await getCreditHistory(created.id)).items)
+  })
+
+  it('returns a sale-less credit with no items and no encoder, never dropping it (DEC-067)', async () => {
+    getDb().credits.push({
+      id: 'cred-no-sale',
+      customerId: 'cust-2',
+      originStoreId: 'zeann',
+      dueDate: '2026-10-01',
+      originalAmountMinor: 50000,
+      balanceMinor: 50000,
+      status: 'outstanding',
+      createdAt: new Date().toISOString(),
+    })
+
+    const record = (await listCreditRecords()).find((credit) => credit.id === 'cred-no-sale')
+
+    expect(record).toBeDefined()
+    expect(record?.items).toEqual([])
+    expect(record?.recordedByUserId).toBeUndefined()
+  })
+
+  it('keeps listCreditRecords aligned with listCredits (DEC-067)', async () => {
+    await createExistingCredit({
+      customerId: 'cust-1',
+      originStoreId: 'amara',
+      date: '2026-09-10',
+      dueDate: '2026-10-01',
+      lines: [{ productId: 'prod-1', quantity: 1, unitPriceMinor: 100000 }],
+      recordedByUserId: 'user-3',
+    })
+
+    const obligations = await listCredits()
+    const records = await listCreditRecords()
+
+    expect(records.map((record) => record.id)).toEqual(obligations.map((credit) => credit.id))
+    // Voided credits stay excluded from both reads (DEC-050).
+    expect(records.some((record) => record.status === 'voided')).toBe(false)
   })
 
   it('encodes an existing credit with item details and no terms (DEC-049)', async () => {

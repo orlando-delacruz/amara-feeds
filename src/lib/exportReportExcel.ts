@@ -1,6 +1,10 @@
 import type { StoreId } from '@/domain'
 import { storeNames } from '@/store/stores'
-import type { CreditExcelRow, ExpenseExcelRow } from '@/features/reports/reportRows'
+import type {
+  CreditExcelRow,
+  ExpenseExcelRow,
+  ExpenseRecordExcelRow,
+} from '@/features/reports/reportRows'
 
 export interface ReportExcelInput {
   from: string
@@ -9,6 +13,8 @@ export interface ReportExcelInput {
   rows: ReportExcelRow[]
   creditRows?: CreditExcelRow[]
   expenseRows?: ExpenseExcelRow[]
+  /** Per-record expense detail with its recorder (DEC-067). */
+  expenseRecordRows?: ExpenseRecordExcelRow[]
 }
 
 export interface ReportExcelRow {
@@ -26,6 +32,8 @@ export interface ReportExcelRow {
   netTotalMinor: number
   riderName: string
   vehiclePlate: string
+  /** Staff member who recorded the sale (sales.recorded_by_user_id). */
+  recordedByName: string
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -69,6 +77,7 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     { header: headerStyle, label: 'Net', width: 12 },
     { header: headerStyle, label: 'Rider', width: 16 },
     { header: headerStyle, label: 'Vehicle', width: 12 },
+    { header: headerStyle, label: 'Recorded By', width: 16 },
   ]
 
   const creditColumns = [
@@ -76,6 +85,11 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     { header: headerStyle, label: 'Origin Store', width: 14 },
     { header: headerStyle, label: 'Created', width: 12 },
     { header: headerStyle, label: 'Due Date', width: 12 },
+    { header: headerStyle, label: 'Item', width: 24 },
+    { header: headerStyle, label: 'Quantity', width: 10 },
+    { header: headerStyle, label: 'Price', width: 12 },
+    { header: headerStyle, label: 'Line Amount', width: 14 },
+    { header: headerStyle, label: 'Recorded By', width: 16 },
     { header: headerStyle, label: 'Original', width: 12 },
     { header: headerStyle, label: 'Paid', width: 12 },
     { header: headerStyle, label: 'Balance', width: 12 },
@@ -100,6 +114,7 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
       { value: row.netTotalMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.riderName, type: String },
       { value: row.vehiclePlate, type: String },
+      { value: row.recordedByName, type: String },
     ]),
   ]
 
@@ -111,6 +126,11 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
       { value: storeNames[row.originStoreId] ?? row.originStoreId, type: String },
       { value: row.createdDate, type: String },
       { value: row.dueDate, type: String },
+      { value: row.productName, type: String },
+      { value: row.quantity, type: Number },
+      { value: row.unitPriceMinor / 100, type: Number, format: '#,##0.00' },
+      { value: row.lineTotalMinor / 100, type: Number, format: '#,##0.00' },
+      { value: row.recordedByName, type: String },
       { value: row.originalMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.paidMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.balanceMinor / 100, type: Number, format: '#,##0.00' },
@@ -143,6 +163,30 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     ]),
   ]
 
+  const expenseRecordColumns = [
+    { header: headerStyle, label: 'Date', width: 12 },
+    { header: headerStyle, label: 'Location', width: 14 },
+    { header: headerStyle, label: 'Rider / Vehicle', width: 18 },
+    { header: headerStyle, label: 'Type', width: 10 },
+    { header: headerStyle, label: 'Amount', width: 12 },
+    { header: headerStyle, label: 'Note', width: 28 },
+    { header: headerStyle, label: 'Recorded By', width: 16 },
+  ]
+
+  const expenseRecordRows = input.expenseRecordRows ?? []
+  const expenseRecordSheet = [
+    expenseRecordColumns.map((col) => ({ value: col.label, ...col.header })),
+    ...expenseRecordRows.map((row) => [
+      { value: row.date, type: String },
+      { value: storeNames[row.storeId] ?? row.storeId, type: String },
+      { value: row.target, type: String },
+      { value: row.type, type: String },
+      { value: row.amountMinor / 100, type: Number, format: '#,##0.00' },
+      { value: row.note, type: String },
+      { value: row.recordedByName, type: String },
+    ]),
+  ]
+
   const columnsWidth = (cols: Array<{ width: number }>) => cols.map((col) => ({ width: col.width }))
 
   // Multi-sheet shape per write-excel-file's docs: one { data, sheet, columns } per tab.
@@ -153,11 +197,18 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     sheet: 'Expenses',
     columns: columnsWidth(expenseColumns),
   }
-  const conditionalSheets = input.expenseRows
-    ? [salesTab, creditTab, expenseTab]
-    : input.creditRows
-      ? [salesTab, creditTab]
-      : [salesTab]
+  const expenseRecordTab = {
+    data: expenseRecordSheet,
+    sheet: 'Expense Records',
+    columns: columnsWidth(expenseRecordColumns),
+  }
+  const conditionalSheets = input.expenseRecordRows
+    ? [salesTab, creditTab, expenseTab, expenseRecordTab]
+    : input.expenseRows
+      ? [salesTab, creditTab, expenseTab]
+      : input.creditRows
+        ? [salesTab, creditTab]
+        : [salesTab]
 
   const blob = await writeExcelFile(
     conditionalSheets as unknown as Parameters<typeof writeExcelFile>[0],

@@ -3,6 +3,7 @@ import type {
   CreditId,
   CreditItem,
   CreditObligation,
+  CreditRecord,
   CreditStatus,
   CustomerId,
   Payment,
@@ -56,15 +57,94 @@ export async function previewDueDate(termsId: PaymentTermsId, fromDate?: string)
   return resolveDueDate(termsId, fromIso)
 }
 
+/** Shared obligation columns, so every credit read selects the same shape. */
+const CREDIT_COLUMNS =
+  'id, customer_id, origin_store_id, sale_id, terms_id, due_date, original_amount_minor, balance_minor, status, interest_minor, created_at'
+
+/** A `credit_obligations` row as selected on the Supabase backend. */
+interface CreditRow {
+  id: string
+  customer_id: string
+  origin_store_id: string
+  sale_id: string | null
+  terms_id: string | null
+  due_date: string
+  original_amount_minor: number
+  balance_minor: number
+  status: string
+  interest_minor: number | null
+  created_at: string
+  /**
+   * Linked sale, embedded by FK. `sale_id` carries no unique constraint, so
+   * PostgREST returns the embed as a list of at most one row — and `null` when
+   * the obligation has no sale at all (sale-less seed rows).
+   */
+  sales?: Array<{
+    recorded_by_user_id: string
+    sale_lines?: SaleLineRow[] | null
+  }> | null
+}
+
+/** A `sale_lines` row with its product name, embedded by FK. */
+interface SaleLineRow {
+  product_id: string
+  quantity: number
+  unit_price_minor: number
+  /** Product name by FK; also a list (no unique constraint on product_id). */
+  products?: Array<{ name?: string } | null> | null
+}
+
+function toCreditObligation(row: CreditRow): CreditObligation {
+  return {
+    id: row.id,
+    customerId: row.customer_id,
+    originStoreId: row.origin_store_id as StoreId,
+    saleId: row.sale_id ?? undefined,
+    termsId: row.terms_id ?? undefined,
+    dueDate: row.due_date,
+    originalAmountMinor: row.original_amount_minor,
+    balanceMinor: row.balance_minor,
+    status: row.status as CreditStatus,
+    interestMinor: row.interest_minor ?? undefined,
+    createdAt: row.created_at,
+  }
+}
+
+/**
+ * Item lines of the originating sale, shared by every credit read. These are
+ * the values actually saved on the transaction (a charge sale or an encoded
+ * legacy credit row); nothing is re-derived here.
+ */
+function toCreditItems(lines: SaleLineRow[] | null | undefined): CreditItem[] {
+  return (lines ?? []).map((line) => ({
+    productId: line.product_id,
+    productName: line.products?.[0]?.name ?? 'Unknown item',
+    quantity: line.quantity,
+    unitPriceMinor: line.unit_price_minor as Money,
+  }))
+}
+
+/** Mock path: the same item lines, read from the in-memory sale. */
+function mockCreditItems(sale: Sale | undefined): CreditItem[] {
+  return (sale?.lines ?? []).map((line) => ({
+    productId: line.productId,
+    productName: mockProductName(line.productId),
+    quantity: line.quantity,
+    unitPriceMinor: line.unitPriceMinor,
+  }))
+}
+
+function mockProductName(productId: string): string {
+  return getDb().products.find((product) => product.id === productId)?.name ?? 'Unknown item'
+}
+
 export async function listCredits(
   filter: { customerId?: CustomerId; originStoreId?: StoreId; status?: CreditStatus } = {},
 ): Promise<CreditObligation[]> {
   if (isSupabaseConfigured && supabase) {
     let query = supabase
       .from('credit_obligations')
-      .select(
-        'id, customer_id, origin_store_id, sale_id, terms_id, due_date, original_amount_minor, balance_minor, status, interest_minor, created_at',
-      )
+      .select(CREDIT_COLUMNS)
       // Voided (admin-reverted) credits are corrections, not standing records.
       .neq('status', 'voided')
     if (filter.customerId) {
@@ -80,19 +160,7 @@ export async function listCredits(
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
-    return (data ?? []).map((row) => ({
-      id: row.id,
-      customerId: row.customer_id,
-      originStoreId: row.origin_store_id as StoreId,
-      saleId: row.sale_id ?? undefined,
-      termsId: row.terms_id ?? undefined,
-      dueDate: row.due_date,
-      originalAmountMinor: row.original_amount_minor,
-      balanceMinor: row.balance_minor,
-      status: row.status as CreditStatus,
-      interestMinor: row.interest_minor ?? undefined,
-      createdAt: row.created_at,
-    }))
+    return (data ?? []).map((row) => toCreditObligation(row as CreditRow))
   }
   return getDb()
     .credits.filter(
@@ -103,6 +171,66 @@ export async function listCredits(
         (!filter.status || credit.status === filter.status),
     )
     .map((credit) => ({ ...credit }))
+}
+
+/**
+ * Credits joined with their item lines and the encoder of the originating
+ * sale (DEC-067) — the reports export shape. Read-only: `credit_obligations`
+ * has no encoder column, so it comes from the linked sale's
+ * `recorded_by_user_id`, which both `record_sale` and `record_existing_credit`
+ * write. Sale-less obligations (seed rows) come back with no items and no
+ * encoder rather than being omitted.
+ */
+export async function listCreditRecords(
+  filter: { customerId?: CustomerId; originStoreId?: StoreId; status?: CreditStatus } = {},
+): Promise<CreditRecord[]> {
+  if (isSupabaseConfigured && supabase) {
+    let query = supabase
+      .from('credit_obligations')
+      .select(
+        `${CREDIT_COLUMNS}, sales(recorded_by_user_id, sale_lines(product_id, quantity, unit_price_minor, products(name)))`,
+      )
+      .neq('status', 'voided')
+    if (filter.customerId) {
+      query = query.eq('customer_id', filter.customerId)
+    }
+    if (filter.originStoreId) {
+      query = query.eq('origin_store_id', filter.originStoreId)
+    }
+    if (filter.status) {
+      query = query.eq('status', filter.status)
+    }
+    const { data, error } = await query.order('created_at', { ascending: false })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    return (data ?? []).map((row) => {
+      const creditRow = row as CreditRow
+      const sale = creditRow.sales?.[0]
+      return {
+        ...toCreditObligation(creditRow),
+        items: toCreditItems(sale?.sale_lines),
+        recordedByUserId: sale?.recorded_by_user_id ?? undefined,
+      }
+    })
+  }
+  const db = getDb()
+  return db.credits
+    .filter(
+      (credit) =>
+        credit.status !== 'voided' &&
+        (!filter.customerId || credit.customerId === filter.customerId) &&
+        (!filter.originStoreId || credit.originStoreId === filter.originStoreId) &&
+        (!filter.status || credit.status === filter.status),
+    )
+    .map((credit) => {
+      const sale = credit.saleId ? db.sales.find((item) => item.id === credit.saleId) : undefined
+      return {
+        ...credit,
+        items: mockCreditItems(sale),
+        recordedByUserId: sale?.recordedByUserId,
+      }
+    })
 }
 
 export async function getCredit(id: CreditId): Promise<CreditObligation> {
@@ -117,19 +245,18 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
   if (isSupabaseConfigured && supabase) {
     // maybeSingle() + explicit not_found: a stale/deleted credit id resolves
     // to the same ServiceError the mock path throws (never raw PGRST116).
-    const { data: credit, error } = await supabase
+    const { data, error } = await supabase
       .from('credit_obligations')
-      .select(
-        'id, customer_id, origin_store_id, sale_id, terms_id, due_date, original_amount_minor, balance_minor, status, interest_minor, created_at',
-      )
+      .select(CREDIT_COLUMNS)
       .eq('id', id)
       .maybeSingle()
     if (error) {
       throw serviceErrorFromSupabase(error)
     }
-    if (!credit) {
+    if (!data) {
       throw new ServiceError('not_found', 'Credit not found.')
     }
+    const credit = data as CreditRow
     const { data: payments } = await supabase
       .from('payments')
       .select(
@@ -148,12 +275,7 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
         .from('sale_lines')
         .select('product_id, quantity, unit_price_minor, products(name)')
         .eq('sale_id', credit.sale_id)
-      items = (lines ?? []).map((line) => ({
-        productId: line.product_id,
-        productName: (line.products as { name?: string } | null)?.name ?? 'Unknown item',
-        quantity: line.quantity,
-        unitPriceMinor: line.unit_price_minor as Money,
-      }))
+      items = toCreditItems(lines as SaleLineRow[] | null)
       const { data: sale } = await supabase
         .from('sales')
         .select('sale_date')
@@ -164,19 +286,7 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
       }
     }
     return {
-      credit: {
-        id: credit.id,
-        customerId: credit.customer_id,
-        originStoreId: credit.origin_store_id as StoreId,
-        saleId: credit.sale_id ?? undefined,
-        termsId: credit.terms_id ?? undefined,
-        dueDate: credit.due_date,
-        originalAmountMinor: credit.original_amount_minor,
-        balanceMinor: credit.balance_minor,
-        status: credit.status as CreditStatus,
-        interestMinor: credit.interest_minor ?? undefined,
-        createdAt: credit.created_at,
-      },
+      credit: toCreditObligation(credit),
       payments: (payments ?? []).map((row) => ({
         id: row.id,
         creditId: row.credit_id,
@@ -196,17 +306,10 @@ export async function getCreditHistory(id: CreditId): Promise<CreditHistory> {
     .payments.filter((payment) => payment.creditId === id)
     .map((payment) => ({ ...payment }))
   const sale = credit.saleId ? getDb().sales.find((item) => item.id === credit.saleId) : undefined
-  const items: CreditItem[] = (sale?.lines ?? []).map((line) => ({
-    productId: line.productId,
-    productName:
-      getDb().products.find((product) => product.id === line.productId)?.name ?? 'Unknown item',
-    quantity: line.quantity,
-    unitPriceMinor: line.unitPriceMinor,
-  }))
   return {
     credit,
     payments,
-    items,
+    items: mockCreditItems(sale),
     transactionDate: sale?.saleDate ?? toDateOnly(new Date(credit.createdAt)),
   }
 }

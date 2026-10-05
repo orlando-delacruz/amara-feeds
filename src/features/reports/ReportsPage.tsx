@@ -8,7 +8,12 @@ import { Icon } from '@/components/ui/icons'
 import { notifySuccess, notifyError } from '@/lib/swal'
 import { todayIso } from '@/lib/dates'
 import { exportReportExcel } from '@/lib/exportReportExcel'
-import { buildCreditReportRows, buildExpenseReportRows, buildSalesReportRows } from './reportRows'
+import {
+  buildCreditReportRows,
+  buildExpenseRecordRows,
+  buildExpenseReportRows,
+  buildSalesReportRows,
+} from './reportRows'
 import { SummarySections } from './SummarySections'
 import { useReportSummaries } from './useReportSummaries'
 
@@ -43,10 +48,11 @@ export function ReportsPage() {
       const rows = await buildSalesReportRows(from, to)
       const creditRows = await buildCreditReportRows(from, to)
       const expenseRows = await buildExpenseReportRows(from, to)
-      await exportReportExcel({ from, to, rows, creditRows, expenseRows })
+      const expenseRecordRows = await buildExpenseRecordRows(from, to)
+      await exportReportExcel({ from, to, rows, creditRows, expenseRows, expenseRecordRows })
       void notifySuccess(
         'Report exported.',
-        'The Excel file (Sales + Credit + Expenses) has been downloaded.',
+        'The Excel file (Sales + Credit + Expenses + Expense Records) has been downloaded.',
       )
     } catch {
       void notifyError('Could not export the report.', 'Please try again.')

@@ -47,6 +47,26 @@ describe('AuditTrailPage', () => {
     expect(screen.queryAllByText(/Sale at Amara/)).toHaveLength(0)
   })
 
+  it('shows the encoder of sales, credits, and expenses to admins (DEC-067)', async () => {
+    await logAuditEvent({
+      action: 'credit.imported',
+      actorUserId: adminUser.id,
+      actorRole: 'admin',
+      storeId: 'amara',
+      subject: 'Maria Santos',
+      detail: 'Existing credit · 1 item(s) · 1150.00',
+    })
+    renderWithProviders(<AuditTrailPage />, { user: adminUser })
+
+    expect(await screen.findByText('Existing credit encoded')).toBeInTheDocument()
+    // Every action row carries its encoder: "Name · Admin/Staff" in the By column.
+    expect((await screen.findAllByText(/Owner · Admin/)).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Alice · Staff/).length).toBeGreaterThan(0)
+    // Sales and expenses resolve their recorders too.
+    expect(screen.getAllByText('Sale recorded').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Expense recorded').length).toBeGreaterThan(0)
+  })
+
   it('scopes staff to their own actions plus connected admin decisions', async () => {
     await logAuditEvent({
       action: 'product.approved',
