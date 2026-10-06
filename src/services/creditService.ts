@@ -75,14 +75,18 @@ interface CreditRow {
   interest_minor: number | null
   created_at: string
   /**
-   * Linked sale, embedded by FK. `sale_id` carries no unique constraint, so
-   * PostgREST returns the embed as a list of at most one row — and `null` when
-   * the obligation has no sale at all (sale-less seed rows).
+   * Linked sale, embedded by FK. PostgREST returns a many-to-one embed as a
+   * single object — a single FK value references at most one row — or `null`
+   * when the obligation has no sale at all (sale-less seed rows). The
+   * generated client types describe every embed as a list, so both shapes are
+   * accepted (see `embedded`).
    */
-  sales?: Array<{
-    recorded_by_user_id: string
-    sale_lines?: SaleLineRow[] | null
-  }> | null
+  sales?: SaleEmbed | SaleEmbed[] | null
+}
+
+interface SaleEmbed {
+  recorded_by_user_id: string
+  sale_lines?: SaleLineRow[] | null
 }
 
 /** A `sale_lines` row with its product name, embedded by FK. */
@@ -90,8 +94,21 @@ interface SaleLineRow {
   product_id: string
   quantity: number
   unit_price_minor: number
-  /** Product name by FK; also a list (no unique constraint on product_id). */
-  products?: Array<{ name?: string } | null> | null
+  /** Product name by FK; an object at runtime, a list in the client types. */
+  products?: { name?: string } | Array<{ name?: string } | null> | null
+}
+
+/**
+ * Reads one row out of a PostgREST embed, whichever shape it arrives in: the
+ * runtime object for many-to-one embeds, or the list the generated client
+ * types describe. A single FK value references at most one row, so the first
+ * element is the whole answer when a list arrives.
+ */
+function embedded<T>(value: T | T[] | null | undefined): T | undefined {
+  if (Array.isArray(value)) {
+    return value[0]
+  }
+  return value ?? undefined
 }
 
 function toCreditObligation(row: CreditRow): CreditObligation {
@@ -118,7 +135,7 @@ function toCreditObligation(row: CreditRow): CreditObligation {
 function toCreditItems(lines: SaleLineRow[] | null | undefined): CreditItem[] {
   return (lines ?? []).map((line) => ({
     productId: line.product_id,
-    productName: line.products?.[0]?.name ?? 'Unknown item',
+    productName: embedded(line.products)?.name ?? 'Unknown item',
     quantity: line.quantity,
     unitPriceMinor: line.unit_price_minor as Money,
   }))
@@ -206,7 +223,7 @@ export async function listCreditRecords(
     }
     return (data ?? []).map((row) => {
       const creditRow = row as CreditRow
-      const sale = creditRow.sales?.[0]
+      const sale = embedded(creditRow.sales)
       return {
         ...toCreditObligation(creditRow),
         items: toCreditItems(sale?.sale_lines),
