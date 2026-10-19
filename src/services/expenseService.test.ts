@@ -63,7 +63,7 @@ describe('expenseService', () => {
     ).rejects.toMatchObject({ code: 'validation' })
   })
 
-  it('rejects missing rider and vehicle', async () => {
+  it('rejects missing rider and vehicle for fuel and repair (DEC-069)', async () => {
     await expect(
       createExpense({
         storeId: 'amara',
@@ -72,6 +72,40 @@ describe('expenseService', () => {
         recordedByUserId: 'user-1',
       }),
     ).rejects.toMatchObject({ code: 'validation' })
+    await expect(
+      createExpense({
+        storeId: 'amara',
+        type: 'repair',
+        amountMinor: 50000,
+        recordedByUserId: 'user-1',
+      }),
+    ).rejects.toMatchObject({ code: 'validation' })
+  })
+
+  it('allows office supplies with no target, charged to the business (DEC-069)', async () => {
+    const record = await createExpense({
+      storeId: 'amara',
+      type: 'office_supplies_other',
+      amountMinor: 3000,
+      note: 'Bond paper',
+      recordedByUserId: 'user-1',
+    })
+    expect(record.riderId).toBeUndefined()
+    expect(record.vehicleId).toBeUndefined()
+  })
+
+  it('keeps an untargeted office expense out of the rider and vehicle net (DEC-069)', async () => {
+    const before = await getDeliveryNetSummary('amara')
+    await createExpense({
+      storeId: 'amara',
+      type: 'office_supplies_other',
+      amountMinor: 3000,
+      recordedByUserId: 'user-1',
+    })
+    const after = await getDeliveryNetSummary('amara')
+    const spend = (s: Awaited<ReturnType<typeof getDeliveryNetSummary>>) =>
+      [...s.riders, ...s.vehicles].reduce((sum, e) => sum + e.expensesMinor, 0)
+    expect(spend(after)).toBe(spend(before))
   })
 
   it('rejects a rider not belonging to the store', async () => {

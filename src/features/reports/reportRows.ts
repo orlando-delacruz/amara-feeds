@@ -186,7 +186,7 @@ export async function buildExpenseReportRows(from: string, to: string): Promise<
 export interface ExpenseRecordExcelRow {
   date: string
   storeId: StoreId
-  /** Rider or vehicle the expense was charged to. */
+  /** Rider, vehicle, or Office — what the expense was charged to. */
   target: string
   type: string
   amountMinor: number
@@ -217,8 +217,16 @@ export async function buildExpenseRecordRows(
         ? (riderNames.get(expense.riderId) ?? NOT_AVAILABLE)
         : expense.vehicleId
           ? (vehicleLabels.get(expense.vehicleId) ?? NOT_AVAILABLE)
-          : NONE,
-      type: expense.type === 'fuel' ? 'Fuel' : 'Repair',
+          : // No rider and no vehicle = charged to the business (migration 00022).
+            'Office',
+      // Was `expense.type === 'fuel' ? 'Fuel' : 'Repair'`, which labelled every
+      // office-supplies row "Repair" in the Expense Records sheet.
+      type:
+        expense.type === 'fuel'
+          ? 'Fuel'
+          : expense.type === 'repair'
+            ? 'Repair'
+            : 'Office Supplies / Others',
       amountMinor: expense.amountMinor,
       note: expense.note ?? '',
       recordedByName: userNames.get(expense.recordedByUserId) ?? NOT_AVAILABLE,

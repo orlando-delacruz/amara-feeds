@@ -181,7 +181,7 @@ describe('exportReportExcel', () => {
     expect(headers(records)).toEqual([
       'Date',
       'Location',
-      'Rider / Vehicle',
+      'Assigned to',
       'Type',
       'Amount',
       'Note',

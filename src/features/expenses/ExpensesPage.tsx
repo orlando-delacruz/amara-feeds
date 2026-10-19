@@ -76,8 +76,23 @@ const expenseTypeOptions = [
 const expenseTypeLabel = (value: ExpenseType): string =>
   expenseTypeOptions.find((option) => option.value === value)?.label ?? value
 
+/** 'office' means the expense is charged to the business, not to a delivery
+ *  person or vehicle — allowed only for office supplies (migration 00022). */
+type ExpenseTargetKind = 'rider' | 'vehicle' | 'office'
+
+const OFFICE: ExpenseTargetKind = 'office'
+
+/** Splits a form into the rider/vehicle ids the service expects. Office spends
+ *  send neither, which is what keeps them out of Riders/Vehicles net. */
+function targetIds(kind: ExpenseTargetKind, targetId: string) {
+  if (kind === OFFICE || !targetId) {
+    return {}
+  }
+  return kind === 'rider' ? { riderId: targetId } : { vehicleId: targetId }
+}
+
 interface ExpenseFormState {
-  targetKind: 'rider' | 'vehicle'
+  targetKind: ExpenseTargetKind
   targetId: string
   type: ExpenseType
   amount: string
@@ -103,8 +118,8 @@ function EditExpenseDialog({
   vehicles: Vehicle[]
   onSaved: () => void
 }) {
-  const [targetKind, setTargetKind] = useState<'rider' | 'vehicle'>(
-    record?.riderId ? 'rider' : 'vehicle',
+  const [targetKind, setTargetKind] = useState<ExpenseTargetKind>(
+    record?.riderId ? 'rider' : record?.vehicleId ? 'vehicle' : OFFICE,
   )
   const [targetId, setTargetId] = useState(record?.riderId ?? record?.vehicleId ?? '')
   const [type, setType] = useState<ExpenseType>(record?.type ?? 'fuel')
@@ -117,15 +132,24 @@ function EditExpenseDialog({
         type: input.type,
         amountMinor: toMinor(Number(input.amount)),
         note: input.note || undefined,
-        ...(targetKind === 'rider' ? { riderId: input.targetId } : { vehicleId: input.targetId }),
+        ...targetIds(targetKind, input.targetId),
       }),
     'Could not update the expense.',
   )
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!record || !targetId || Number(amount) <= 0) {
-      setFormError('Select a target and enter an amount greater than zero.')
+    const isOffice = targetKind === OFFICE
+    if (!record || Number(amount) <= 0) {
+      setFormError('Enter an amount greater than zero.')
+      return
+    }
+    if (!isOffice && !targetId) {
+      setFormError('Select a target, or charge it to the office.')
+      return
+    }
+    if (isOffice && type !== 'office_supplies_other') {
+      setFormError('Only office supplies can be charged to the office.')
       return
     }
     setFormError(null)
@@ -154,22 +178,25 @@ function EditExpenseDialog({
           options={[
             { value: 'rider', label: 'Rider' },
             { value: 'vehicle', label: 'Vehicle' },
+            { value: OFFICE, label: 'Office' },
           ]}
           value={targetKind}
           onChange={(event) => {
-            setTargetKind(event.target.value as 'rider' | 'vehicle')
+            setTargetKind(event.target.value as ExpenseTargetKind)
             setTargetId('')
           }}
         />
-        <Select
-          id="edit-expense-target"
-          label={targetKind === 'rider' ? 'Rider' : 'Vehicle'}
-          options={targetOptions}
-          placeholder={targetKind === 'rider' ? 'Select a rider' : 'Select a vehicle'}
-          value={targetId}
-          onChange={(event) => setTargetId(event.target.value)}
-          required
-        />
+        {targetKind !== OFFICE && (
+          <Select
+            id="edit-expense-target"
+            label={targetKind === 'rider' ? 'Rider' : 'Vehicle'}
+            options={targetOptions}
+            placeholder={targetKind === 'rider' ? 'Select a rider' : 'Select a vehicle'}
+            value={targetId}
+            onChange={(event) => setTargetId(event.target.value)}
+            required
+          />
+        )}
         <Select
           id="edit-expense-type"
           label="Expense type"
@@ -240,12 +267,18 @@ export function ExpensesPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!form.targetId) {
+    const isOffice = form.targetKind === OFFICE
+    // Office spends carry no target; everything else must name one.
+    if (!isOffice && !form.targetId) {
       setFormError(
         form.targetKind === 'rider'
           ? 'Select a rider to assign the expense to.'
           : 'Select a vehicle to assign the expense to.',
       )
+      return
+    }
+    if (isOffice && form.type !== 'office_supplies_other') {
+      setFormError('Only office supplies can be charged to the office.')
       return
     }
     setFormError(null)
@@ -255,7 +288,7 @@ export function ExpensesPage() {
       amountMinor: toMinor(Number(form.amount)),
       note: form.note || undefined,
       recordedByUserId: user?.id ?? '',
-      ...(form.targetKind === 'rider' ? { riderId: form.targetId } : { vehicleId: form.targetId }),
+      ...targetIds(form.targetKind, form.targetId),
     })
     if (record) {
       setForm(emptyForm)
@@ -347,21 +380,26 @@ export function ExpensesPage() {
               options={[
                 { value: 'rider', label: 'Rider' },
                 { value: 'vehicle', label: 'Vehicle' },
+                { value: OFFICE, label: 'Office' },
               ]}
               value={form.targetKind}
               onChange={(event) =>
-                updateForm('targetKind', event.target.value as 'rider' | 'vehicle')
+                updateForm('targetKind', event.target.value as ExpenseTargetKind)
               }
             />
-            <Select
-              id="expense-target"
-              label={form.targetKind === 'rider' ? 'Rider' : 'Vehicle'}
-              options={targetOptions}
-              placeholder={form.targetKind === 'rider' ? 'Select a rider' : 'Select a vehicle'}
-              value={form.targetId}
-              onChange={(event) => updateForm('targetId', event.target.value)}
-              required
-            />
+            {form.targetKind !== OFFICE && (
+              <Select
+                id="expense-target"
+                label={form.targetKind === 'rider' ? 'Rider' : 'Vehicle'}
+                options={targetOptions}
+                placeholder={
+                  form.targetKind === 'rider' ? 'Select a rider' : 'Select a vehicle'
+                }
+                value={form.targetId}
+                onChange={(event) => updateForm('targetId', event.target.value)}
+                required
+              />
+            )}
             <Select
               id="expense-type"
               label="Expense type"
@@ -457,7 +495,7 @@ export function ExpensesPage() {
           <RecordList
             caption={`Expense history — ${storeLabel(store)}`}
             columns={[
-              { key: 'target', header: 'Rider / Vehicle' },
+              { key: 'target', header: 'Assigned to' },
               { key: 'type', header: 'Type' },
               { key: 'amount', header: 'Amount' },
               { key: 'note', header: 'Note' },
@@ -469,7 +507,8 @@ export function ExpensesPage() {
               target:
                 (record.riderId ? riderNames.get(record.riderId) : null) ??
                 (record.vehicleId ? vehicleNames.get(record.vehicleId) : null) ??
-                'Not available',
+                // No rider and no vehicle = charged to the business (migration 00022).
+                (!record.riderId && !record.vehicleId ? 'Office' : 'Not available'),
               type: expenseTypeLabel(record.type),
               amount: <MoneyText amountMinor={record.amountMinor} />,
               note: record.note ?? '—',

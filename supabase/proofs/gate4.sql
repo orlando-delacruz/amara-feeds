@@ -1214,4 +1214,82 @@ select public.update_product('bbbbbbbb-0000-0000-0000-000000000002', 'cooking oi
 rollback;
 select 'pass: product rename is admin-only, unique against active, audited' as proof;
 
+-- --- 37. Office-supplies expenses may have no rider/vehicle (DEC-069) ------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+-- Staff records office supplies with NO target: accepted, not forced onto a rider.
+select public.create_expense('amara', null, null,
+  'office_supplies_other', 3000, 'Bond paper') as office_untargeted \gset
+select count(*) = 1 as office_saved_without_target from public.expenses
+ where id = (:'office_untargeted'::jsonb->>'expense_id')::uuid
+   and rider_id is null and vehicle_id is null;
+-- Audit records that it was charged to the office, not to a person.
+select detail = 'Charged to the office' as office_audit_detail from public.audit_events
+ where action = 'expense.recorded' and subject = 'Office supplies / other expense'
+ order by created_at desc limit 1;
+rollback;
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+-- Fuel and repair STILL require a target: the per-target net (DEC-017) depends
+-- on it, so the relaxation must not leak to the other two types.
+do $$
+begin
+  begin
+    perform public.create_expense('amara', null, null, 'fuel', 3000, 'Untargeted fuel');
+    raise exception 'FAIL: untargeted fuel accepted';
+  exception when others then
+    if sqlerrm like '%rider or vehicle%' then raise notice 'untargeted fuel refused';
+    else raise; end if;
+  end;
+end $$;
+do $$
+begin
+  begin
+    perform public.create_expense('amara', null, null, 'repair', 3000, 'Untargeted repair');
+    raise exception 'FAIL: untargeted repair accepted';
+  exception when others then
+    if sqlerrm like '%rider or vehicle%' then raise notice 'untargeted repair refused';
+    else raise; end if;
+  end;
+end $$;
+-- An office-supplies expense may still name a vehicle (a cart bought as office
+-- stock): the target is optional, not forbidden.
+select public.create_expense('amara', null, 'dddddddd-0000-0000-0000-000000000002',
+  'office_supplies_other', 45000, 'Handcart') as office_with_vehicle \gset
+select count(*) = 1 as office_keeps_vehicle_target from public.expenses
+ where id = (:'office_with_vehicle'::jsonb->>'expense_id')::uuid
+   and vehicle_id = 'dddddddd-0000-0000-0000-000000000002';
+rollback;
+begin;
+-- Fixture as postgres BEFORE switching role: inserts under `authenticated`
+-- face RLS, and psql cannot substitute :'var' inside do $$…$$.
+insert into public.expenses (id, store_id, vehicle_id, type, amount_minor, note, recorded_by_user_id)
+values ('eeeeeeee-0000-0000-0000-000000000002', 'amara', 'dddddddd-0000-0000-0000-000000000002',
+  'office_supplies_other', 3000, 'For retarget', '11111111-1111-1111-1111-111111111111');
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+-- The admin correction path enforces the same rule.
+select public.update_expense('eeeeeeee-0000-0000-0000-000000000002',
+  null, null, 'office_supplies_other', 3000, 'Retargeted to the office');
+select count(*) = 1 as update_can_drop_target from public.expenses
+ where id = 'eeeeeeee-0000-0000-0000-000000000002' and rider_id is null and vehicle_id is null;
+do $$
+begin
+  begin
+    perform public.update_expense('eeeeeeee-0000-0000-0000-000000000002',
+      null, null, 'fuel', 3000, 'Retarget as fuel');
+    raise exception 'FAIL: office row retyped to fuel without a target';
+  exception when others then
+    if sqlerrm like '%rider or vehicle%' then raise notice 'retyping without a target refused';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+select 'pass: office expenses may be untargeted; fuel/repair still need one' as proof;
+
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

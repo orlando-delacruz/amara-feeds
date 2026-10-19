@@ -66,7 +66,10 @@ export async function createExpense(input: NewExpenseInput): Promise<Expense> {
   if (input.amountMinor <= 0) {
     throw new ServiceError('validation', 'Expense amount must be greater than zero.')
   }
-  if (!input.riderId && !input.vehicleId) {
+  // Office supplies may be charged to the business itself; fuel and repair must
+  // name a rider or vehicle so the per-target net stays meaningful (migration
+  // 00022). Mirrors expense_needs_rider_or_vehicle on the database.
+  if (!input.riderId && !input.vehicleId && input.type !== 'office_supplies_other') {
     throw new ServiceError('validation', 'Assign the expense to a rider or vehicle.')
   }
   if (input.riderId) {
@@ -150,7 +153,10 @@ export async function updateExpense(id: string, input: UpdateExpenseInput): Prom
   if (!record) {
     throw new ServiceError('not_found', 'Expense not found.')
   }
-  if (!input.riderId && !input.vehicleId) {
+  // Office supplies may be charged to the business itself; fuel and repair must
+  // name a rider or vehicle so the per-target net stays meaningful (migration
+  // 00022). Mirrors expense_needs_rider_or_vehicle on the database.
+  if (!input.riderId && !input.vehicleId && input.type !== 'office_supplies_other') {
     throw new ServiceError('validation', 'Assign the expense to a rider or vehicle.')
   }
   if (input.riderId) {

@@ -168,7 +168,7 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
   const expenseRecordColumns = [
     { header: headerStyle, label: 'Date', width: 12 },
     { header: headerStyle, label: 'Location', width: 14 },
-    { header: headerStyle, label: 'Rider / Vehicle', width: 18 },
+    { header: headerStyle, label: 'Assigned to', width: 18 },
     { header: headerStyle, label: 'Type', width: 10 },
     { header: headerStyle, label: 'Amount', width: 12 },
     { header: headerStyle, label: 'Note', width: 28 },

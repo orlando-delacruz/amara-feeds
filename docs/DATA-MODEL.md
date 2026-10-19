@@ -120,7 +120,7 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 - **Concept:** a store-specific fuel or repair cost recorded against a rider or vehicle (at least one required), used to compute per-rider/vehicle net (delivered-sales value minus expenses). Only admins can edit or delete a recorded expense (client revisions, DEC-055/DEC-056): editing corrects target, type, amount, and note without changing the store; deletion is a single-row removal — nothing references expenses — so net, by-date, and report figures recompute from the remaining rows.
 - **Source:** REQ-EXP-001–003; client confirmation (fuel/repair costs deducted from rider/vehicle sales); admin-only edit/delete per client request (DEC-055, DEC-056).
-- **Boundary:** per-store (never shared); expense type is `fuel`, `repair` or `office_supplies_other` — the last added 2026-10-19 as one type covering office supplies and misc (DEC-068), widening the DEC-034 fuel/repair baseline; net computation uses only delivery-tagged sales at the same store.
+- **Boundary:** per-store (never shared); expense type is `fuel`, `repair` or `office_supplies_other` — the last added 2026-10-19 as one type covering office supplies and misc (DEC-068), widening the DEC-034 fuel/repair baseline; net computation uses only delivery-tagged sales at the same store. **Target requirement (DEC-069):** an expense must name a rider or a vehicle *except* when its type is `office_supplies_other`, which may be charged to the business itself. Fuel and repair always require a target so the per-target net stays meaningful; an expense with neither target is reported as `Office` and drops out of Riders net and Vehicles net automatically.
 
 ## 5. Conceptual Relationships
 

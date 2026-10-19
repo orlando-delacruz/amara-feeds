@@ -328,6 +328,23 @@ describe('buildExpenseRecordRows', () => {
     })
   })
 
+  it('labels office supplies as Office Supplies, not Repair (DEC-069)', async () => {
+    await createExpense({
+      storeId: 'amara',
+      type: 'office_supplies_other',
+      amountMinor: 3000,
+      note: 'Bond paper',
+      recordedByUserId: 'user-1',
+    })
+    const rows = await buildExpenseRecordRows(todayIso(), todayIso())
+    // This row was previously exported as "Repair": the builder used a
+    // `type === 'fuel' ? 'Fuel' : 'Repair'` binary that had no third branch.
+    expect(rows.find((row) => row.amountMinor === 3000)).toMatchObject({
+      target: 'Office',
+      type: 'Office Supplies / Others',
+    })
+  })
+
   it('keeps one row per record even when a date and store aggregate to one summary row', async () => {
     await createExpense({
       storeId: 'amara',
