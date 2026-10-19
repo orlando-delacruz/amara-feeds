@@ -16,6 +16,10 @@ dist-ssr
 .env
 .env.*
 
+# Graphify knowledge-graph build output — regenerate with `graphify update .`
+# (see WORKFLOW.md). Contains graph.json, graph.html and an extraction cache.
+graphify-out/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

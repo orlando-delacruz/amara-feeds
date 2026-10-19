@@ -28,8 +28,29 @@ describe('buildExpenseDateSummary', () => {
       }),
     ])
     expect(entries).toEqual([
-      { date: '2026-03-04', fuelMinor: 75000, repairMinor: 120000, totalMinor: 195000 },
-      { date: '2026-03-05', fuelMinor: 10000, repairMinor: 0, totalMinor: 10000 },
+      {
+        date: '2026-03-04',
+        fuelMinor: 75000,
+        repairMinor: 120000,
+        otherMinor: 0,
+        totalMinor: 195000,
+      },
+      { date: '2026-03-05', fuelMinor: 10000, repairMinor: 0, otherMinor: 0, totalMinor: 10000 },
+    ])
+  })
+
+  it('buckets office supplies separately instead of falling into repair', () => {
+    const entries = buildExpenseDateSummary([
+      expense({ createdAt: '2026-03-04T08:00:00.000Z', type: 'office_supplies_other', amountMinor: 5000 }),
+    ])
+    expect(entries).toEqual([
+      {
+        date: '2026-03-04',
+        fuelMinor: 0,
+        repairMinor: 0,
+        otherMinor: 5000,
+        totalMinor: 5000,
+      },
     ])
   })
 

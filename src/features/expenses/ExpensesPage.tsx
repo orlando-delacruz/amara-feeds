@@ -70,7 +70,11 @@ const NetGrid = styled.div`
 const expenseTypeOptions = [
   { value: 'fuel', label: 'Fuel' },
   { value: 'repair', label: 'Repair' },
+  { value: 'office_supplies_other', label: 'Office Supplies / Others' },
 ]
+
+const expenseTypeLabel = (value: ExpenseType): string =>
+  expenseTypeOptions.find((option) => option.value === value)?.label ?? value
 
 interface ExpenseFormState {
   targetKind: 'rider' | 'vehicle'
@@ -274,7 +278,7 @@ export function ExpensesPage() {
   async function requestDelete(record: Expense) {
     const confirmed = await confirmAction({
       title: 'Delete this expense?',
-      text: `Permanently delete the ${record.type} expense of ${formatPeso(record.amountMinor)}? Net summaries update accordingly.`,
+      text: `Permanently delete the ${expenseTypeLabel(record.type).toLowerCase()} expense of ${formatPeso(record.amountMinor)}? Net summaries update accordingly.`,
       confirmLabel: 'Delete',
       danger: true,
     })
@@ -309,7 +313,7 @@ export function ExpensesPage() {
     <Stack>
       <PageHeader
         title="Expenses"
-        description={`Fuel and repair expenses at ${storeLabel(store)}.`}
+        description={`Fuel, repair and office supplies expenses at ${storeLabel(store)}.`}
         size="compact"
       />
       {dateSummary.length > 0 && (
@@ -320,12 +324,14 @@ export function ExpensesPage() {
               { key: 'date', header: 'Date' },
               { key: 'fuel', header: 'Fuel' },
               { key: 'repair', header: 'Repair' },
+              { key: 'other', header: 'Office Supplies / Others' },
               { key: 'total', header: 'Total' },
             ]}
             rows={dateSummary.map((entry) => ({
               date: <DateText value={`${entry.date}T00:00:00`} />,
               fuel: <MoneyText amountMinor={entry.fuelMinor} />,
               repair: <MoneyText amountMinor={entry.repairMinor} />,
+              other: <MoneyText amountMinor={entry.otherMinor} />,
               total: <MoneyText amountMinor={entry.totalMinor} />,
             }))}
           />
@@ -464,7 +470,7 @@ export function ExpensesPage() {
                 (record.riderId ? riderNames.get(record.riderId) : null) ??
                 (record.vehicleId ? vehicleNames.get(record.vehicleId) : null) ??
                 'Not available',
-              type: record.type === 'fuel' ? 'Fuel' : 'Repair',
+              type: expenseTypeLabel(record.type),
               amount: <MoneyText amountMinor={record.amountMinor} />,
               note: record.note ?? '—',
               recordedBy: userNames.get(record.recordedByUserId) ?? 'Not available',

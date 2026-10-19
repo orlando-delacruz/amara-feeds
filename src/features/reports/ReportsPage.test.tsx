@@ -51,8 +51,11 @@ describe('ReportsPage', () => {
     renderReports()
     await screen.findAllByText(/Sales by store/)
 
-    expect(screen.getByRole('button', { name: 'From' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'To' })).toBeInTheDocument()
+    // Each trigger is named "<label> <current value>" so a screen reader hears
+    // both the field and its date (DEC-068 accessibility fix); the name still
+    // starts with the visible label, as WCAG 2.5.3 requires.
+    expect(screen.getByRole('button', { name: /^From / })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^To / })).toBeInTheDocument()
   })
 
   it('provides an Export Excel action', async () => {
@@ -64,7 +67,7 @@ describe('ReportsPage', () => {
   it('redirects staff away from admin reports', async () => {
     renderReports('/admin/reports', staffUser)
     expect(
-      await screen.findByRole('heading', { name: 'Dashboard' }, { timeout: 5000 }),
+      await screen.findByRole('heading', { name: 'Dashboard' }),
     ).toBeInTheDocument()
   })
 })

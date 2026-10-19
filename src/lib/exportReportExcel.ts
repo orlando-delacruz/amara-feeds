@@ -148,6 +148,7 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
     { header: headerStyle, label: 'Location', width: 14 },
     { header: headerStyle, label: 'Fuel', width: 12 },
     { header: headerStyle, label: 'Repair', width: 12 },
+    { header: headerStyle, label: 'Office Supplies / Others', width: 24 },
     { header: headerStyle, label: 'Total', width: 12 },
   ]
 
@@ -159,6 +160,7 @@ export async function exportReportExcel(input: ReportExcelInput): Promise<void> 
       { value: storeNames[row.storeId] ?? row.storeId, type: String },
       { value: row.fuelMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.repairMinor / 100, type: Number, format: '#,##0.00' },
+      { value: row.otherMinor / 100, type: Number, format: '#,##0.00' },
       { value: row.totalMinor / 100, type: Number, format: '#,##0.00' },
     ]),
   ]

@@ -4,6 +4,15 @@ import type { ReactNode } from 'react'
 interface FormFieldProps {
   label: string
   inputId: string
+  /**
+   * Set when the child is not a native form control — DatePicker's trigger is
+   * a <button>. A `<label htmlFor>` wins the accessible-name calculation, so it
+   * would replace the button's own content with just the label and hide the
+   * selected date from screen readers. The label then renders as text and the
+   * child points at it with `aria-labelledby={`${inputId}-label`}` (plus its own
+   * value element, so the name still contains the visible label — WCAG 2.5.3).
+   */
+  labelAsText?: boolean
   error?: string
   hint?: string
   required?: boolean
@@ -41,6 +50,7 @@ const ErrorText = styled.p`
 export function FormField({
   label,
   inputId,
+  labelAsText = false,
   error,
   hint,
   required = false,
@@ -48,12 +58,21 @@ export function FormField({
 }: FormFieldProps) {
   const hintId = hint ? `${inputId}-hint` : undefined
   const errorId = error ? `${inputId}-error` : undefined
+  const mark = (
+    <>
+      {label}
+      {required && <RequiredMark aria-hidden="true">*</RequiredMark>}
+    </>
+  )
   return (
     <Wrapper>
-      <Label htmlFor={inputId}>
-        {label}
-        {required && <RequiredMark aria-hidden="true">*</RequiredMark>}
-      </Label>
+      {labelAsText ? (
+        <Label as="span" id={`${inputId}-label`}>
+          {mark}
+        </Label>
+      ) : (
+        <Label htmlFor={inputId}>{mark}</Label>
+      )}
       {children}
       {hint && <Hint id={hintId}>{hint}</Hint>}
       {error && (

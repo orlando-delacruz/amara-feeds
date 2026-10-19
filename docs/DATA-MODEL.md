@@ -47,7 +47,7 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 ### 4.3 Product / Item — Confirmed
 
 - **Concept:** a sellable, stockable, and receivable product/item record with an approval state.
-- **Source:** REQ-PROD-001–003; `docs/PROJECT.md` §4.
+- **Source:** REQ-PROD-001–003; `docs/PROJECT.md` §4; admin-only rename from the inventory Edit stock dialog (DEC-068). `products.name` is the single name behind the inventory row, the sale catalog and reports — there is no per-store item name, so a rename is global and immediate.
 - **Boundary:** exact product information is Confirmation Required; rejection/edit/resubmission behavior is unconfirmed.
 
 ### 4.4 Sale — Confirmed
@@ -120,7 +120,7 @@ It explicitly does NOT define tables, columns, primary/foreign keys, IDs, enums,
 
 - **Concept:** a store-specific fuel or repair cost recorded against a rider or vehicle (at least one required), used to compute per-rider/vehicle net (delivered-sales value minus expenses). Only admins can edit or delete a recorded expense (client revisions, DEC-055/DEC-056): editing corrects target, type, amount, and note without changing the store; deletion is a single-row removal — nothing references expenses — so net, by-date, and report figures recompute from the remaining rows.
 - **Source:** REQ-EXP-001–003; client confirmation (fuel/repair costs deducted from rider/vehicle sales); admin-only edit/delete per client request (DEC-055, DEC-056).
-- **Boundary:** per-store (never shared); expense type enum (fuel, repair) is Assumed pending exact values; net computation uses only delivery-tagged sales at the same store.
+- **Boundary:** per-store (never shared); expense type is `fuel`, `repair` or `office_supplies_other` — the last added 2026-10-19 as one type covering office supplies and misc (DEC-068), widening the DEC-034 fuel/repair baseline; net computation uses only delivery-tagged sales at the same store.
 
 ## 5. Conceptual Relationships
 

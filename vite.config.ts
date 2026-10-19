@@ -75,7 +75,11 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     pool: 'vmThreads',
-    testTimeout: 15000,
+    // 30s, not 15s: multi-interaction userEvent flows in jsdom exceed 15s under
+    // parallel load on a busy machine and failed as `Test timed out` with no
+    // assertion ever running. Verified stable at 4 failures (DatePicker x3,
+    // SaleListPage x1) with the higher limit; the low one varied 4/5/7 per run.
+    testTimeout: 30000,
     setupFiles: ['./src/test/setup.ts'],
   },
 })

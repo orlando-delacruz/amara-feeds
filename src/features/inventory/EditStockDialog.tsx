@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import styled from 'styled-components'
-import { updateStock } from '@/services'
+import { renameProduct, updateStock } from '@/services'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
 import { TextField } from '@/components/ui/TextField'
@@ -40,6 +40,7 @@ export function EditStockDialog({
 }: EditStockDialogProps) {
   const [quantity, setQuantity] = useState(row ? String(row.quantity) : '')
   const [price, setPrice] = useState('')
+  const [name, setName] = useState(row ? row.productName : '')
   const { run, pending } = useAlertMutation(
     (input: { quantity: number; priceMinor?: number }) =>
       updateStock(row!.storeId, row!.productId, {
@@ -49,6 +50,16 @@ export function EditStockDialog({
         actorRole,
       }),
     'Could not update the stock.',
+  )
+  // Renamed before the stock write so a rejected name leaves quantity and price
+  // untouched; the reverse order would half-apply the edit.
+  const { run: runRename, pending: renaming } = useAlertMutation(
+    (input: { name: string }) =>
+      renameProduct(row!.productId, input.name, {
+        userId: actorUserId ?? '',
+        role: actorRole,
+      }),
+    'Could not rename the item.',
   )
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -64,6 +75,16 @@ export function EditStockDialog({
     if (priceValue !== undefined && Number.isNaN(priceValue)) {
       return
     }
+    const trimmed = name.trim()
+    if (!trimmed) {
+      return
+    }
+    if (trimmed !== row.productName) {
+      const renamed = await runRename({ name: trimmed })
+      if (!renamed) {
+        return
+      }
+    }
     const saved = await run({ quantity: quantityValue, priceMinor: priceValue })
     if (saved) {
       onSaved(saved.level.quantity, saved.previousQuantity)
@@ -76,6 +97,15 @@ export function EditStockDialog({
         <p>
           {row?.productName} at {row ? storeNames[row.storeId] : ''}.
         </p>
+        <TextField
+          id="edit-stock-name"
+          label="Item name"
+          autoComplete="off"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          hint="Renames the item everywhere, including the sale catalog."
+          required
+        />
         <TextField
           id="edit-stock-quantity"
           label="Quantity on hand"
@@ -103,8 +133,8 @@ export function EditStockDialog({
               : 'Leave empty to keep the price from the latest recorded stock receipt.'
           }
         />
-        <Button type="submit" disabled={pending}>
-          {pending ? 'Saving…' : 'Save changes'}
+        <Button type="submit" disabled={pending || renaming}>
+          {pending || renaming ? 'Saving…' : 'Save changes'}
         </Button>
       </Form>
     </Dialog>

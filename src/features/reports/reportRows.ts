@@ -143,6 +143,8 @@ export interface ExpenseExcelRow {
   storeId: StoreId
   fuelMinor: number
   repairMinor: number
+  /** Fuel/repair assumed baseline was binary (DEC-034); widened 2026-10-19. */
+  otherMinor: number
   totalMinor: number
 }
 
@@ -160,12 +162,15 @@ export async function buildExpenseReportRows(from: string, to: string): Promise<
       storeId: expense.storeId,
       fuelMinor: 0,
       repairMinor: 0,
+      otherMinor: 0,
       totalMinor: 0,
     }
     if (expense.type === 'fuel') {
       entry.fuelMinor += expense.amountMinor
-    } else {
+    } else if (expense.type === 'repair') {
       entry.repairMinor += expense.amountMinor
+    } else {
+      entry.otherMinor += expense.amountMinor
     }
     entry.totalMinor += expense.amountMinor
     byDateStore.set(key, entry)

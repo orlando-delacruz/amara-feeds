@@ -14,6 +14,7 @@ export const AUDIT_ACTION_LABELS: Record<AuditEvent['action'], string> = {
   'product.submitted': 'Product submitted',
   'product.approved': 'Product approved',
   'product.rejected': 'Product rejected',
+  'product.renamed': 'Item renamed',
   'rider.added': 'Rider added',
   'rider.status-changed': 'Rider status changed',
   'vehicle.added': 'Vehicle added',

@@ -64,7 +64,7 @@ describe('SaleCartPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save sale' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
+      await screen.findByRole('heading', { name: 'Sales' }),
     ).toBeInTheDocument()
   })
 
@@ -80,7 +80,7 @@ describe('SaleCartPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save sale' }))
     expect(
-      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
+      await screen.findByRole('heading', { name: 'Sales' }),
     ).toBeInTheDocument()
   })
 
@@ -116,7 +116,7 @@ describe('SaleCartPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save sale' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
+      await screen.findByRole('heading', { name: 'Sales' }),
     ).toBeInTheDocument()
   })
 
@@ -127,7 +127,7 @@ describe('SaleCartPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save sale' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
+      await screen.findByRole('heading', { name: 'Sales' }),
     ).toBeInTheDocument()
   })
 
@@ -259,7 +259,7 @@ describe('SaleCartPage', () => {
     const popup = await __awaitSwal('Sale recorded, but the down payment was not saved.')
     expect(String(popup?.text)).toMatch(/credit page/)
     expect(
-      await screen.findByRole('heading', { name: 'Sales' }, { timeout: 5000 }),
+      await screen.findByRole('heading', { name: 'Sales' }),
     ).toBeInTheDocument()
     // The sale itself was recorded (seed has four).
     expect(getDb().sales).toHaveLength(5)

@@ -89,7 +89,14 @@ const input: ReportExcelInput = {
     },
   ],
   expenseRows: [
-    { date: '2026-10-01', storeId: 'amara', fuelMinor: 75000, repairMinor: 0, totalMinor: 75000 },
+    {
+      date: '2026-10-01',
+      storeId: 'amara',
+      fuelMinor: 75000,
+      repairMinor: 0,
+      otherMinor: 0,
+      totalMinor: 75000,
+    },
   ],
   expenseRecordRows: [
     {
@@ -193,8 +200,15 @@ describe('exportReportExcel', () => {
 
   it('keeps the aggregated Expenses sheet alongside the per-record one', async () => {
     await exportReportExcel(input)
-    expect(headers(sheet('Expenses'))).toEqual(['Date', 'Location', 'Fuel', 'Repair', 'Total'])
-    expect(row(sheet('Expenses'), 1)).toEqual(['2026-10-01', 'Amara', 750, 0, 750])
+    expect(headers(sheet('Expenses'))).toEqual([
+      'Date',
+      'Location',
+      'Fuel',
+      'Repair',
+      'Office Supplies / Others',
+      'Total',
+    ])
+    expect(row(sheet('Expenses'), 1)).toEqual(['2026-10-01', 'Amara', 750, 0, 0, 750])
   })
 
   it('omits the sheets whose rows were not requested', async () => {

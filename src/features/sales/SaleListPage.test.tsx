@@ -72,9 +72,11 @@ describe('SaleListPage', () => {
     renderAt('/sales', undefined, 'amara')
     await screen.findByText('Maria Santos')
 
-    const dateInput = screen.getByLabelText('Date')
-    await user.clear(dateInput)
-    await user.type(dateInput, '2000-01-01')
+    // The date control is a DatePicker trigger, not a typeable input: open it
+    // and step to next month, where no sale exists.
+    await user.click(screen.getByRole('button', { name: /^Date / }))
+    await user.click(screen.getByRole('button', { name: 'Next month' }))
+    await user.click(screen.getAllByRole('gridcell')[0])
 
     expect(await screen.findByText('No sales on this date')).toBeInTheDocument()
   })

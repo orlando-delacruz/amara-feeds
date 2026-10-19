@@ -2,6 +2,23 @@
 -- Runs inside the local database as `postgres`. Simulates callers by
 -- setting the request JWT claim (auth.uid()) and switching the DB role.
 -- Each section uses BEGIN/ROLLBACK so state stays isolated.
+--
+-- !! psql SCRIPT — NOT plain SQL. Do NOT paste or run this in a GUI SQL editor,
+--    Supabase Studio, or any tool that hands statements straight to Postgres:
+--    it contains psql meta-commands (\pset, \set, and 28 \gset captures) that a
+--    plain SQL engine rejects with `42601 syntax error at or near "\"`.
+--    Studio will also NOT stop on the first error, so a partial run can look
+--    like a pass.
+--
+-- Run it exactly like this (from the repo root), never as a pasted script:
+--     docker exec -i supabase_db_amara-feeds psql -U postgres < supabase/proofs/gate4.sql
+-- Requires: `npx supabase db reset` applied first, or the proofs run against
+-- a schema that predates the migration they cover.
+--
+-- KNOWN LIMIT: a proof line prints "pass" whenever its block raised no
+-- exception. `select ... as some_assertion` only PRINTS t/f — a false boolean
+-- does NOT fail the run. So "36 proofs pass" means "no exceptions", not
+-- "every assertion is true". Grep the output for a lone `f` to audit them.
 
 \pset pager off
 \set ON_ERROR_STOP on
@@ -385,8 +402,11 @@ set local role authenticated;
 set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 set local request.jwt.claim.role = 'authenticated';
 -- Receiving into an approved row stays allowed (normal workflow).
-select public.record_receiving('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 5, 'Proof Supplier', 100000, 115000, null, null);
-select quantity = 25 as receiving_still_adds from public.stock_levels
+-- Since migration 00017 (DEC-061) a receipt is PENDING and does not move stock
+-- until an admin approves it, so the assertion is "allowed, stock untouched"
+-- (20 is the seeded quantity). The approve-then-apply path is proven in 32.
+select public.record_receiving('amara', 'bbbbbbbb-0000-0000-0000-000000000001', 5, 'Proof Supplier', 100000, 115000, null, null) as staff_receipt_into_approved;
+select quantity = 20 as receiving_allowed_stock_untouched from public.stock_levels
  where store_id='amara' and product_id='bbbbbbbb-0000-0000-0000-000000000001';
 rollback;
 select 'pass: approved inventory admin-edit-only, receiving unaffected' as proof;
@@ -620,9 +640,11 @@ set local role authenticated;
 set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
 set local request.jwt.claim.role = 'authenticated';
 select public.void_sale(nullif(current_setting('app.proof_paid_sale', true), '')::uuid);
+-- Product 2 only: the sale used it, so it is the row void_sale restores (40).
+-- (This query previously also matched product 1, which void_sale never touches,
+-- so it printed a spurious false alongside the true.)
 select quantity = 40 as stock_restored_on_voided_sale from public.stock_levels
- where store_id='zeann' and product_id='bbbbbbbb-0000-0000-0000-000000000001'
-    or store_id='zeann' and product_id='bbbbbbbb-0000-0000-0000-000000000002';
+ where store_id='zeann' and product_id='bbbbbbbb-0000-0000-0000-000000000002';
 rollback;
 select 'pass: sale undo reverses stock once and voids credit + payments' as proof;
 
@@ -1084,5 +1106,112 @@ select interest_minor is null as interest_absent_by_default from public.payments
  where id = (:'paid_without_interest'::jsonb->>'payment_id')::uuid;
 rollback;
 select 'pass: payment interest stored per payment, balance math unchanged' as proof;
+
+-- --- 35. Office supplies expense type accepted end to end (DEC-068) --------
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+-- Staff records the new type; the widened check constraint must accept it.
+select public.create_expense('amara', 'cccccccc-0000-0000-0000-000000000001',
+  null, 'office_supplies_other', 3000, 'Bond paper') as office_exp \gset
+select type = 'office_supplies_other' as office_type_saved from public.expenses
+ where id = (:'office_exp'::jsonb->>'expense_id')::uuid;
+-- The audit row must exist and must not claim the expense was a repair.
+select subject = 'Office supplies / other expense' as office_audit_label from public.audit_events
+ where action = 'expense.recorded' and detail = 'Bond paper';
+rollback;
+begin;
+-- update_expense accepts the widened set. Seeded expenses get random uuids
+-- (the insert omits id), so use a fixture with a known id — inserted as
+-- postgres BEFORE switching role, because inserts under `authenticated` face
+-- RLS and because psql does not substitute :'var' inside do $$…$$ (SESSION.md
+-- DB gotchas). 'dddddddd-...0002' is a VEHICLE, not an expense.
+insert into public.expenses (id, store_id, vehicle_id, type, amount_minor, note, recorded_by_user_id)
+values ('eeeeeeee-0000-0000-0000-000000000001', 'amara', 'dddddddd-0000-0000-0000-000000000002',
+  'fuel', 5000, 'Type check', '11111111-1111-1111-1111-111111111111');
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+-- An unrecognised type is still refused (row still exists, so this is the type
+-- check refusing it, not a missing row).
+do $$
+begin
+  begin
+    perform public.update_expense('eeeeeeee-0000-0000-0000-000000000001',
+      null, 'dddddddd-0000-0000-0000-000000000002', 'not_a_type', 100, null);
+    raise exception 'FAIL: unrecognised expense type accepted';
+  exception when others then
+    if sqlerrm like '%not recognised%' then raise notice 'unknown expense type refused';
+    else raise; end if;
+  end;
+end $$;
+-- The widened type is accepted, and the row updates.
+select public.update_expense('eeeeeeee-0000-0000-0000-000000000001',
+  null, 'dddddddd-0000-0000-0000-000000000002', 'office_supplies_other', 5000, 'Re-bucketed');
+select type = 'office_supplies_other' as office_type_updated from public.expenses
+ where id = 'eeeeeeee-0000-0000-0000-000000000001';
+-- delete_expense still works on the new type.
+select public.delete_expense('eeeeeeee-0000-0000-0000-000000000001') as office_del;
+rollback;
+select 'pass: office supplies expense type accepted, validated, audited' as proof;
+
+-- --- 36. update_product: admin-only rename, unique active name (DEC-068) ---
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+set local request.jwt.claim.role = 'authenticated';
+-- Staff must never rename: DEC-050 made all inventory correction admin-only.
+do $$
+begin
+  begin
+    perform public.update_product('bbbbbbbb-0000-0000-0000-000000000001', 'Rice 50kg');
+    raise exception 'FAIL: staff renamed a product';
+  exception when others then
+    if sqlerrm like '%Only admins%' then raise notice 'staff rename blocked';
+    else raise; end if;
+  end;
+end $$;
+rollback;
+begin;
+set local role authenticated;
+set local request.jwt.claim.sub = '33333333-3333-3333-3333-333333333333';
+set local request.jwt.claim.role = 'authenticated';
+-- Admin rename applies, trimmed, and is audited.
+select public.update_product('bbbbbbbb-0000-0000-0000-000000000001', '  Rice 50kg  ') as renamed;
+select name = 'Rice 50kg' as rename_trimmed from public.products
+ where id = 'bbbbbbbb-0000-0000-0000-000000000001';
+select count(*) = 1 as rename_audited from public.audit_events
+ where action = 'product.renamed' and subject = 'Rice 50kg';
+-- Another ACTIVE product already uses the name (case-insensitive): refused.
+do $$
+begin
+  begin
+    perform public.update_product('bbbbbbbb-0000-0000-0000-000000000002', 'rice 50kg');
+    raise exception 'FAIL: rename created a duplicate active name';
+  exception when others then
+    if sqlerrm like '%already taken%' then raise notice 'duplicate active name refused';
+    else raise; end if;
+  end;
+end $$;
+-- A PENDING product using the name does not block it (the submit_product rule).
+select public.update_product('bbbbbbbb-0000-0000-0000-000000000002', 'Cooking Oil 1L') as onto_pending;
+-- Blank name refused.
+do $$
+begin
+  begin
+    perform public.update_product('bbbbbbbb-0000-0000-0000-000000000002', '   ');
+    raise exception 'FAIL: blank product name accepted';
+  exception when others then
+    if sqlerrm like '%name is required%' then raise notice 'blank rename refused';
+    else raise; end if;
+  end;
+end $$;
+-- Renaming to the name it already has is a no-op, not a duplicate-name error.
+select public.update_product('bbbbbbbb-0000-0000-0000-000000000002', 'cooking oil 1L') as same_name_noop;
+rollback;
+select 'pass: product rename is admin-only, unique against active, audited' as proof;
 
 select 'ALL GATE 4 PROOFS COMPLETED' as result;

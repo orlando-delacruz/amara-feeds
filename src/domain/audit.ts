@@ -11,6 +11,7 @@ export type AuditAction =
   | 'product.submitted'
   | 'product.approved'
   | 'product.rejected'
+  | 'product.renamed'
   | 'rider.added'
   | 'rider.status-changed'
   | 'vehicle.added'

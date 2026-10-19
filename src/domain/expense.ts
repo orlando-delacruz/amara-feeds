@@ -3,7 +3,7 @@ import type { StoreId } from './store'
 import type { Money } from '@/lib/money'
 
 /** assumed: common expense types; exact values are Confirmation Required */
-export type ExpenseType = 'fuel' | 'repair'
+export type ExpenseType = 'fuel' | 'repair' | 'office_supplies_other'
 
 export interface Expense {
   id: ExpenseId

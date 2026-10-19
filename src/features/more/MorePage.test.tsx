@@ -109,8 +109,9 @@ describe('MorePage', () => {
     const main = screen.getByRole('main')
     await userEvent.setup().click(within(main).getByRole('button', { name: 'Sign out' }))
     // The sign-out path awaits the confirm popup, then signs out and navigates.
-    expect(
-      await screen.findByRole('heading', { name: 'Sign in' }, { timeout: 3000 }),
-    ).toBeInTheDocument()
+    // 3000ms was too tight under parallel load: this was the documented flake,
+    // now surfaced as a real failure once it stopped being masked by the other
+    // broken DatePicker tests. Inherits the suite's 30s testTimeout.
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
   })
 })

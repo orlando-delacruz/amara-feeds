@@ -11,6 +11,8 @@ export interface ExpenseDateEntry {
   date: string
   fuelMinor: number
   repairMinor: number
+  /** Fuel/repair assumed baseline was binary (DEC-034); widened 2026-10-19. */
+  otherMinor: number
   totalMinor: number
 }
 
@@ -19,11 +21,19 @@ export function buildExpenseDateSummary(expenses: Expense[]): ExpenseDateEntry[]
   const byDate = new Map<string, ExpenseDateEntry>()
   for (const expense of expenses) {
     const date = toDateOnly(new Date(expense.createdAt))
-    const entry = byDate.get(date) ?? { date, fuelMinor: 0, repairMinor: 0, totalMinor: 0 }
+    const entry = byDate.get(date) ?? {
+      date,
+      fuelMinor: 0,
+      repairMinor: 0,
+      otherMinor: 0,
+      totalMinor: 0,
+    }
     if (expense.type === 'fuel') {
       entry.fuelMinor += expense.amountMinor
-    } else {
+    } else if (expense.type === 'repair') {
       entry.repairMinor += expense.amountMinor
+    } else {
+      entry.otherMinor += expense.amountMinor
     }
     entry.totalMinor += expense.amountMinor
     byDate.set(date, entry)

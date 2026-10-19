@@ -33,7 +33,7 @@ describe('SignInPage', () => {
     await fillLogin('alice', 'alice123')
 
     expect(
-      await screen.findByRole('heading', { name: 'Dashboard' }, { timeout: 5000 }),
+      await screen.findByRole('heading', { name: 'Dashboard' }),
     ).toBeInTheDocument()
   })
 
@@ -42,7 +42,7 @@ describe('SignInPage', () => {
     await fillLogin('owner', 'admin123')
 
     expect(
-      await screen.findByRole('heading', { name: 'Admin Dashboard' }, { timeout: 5000 }),
+      await screen.findByRole('heading', { name: 'Admin Dashboard' }),
     ).toBeInTheDocument()
   })
 

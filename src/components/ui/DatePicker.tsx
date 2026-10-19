@@ -313,9 +313,6 @@ export function DatePicker({
     if (!open) {
       return
     }
-    const current = parseDay(value || toDateOnly(new Date()))
-    setViewYear(current.year)
-    setViewMonth(current.month)
 
     function handlePointerDown(event: PointerEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -334,7 +331,19 @@ export function DatePicker({
       document.removeEventListener('pointerdown', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [open, value])
+  }, [open])
+
+  // Re-sync the visible month to the selected value on every trigger press, so
+  // the calendar never opens on a month left over from last time. Done here
+  // rather than in the open effect: setState in an effect is what
+  // react-hooks/set-state-in-effect flags, and only the trigger opens the
+  // calendar.
+  function toggleCalendar() {
+    const current = parseDay(value || toDateOnly(new Date()))
+    setViewYear(current.year)
+    setViewMonth(current.month)
+    setOpen((isOpen) => !isOpen)
+  }
 
   const today = toDateOnly(new Date())
   const firstWeekday = new Date(viewYear, viewMonth, 1).getDay()
@@ -364,7 +373,14 @@ export function DatePicker({
     .join(' ')
 
   return (
-    <FormField label={label} inputId={id} error={error} hint={hint} required={required}>
+    <FormField
+      label={label}
+      inputId={id}
+      labelAsText
+      error={error}
+      hint={hint}
+      required={required}
+    >
       <Wrapper ref={wrapperRef}>
         <FieldButton
           ref={fieldRef}
@@ -373,15 +389,21 @@ export function DatePicker({
           $invalid={Boolean(error)}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy || undefined}
+          // Name = visible label + current value. Without the value element the
+          // button would announce only "Date" and a screen-reader user could not
+          // hear what is selected.
+          aria-labelledby={`${id}-label ${id}-value`}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={dialogId}
-          onClick={() => setOpen((current) => !current)}
+          onClick={toggleCalendar}
         >
           <FieldIcon aria-hidden="true">
             <Icon name="calendar" />
           </FieldIcon>
-          <FieldValue>{value ? formatDate(`${value}T12:00:00`) : 'Select a date'}</FieldValue>
+          <FieldValue id={`${id}-value`}>
+            {value ? formatDate(`${value}T12:00:00`) : 'Select a date'}
+          </FieldValue>
         </FieldButton>
         {open && (
           <Calendar id={dialogId} role="dialog" aria-modal="false" aria-label={`${label} calendar`}>
