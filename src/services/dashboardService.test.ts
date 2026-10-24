@@ -318,4 +318,42 @@ describe('dashboardService', () => {
       bankMinor: 0,
     })
   })
+
+  it('retrieves more than one page of eligible sales without truncation', async () => {
+    const date = '2026-10-08'
+    const sales: Sale[] = []
+    for (let i = 0; i < 1200; i++) {
+      sales.push({
+        ...saleAt(`page-${i}`, date, 100),
+        storeId: i % 2 === 0 ? 'amara' : 'zeann',
+        paymentMethod: i % 3 === 0 ? 'GCash' : 'Cash',
+      })
+    }
+    seedSales(sales)
+
+    const perStore = await getDailySalesByStore(date)
+    const overall = await getOverallDailySales(date)
+    const amara = perStore.find((row) => row.storeId === 'amara')
+    const zeann = perStore.find((row) => row.storeId === 'zeann')
+
+    expect(amara?.saleCount).toBe(600)
+    expect(zeann?.saleCount).toBe(600)
+    expect(overall.saleCount).toBe(1200)
+    expect(overall.totalMinor).toBe(120000)
+
+    const weekly = await getOverallWeeklySales(date)
+    const monthly = await getOverallMonthlySales(date)
+    expect(weekly.saleCount).toBe(1200)
+    expect(monthly.saleCount).toBe(1200)
+
+    const rangeOverall = await getOverallSalesInRange(date, date)
+    expect(rangeOverall.saleCount).toBe(1200)
+
+    const byMethod = await getSalesByPaymentMethodInRange(date, date)
+    expect(byMethod.reduce((sum, row) => sum + row.saleCount, 0)).toBe(1200)
+
+    const cash = await getCashSalesByMethod({ date })
+    expect(cash.saleCount).toBe(800)
+    expect(cash.gcashMinor).toBe(40000)
+  })
 })

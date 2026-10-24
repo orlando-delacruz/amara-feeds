@@ -32,21 +32,67 @@ function saleDayInRange(sale: Sale, startDate: string, endDate: string): boolean
   return sale.saleDate >= startDate && sale.saleDate <= endDate
 }
 
-async function fetchSalesForSummary(): Promise<SaleRow[]> {
+interface SalesSummaryRange {
+  from?: string
+  to?: string
+}
+
+const SALES_PAGE_SIZE = 1000
+
+async function fetchSalesForSummary(range?: SalesSummaryRange): Promise<SaleRow[]> {
   if (!isSupabaseConfigured || !supabase) {
-    return []
+    return getDb()
+      .sales.filter(
+        (sale) =>
+          !sale.isLegacy &&
+          !sale.isVoided &&
+          (!range?.from || sale.saleDate >= range.from) &&
+          (!range?.to || sale.saleDate <= range.to),
+      )
+      .map((sale) => ({
+        id: sale.id,
+        store_id: sale.storeId,
+        sale_date: sale.saleDate,
+        total_minor: sale.totalMinor,
+        payment_method: sale.paymentMethod ?? null,
+        payment_type: sale.paymentType,
+      }))
   }
-  const { data, error } = await supabase
-    .from('sales')
-    .select('id, store_id, sale_date, total_minor, payment_method, payment_type')
-    // Encoded legacy credits never count as sales (DEC-049); voided sales are
-    // corrections (DEC-050).
-    .eq('is_legacy', false)
-    .eq('is_voided', false)
-  if (error) {
-    throw serviceErrorFromSupabase(error)
+
+  const rows: SaleRow[] = []
+  let offset = 0
+  // PostgREST caps a single response, so page through the requested range
+  // until a short page proves there is nothing left. Range offsets keep the
+  // pages disjoint, so no record is counted twice or skipped.
+  while (true) {
+    let query = supabase
+      .from('sales')
+      .select('id, store_id, sale_date, total_minor, payment_method, payment_type')
+      // Encoded legacy credits never count as sales (DEC-049); voided sales are
+      // corrections (DEC-050).
+      .eq('is_legacy', false)
+      .eq('is_voided', false)
+    if (range?.from) {
+      query = query.gte('sale_date', range.from)
+    }
+    if (range?.to) {
+      query = query.lte('sale_date', range.to)
+    }
+    if (typeof query.range === 'function') {
+      query = query.range(offset, offset + SALES_PAGE_SIZE - 1)
+    }
+    const { data, error } = await query.order('sale_date', { ascending: false })
+    if (error) {
+      throw serviceErrorFromSupabase(error)
+    }
+    const page = (data ?? []) as SaleRow[]
+    rows.push(...page)
+    if (page.length < SALES_PAGE_SIZE || typeof query.range !== 'function') {
+      break
+    }
+    offset += SALES_PAGE_SIZE
   }
-  return (data ?? []) as SaleRow[]
+  return rows
 }
 
 /** Sales summaries never include encoded legacy credits or undone sales (DEC-049/050). */
@@ -55,7 +101,7 @@ function liveSales(): Sale[] {
 }
 
 export async function getDailySalesByStore(date: string): Promise<DailySalesByStore[]> {
-  const rows = await fetchSalesForSummary()
+  const rows = await fetchSalesForSummary({ from: date, to: date })
   if (isSupabaseConfigured && supabase) {
     const sales = rows.filter((row) => row.sale_date === date)
     return storeIds.map((storeId) => {
@@ -81,7 +127,7 @@ export async function getDailySalesByStore(date: string): Promise<DailySalesBySt
 }
 
 export async function getOverallDailySales(date: string): Promise<OverallDailySales> {
-  const rows = await fetchSalesForSummary()
+  const rows = await fetchSalesForSummary({ from: date, to: date })
   if (isSupabaseConfigured && supabase) {
     const sales = rows.filter((row) => row.sale_date === date)
     return {
@@ -106,7 +152,7 @@ export async function getSalesByStoreInRange(
   from: string,
   to: string,
 ): Promise<PeriodSalesByStore[]> {
-  const rows = await fetchSalesForSummary()
+  const rows = await fetchSalesForSummary({ from, to })
   if (isSupabaseConfigured && supabase) {
     const sales = inRangeRows(rows, from, to)
     return storeIds.map((storeId) => {
@@ -137,7 +183,7 @@ export async function getOverallSalesInRange(
   from: string,
   to: string,
 ): Promise<OverallPeriodSales> {
-  const rows = await fetchSalesForSummary()
+  const rows = await fetchSalesForSummary({ from, to })
   if (isSupabaseConfigured && supabase) {
     const sales = inRangeRows(rows, from, to)
     return {
@@ -158,7 +204,7 @@ export async function getOverallSalesInRange(
 
 export async function getWeeklySalesByStore(date: string): Promise<PeriodSalesByStore[]> {
   const startDate = startOfWeekOnly(date)
-  const rows = await fetchSalesForSummary()
+  const rows = await fetchSalesForSummary({ from: startDate, to: date })
   if (isSupabaseConfigured && supabase) {
     const sales = inRangeRows(rows, startDate, date)
     return storeIds.map((storeId) => {
@@ -187,7 +233,7 @@ export async function getWeeklySalesByStore(date: string): Promise<PeriodSalesBy
 
 export async function getOverallWeeklySales(date: string): Promise<OverallPeriodSales> {
   const startDate = startOfWeekOnly(date)
-  const rows = await fetchSalesForSummary()
+  const rows = await fetchSalesForSummary({ from: startDate, to: date })
   if (isSupabaseConfigured && supabase) {
     const sales = inRangeRows(rows, startDate, date)
     return {
@@ -208,7 +254,7 @@ export async function getOverallWeeklySales(date: string): Promise<OverallPeriod
 
 export async function getMonthlySalesByStore(date: string): Promise<PeriodSalesByStore[]> {
   const startDate = startOfMonthOnly(date)
-  const rows = await fetchSalesForSummary()
+  const rows = await fetchSalesForSummary({ from: startDate, to: date })
   if (isSupabaseConfigured && supabase) {
     const sales = inRangeRows(rows, startDate, date)
     return storeIds.map((storeId) => {
@@ -237,7 +283,7 @@ export async function getMonthlySalesByStore(date: string): Promise<PeriodSalesB
 
 export async function getOverallMonthlySales(date: string): Promise<OverallPeriodSales> {
   const startDate = startOfMonthOnly(date)
-  const rows = await fetchSalesForSummary()
+  const rows = await fetchSalesForSummary({ from: startDate, to: date })
   if (isSupabaseConfigured && supabase) {
     const sales = inRangeRows(rows, startDate, date)
     return {
@@ -327,7 +373,7 @@ export async function getSalesByPaymentMethodInRange(
 ): Promise<PaymentMethodSalesRow[]> {
   const sales =
     isSupabaseConfigured && supabase
-      ? inRangeRows(await fetchSalesForSummary(), from, to)
+      ? inRangeRows(await fetchSalesForSummary({ from, to }), from, to)
       : liveSales()
           .filter((sale) => saleDayInRange(sale, from, to))
           .map((sale) => ({
@@ -374,7 +420,10 @@ export async function getCashSalesByMethod(
     storeId?: string
   } = {},
 ): Promise<CashSalesByMethod> {
-  const rows = await fetchSalesForSummary()
+  const rows = await fetchSalesForSummary({
+    from: filter.from ?? filter.date,
+    to: filter.to ?? filter.date,
+  })
   const inScope = (day: string, store: string) =>
     (!filter.date || day === filter.date) &&
     (!filter.from || day >= filter.from) &&

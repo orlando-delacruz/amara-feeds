@@ -1,12 +1,17 @@
+const BUSINESS_TIMEZONE = 'Asia/Manila'
+
 export function nowIso(): string {
   return new Date().toISOString()
 }
 
+/** Date-only string (YYYY-MM-DD) in the Philippine business timezone. */
 export function toDateOnly(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: BUSINESS_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
 }
 
 export function todayIso(): string {
@@ -18,8 +23,9 @@ export function isSameDate(isoTimestamp: string, dateOnly: string): boolean {
 }
 
 export function subDaysDateOnly(dateOnly: string, days: number): string {
-  const date = new Date(`${dateOnly}T00:00:00`)
-  date.setDate(date.getDate() - days)
+  const [year, month, day] = dateOnly.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  date.setUTCDate(date.getUTCDate() - days)
   return toDateOnly(date)
 }
 
@@ -30,9 +36,10 @@ export function startOfMonthOnly(dateOnly: string): string {
 
 /** Sunday (YYYY-MM-DD) of the calendar week (Sunday–Saturday) containing `dateOnly`. */
 export function startOfWeekOnly(dateOnly: string): string {
-  const date = new Date(`${dateOnly}T00:00:00`)
-  const daysSinceSunday = date.getDay()
-  date.setDate(date.getDate() - daysSinceSunday)
+  const [year, month, day] = dateOnly.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  const daysSinceSunday = date.getUTCDay()
+  date.setUTCDate(date.getUTCDate() - daysSinceSunday)
   return toDateOnly(date)
 }
 
@@ -47,6 +54,6 @@ export function isDateOnlyInRange(
 
 export function addDays(isoTimestamp: string, days: number): string {
   const date = new Date(isoTimestamp)
-  date.setDate(date.getDate() + days)
+  date.setUTCDate(date.getUTCDate() + days)
   return date.toISOString()
 }

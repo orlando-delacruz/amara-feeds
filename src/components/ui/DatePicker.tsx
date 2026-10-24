@@ -353,7 +353,12 @@ export function DatePicker({
     cells.push(null)
   }
   for (let day = 1; day <= daysInMonth; day += 1) {
-    cells.push({ day, dateOnly: toDateOnly(new Date(viewYear, viewMonth, day, 12)) })
+    const month = String(viewMonth + 1).padStart(2, '0')
+    const dayText = String(day).padStart(2, '0')
+    cells.push({
+      day,
+      dateOnly: toDateOnly(new Date(`${viewYear}-${month}-${dayText}T12:00:00+08:00`)),
+    })
   }
 
   function shiftMonth(delta: number) {

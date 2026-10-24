@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { useNavigate } from 'react-router-dom'
 import { Alert } from '@/components/ui/Alert'
@@ -177,6 +177,17 @@ export function AdminDashboardPage() {
     }
   }, `${period}:${date}`)
 
+  useEffect(() => {
+    const reload = () => {
+      if (document.visibilityState === 'visible') {
+        void summaries.reload()
+        void paymentSplit.reload()
+      }
+    }
+    document.addEventListener('visibilitychange', reload)
+    return () => document.removeEventListener('visibilitychange', reload)
+  }, [summaries.reload, paymentSplit.reload]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <Stack>
       <RouteBoard
@@ -221,7 +232,7 @@ export function AdminDashboardPage() {
             <Stamp key={period}>
               <StatCard
                 label={periodSales.heroLabel}
-                value={<MoneyText amountMinor={periodSales.overall.totalMinor} />}
+                value={<MoneyText amountMinor={periodSales.overall.totalMinor} fit />}
                 caption={`${periodSales.overall.saleCount} ${periodSales.rangeCaption}`}
                 tone="brand"
                 icon={<Icon name="card" />}
@@ -239,7 +250,7 @@ export function AdminDashboardPage() {
                   </ColumnHeader>
                   <DayFigure>
                     <DayValue>
-                      <MoneyText amountMinor={row.totalMinor} />
+                      <MoneyText amountMinor={row.totalMinor} fit />
                     </DayValue>
                     <DayCaption>{periodSales.columnCaption}</DayCaption>
                   </DayFigure>
@@ -254,21 +265,21 @@ export function AdminDashboardPage() {
               <DepotBoard>
                 <StatCard
                   label="Total Cash Sales"
-                  value={<MoneyText amountMinor={paymentSplit.data?.cash.totalMinor ?? 0} />}
+                  value={<MoneyText amountMinor={paymentSplit.data?.cash.totalMinor ?? 0} fit />}
                   valueScale="large"
                   caption={`${paymentSplit.data?.cash.saleCount ?? 0} cash sales`}
                   icon={<Icon name="card" />}
                 />
                 <StatCard
                   label="GCash Paid"
-                  value={<MoneyText amountMinor={paymentSplit.data?.gcash ?? 0} />}
+                  value={<MoneyText amountMinor={paymentSplit.data?.gcash ?? 0} fit />}
                   valueScale="large"
                   caption="sales + collections via GCash"
                   icon={<Icon name="card" />}
                 />
                 <StatCard
                   label="Bank Payment"
-                  value={<MoneyText amountMinor={paymentSplit.data?.bank ?? 0} />}
+                  value={<MoneyText amountMinor={paymentSplit.data?.bank ?? 0} fit />}
                   valueScale="large"
                   caption="sales + collections via bank transfer"
                   icon={<Icon name="card" />}
@@ -280,7 +291,7 @@ export function AdminDashboardPage() {
               <DepotBoard>
                 <StatCard
                   label="Outstanding credit"
-                  value={<MoneyText amountMinor={data.outstanding.totalMinor} />}
+                  value={<MoneyText amountMinor={data.outstanding.totalMinor} fit />}
                   valueScale="large"
                   caption={`${data.outstanding.count} obligations`}
                   icon={<Icon name="alert" />}
@@ -292,7 +303,7 @@ export function AdminDashboardPage() {
                 />
                 <StatCard
                   label="Payments today"
-                  value={<MoneyText amountMinor={data.payments.totalMinor} />}
+                  value={<MoneyText amountMinor={data.payments.totalMinor} fit />}
                   valueScale="large"
                   caption={`${data.payments.count} payments`}
                   icon={<Icon name="card" />}

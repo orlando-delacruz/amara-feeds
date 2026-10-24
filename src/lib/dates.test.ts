@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { startOfMonthOnly, startOfWeekOnly } from './dates'
+import { isSameDate, startOfMonthOnly, startOfWeekOnly, toDateOnly } from './dates'
 
 describe('dates', () => {
   describe('startOfWeekOnly', () => {
@@ -31,6 +31,17 @@ describe('dates', () => {
 
     it('crosses a year boundary', () => {
       expect(startOfMonthOnly('2026-01-31')).toBe('2026-01-01')
+    })
+  })
+
+  describe('business timezone', () => {
+    it('converts a UTC timestamp to the Manila date', () => {
+      expect(toDateOnly(new Date('2026-10-24T17:00:00.000Z'))).toBe('2026-10-25')
+    })
+
+    it('compares timestamps consistently in Manila time', () => {
+      expect(isSameDate('2026-10-24T17:00:00.000Z', '2026-10-25')).toBe(true)
+      expect(isSameDate('2026-10-24T15:00:00.000Z', '2026-10-25')).toBe(false)
     })
   })
 })
