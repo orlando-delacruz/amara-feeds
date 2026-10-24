@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Alert } from '@/components/ui/Alert'
 import { AsyncBoundary } from '@/components/ui/AsyncBoundary'
 import { Button } from '@/components/ui/Button'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { MoneyText } from '@/components/ui/MoneyText'
 import { RecordList } from '@/components/ui/RecordList'
 import { Section } from '@/components/ui/Section'
@@ -124,7 +125,8 @@ const DayCaption = styled.span`
 
 export function AdminDashboardPage() {
   const navigate = useNavigate()
-  const date = todayIso()
+  const [referenceDate, setReferenceDate] = useState(todayIso())
+  const date = referenceDate
   const summaries = useBusinessSummaries(date)
   const data = summaries.data
   const [period, setPeriod] = useState<'today' | 'weekly' | 'monthly'>('today')
@@ -201,6 +203,14 @@ export function AdminDashboardPage() {
           </>
         }
       />
+      <DatePicker
+        id="dashboard-reference-date"
+        label="Reference date"
+        value={referenceDate}
+        onChange={setReferenceDate}
+        hint="Inspect historical Daily, Weekly, and Monthly summaries."
+      />
+
       <AsyncBoundary
         loading={summaries.loading}
         error={summaries.error}
