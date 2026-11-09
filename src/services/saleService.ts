@@ -3,6 +3,7 @@ import type { StoreId } from '@/domain'
 import type { Money } from '@/lib/money'
 import { todayIso } from '@/lib/dates'
 import { getDb } from './mocks/db'
+import { collectPages } from './pagination'
 import { nextId } from './mocks/ids'
 import { applyStockDelta } from './inventoryService'
 import { createObligationFromSale } from './creditService'
@@ -40,6 +41,26 @@ function derivedLinePrice(storeId: StoreId, productId: ProductId): Money {
   return record.sellingPriceMinor
 }
 
+/** Shape of one `sales` row as PostgREST returns it, with nested sale_lines. */
+interface SaleRow {
+  id: string
+  store_id: string
+  sale_date: string
+  customer_id: string | null
+  payment_type: string
+  payment_method: string | null
+  delivery_fee_minor: number
+  delivery_rider_id: string | null
+  delivery_vehicle_id: string | null
+  discount_minor: number
+  total_minor: number
+  recorded_by_user_id: string
+  created_at: string
+  sale_lines:
+    | { id: string; product_id: string; quantity: number; unit_price_minor: number }[]
+    | null
+}
+
 export async function listSales(
   filter: {
     storeId?: StoreId
@@ -50,38 +71,49 @@ export async function listSales(
   } = {},
 ): Promise<Sale[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase
-      .from('sales')
-      .select(
-        `id, store_id, sale_date, customer_id, payment_type, payment_method,
-         delivery_fee_minor, delivery_rider_id, delivery_vehicle_id, discount_minor,
-         total_minor, recorded_by_user_id, created_at,
-         sale_lines(id, product_id, quantity, unit_price_minor)`,
-      )
-      // Encoded legacy credits live only under Credit (DEC-049); voided sales
-      // are corrections, excluded from lists (DEC-050).
-      .eq('is_legacy', false)
-      .eq('is_voided', false)
-    if (filter.storeId) {
-      query = query.eq('store_id', filter.storeId)
-    }
-    if (filter.customerId) {
-      query = query.eq('customer_id', filter.customerId)
-    }
-    if (filter.date) {
-      query = query.eq('sale_date', filter.date)
-    }
-    if (filter.from) {
-      query = query.gte('sale_date', filter.from)
-    }
-    if (filter.to) {
-      query = query.lte('sale_date', filter.to)
-    }
-    const { data, error } = await query.order('created_at', { ascending: false })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // Paged: a single request is capped at 1,000 rows, and ordering newest-first
+    // meant the report export silently lost everything older than that cap.
+    const data = await collectPages<SaleRow>(
+      (offset, size) => {
+        let query = supabase!
+          .from('sales')
+          .select(
+            `id, store_id, sale_date, customer_id, payment_type, payment_method,
+             delivery_fee_minor, delivery_rider_id, delivery_vehicle_id, discount_minor,
+             total_minor, recorded_by_user_id, created_at,
+             sale_lines(id, product_id, quantity, unit_price_minor)`,
+          )
+          // Encoded legacy credits live only under Credit (DEC-049); voided sales
+          // are corrections, excluded from lists (DEC-050).
+          .eq('is_legacy', false)
+          .eq('is_voided', false)
+        if (filter.storeId) {
+          query = query.eq('store_id', filter.storeId)
+        }
+        if (filter.customerId) {
+          query = query.eq('customer_id', filter.customerId)
+        }
+        if (filter.date) {
+          query = query.eq('sale_date', filter.date)
+        }
+        if (filter.from) {
+          query = query.gte('sale_date', filter.from)
+        }
+        if (filter.to) {
+          query = query.lte('sale_date', filter.to)
+        }
+        return query
+          .range(offset, offset + size - 1)
+          .order('created_at', { ascending: false }) as unknown as PromiseLike<{
+          data: SaleRow[] | null
+          error: unknown
+        }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       id: row.id,
       storeId: row.store_id as StoreId,
       saleDate: row.sale_date,

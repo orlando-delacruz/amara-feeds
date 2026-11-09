@@ -17,6 +17,8 @@ interface FakeChain {
   select: (...args: unknown[]) => FakeChain
   neq: (...args: unknown[]) => FakeChain
   eq: (...args: unknown[]) => FakeChain
+  /** PostgREST caps a response; lists page through `.range(offset, to)`. */
+  range: (from: number, to: number) => FakeChain
   order: (...args: unknown[]) => Promise<{ data: unknown[]; error: null }>
   maybeSingle: (...args: unknown[]) => Promise<{ data: unknown; error: null }>
   /** postgrest-js builders are thenable: awaiting the chain runs the query. */
@@ -29,11 +31,19 @@ interface FakeChain {
 vi.mock('./supabaseClient', () => {
   function chainFor(table: string): FakeChain {
     const rows = () => supabaseHarness.tables[table] ?? []
-    const result = () => ({ data: rows(), error: null })
+    // Mirrors PostgREST: only the requested slice is returned, so a caller that
+    // does not page sees the cap exactly as production does.
+    let window: { from: number; to: number } | null = null
+    const paged = () => (window ? rows().slice(window.from, window.to + 1) : rows())
+    const result = () => ({ data: paged(), error: null })
     const chain: FakeChain = {
       select: () => chain,
       neq: () => chain,
       eq: () => chain,
+      range: (from, to) => {
+        window = { from, to }
+        return chain
+      },
       order: async () => result(),
       maybeSingle: async () => ({ data: rows()[0] ?? null, error: null }),
       then: (onFulfilled, onRejected) => Promise.resolve(result()).then(onFulfilled, onRejected),

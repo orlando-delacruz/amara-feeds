@@ -1,26 +1,46 @@
 import type { Expense, NewExpenseInput, StoreId } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { collectPages } from './pagination'
 import { assertActiveRecorder } from './userService'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
 
+interface ExpenseRow {
+  id: string
+  store_id: string
+  rider_id: string | null
+  vehicle_id: string | null
+  type: string
+  amount_minor: number
+  note: string | null
+  recorded_by_user_id: string
+  created_at: string
+}
+
 export async function listExpenses(filter: { storeId?: StoreId } = {}): Promise<Expense[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase
-      .from('expenses')
-      .select(
-        'id, store_id, rider_id, vehicle_id, type, amount_minor, note, recorded_by_user_id, created_at',
-      )
-    if (filter.storeId) {
-      query = query.eq('store_id', filter.storeId)
-    }
-    const { data, error } = await query.order('created_at', { ascending: false })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // Paged: PostgREST caps one response, and the report export reads this list.
+    const data = await collectPages<ExpenseRow>(
+      (offset, size) => {
+        let query = supabase!
+          .from('expenses')
+          .select(
+            'id, store_id, rider_id, vehicle_id, type, amount_minor, note, recorded_by_user_id, created_at',
+          )
+        if (filter.storeId) {
+          query = query.eq('store_id', filter.storeId)
+        }
+        return query.range(offset, offset + size - 1).order('created_at', {
+          ascending: false,
+        }) as unknown as PromiseLike<{ data: ExpenseRow[] | null; error: unknown }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       id: row.id,
       storeId: row.store_id as StoreId,
       riderId: row.rider_id ?? undefined,

@@ -1060,6 +1060,19 @@ No formal decision records existed before Phase 0. The following records were cr
 - **Related documents:** `supabase/migrations/20261019000000_00020_expense_office_supplies.sql`, `supabase/migrations/20261019000100_00021_update_product_name.sql`, `src/domain/expense.ts`, `src/domain/audit.ts`, `src/services/productService.ts`, `src/services/auditService.ts`, `src/features/inventory/EditStockDialog.tsx`, `src/features/expenses/ExpensesPage.tsx`, `src/features/expenses/expenseSummary.ts`, `src/features/reports/reportRows.ts`, `src/lib/exportReportExcel.ts`, `docs/DATA-MODEL.md`, `docs/API.md`.
 - **Supersedes / Superseded by:** Widens the DEC-034 fuel/repair expense-type baseline; nothing superseded.
 
+### DEC-070 — Every list query pages, because PostgREST caps a response at 1,000 rows
+
+- **ID:** DEC-070
+- **Title:** Every list query pages, because PostgREST caps a response at 1,000 rows
+- **Status:** Accepted
+- **Date:** 2026-11-09
+- **Context:** Client report: "when I import them to Excel, they are from the date the system started Sept. 25 up to the present … the only data that comes in is October 11–November 8." No data was missing from the database. `listSales` filtered `sale_date` correctly server-side, but issued **one** request with no `.limit()`/`.range()` and ordered `created_at DESC`. Hosted PostgREST caps a single response at 1,000 rows, so the query silently returned the **newest 1,000 sales** and dropped everything older — the export's Sales sheet simply began at the row-1,000 boundary, with no error. `listCreditRecords`, `listExpenses` and `listCustomers` had the same shape. DEC-065 had flagged this cap as a risk and `dashboardService` was subsequently paged, which is why the dashboard totals looked right while the exported file was short — a combination that reads like a data problem but is not.
+- **Decision:** New `src/services/pagination.ts` exposes `collectPages(fetchPage, throwOnError)`, extracted from the loop `dashboardService` already used. It requests disjoint windows with `range(offset, offset + size - 1)` and stops on a short page, so no row is fetched twice or skipped and an exact multiple of the page size terminates on one empty page. Applied to `listSales`, `listCreditRecords`, `listExpenses` and `listCustomers` — the four lists the report export reads — leaving the mock backend untouched (it returns everything).
+- **Alternatives considered:** Raising the PostgREST `max-rows` setting — it moves the cliff rather than removing it, needs a hosted configuration change, and would still fail silently at the new limit. Paging only inside the report builders — every other list endpoint keeps the same latent bug. Adding `.limit(10000)` — same cliff, and it hides the problem until the business crosses it.
+- **Consequences:** The export now contains the full requested range. Each list costs one extra request per 1,000 rows, which is negligible for this workload. Frontend-only — no migration, no `db push`. The mock backend still cannot reproduce the cap, so a regression test drives the Supabase path with a fake client that **caps by default** (a fake that returns everything would have passed on the broken code); removing `.range()` from `listSales` makes three of those tests fail, which was verified.
+- **Open questions or follow-up:** `listProducts`, `listRiders`, `listVehicles` and `listUsers` are not yet paged — they are small today but share the same shape and should be converted when next touched. `History`/`audit_events` lists likely have the same cap and have not been checked.
+- **Related documents:** `src/services/pagination.ts`, `src/services/saleService.ts`, `src/services/creditService.ts`, `src/services/expenseService.ts`, `src/services/customerService.ts`, `src/services/dashboardService.ts`, `src/services/pagination.test.ts`.
+
 ### DEC-069 — Office-supplies expenses may be charged to the business, not a rider/vehicle
 
 - **ID:** DEC-069

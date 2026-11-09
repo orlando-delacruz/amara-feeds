@@ -19,6 +19,7 @@ import type { Money } from '@/lib/money'
 import { addDays, toDateOnly } from '@/lib/dates'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { collectPages } from './pagination'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
@@ -202,26 +203,33 @@ export async function listCreditRecords(
   filter: { customerId?: CustomerId; originStoreId?: StoreId; status?: CreditStatus } = {},
 ): Promise<CreditRecord[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase
-      .from('credit_obligations')
-      .select(
-        `${CREDIT_COLUMNS}, sales(recorded_by_user_id, sale_lines(product_id, quantity, unit_price_minor, products(name)))`,
-      )
-      .neq('status', 'voided')
-    if (filter.customerId) {
-      query = query.eq('customer_id', filter.customerId)
-    }
-    if (filter.originStoreId) {
-      query = query.eq('origin_store_id', filter.originStoreId)
-    }
-    if (filter.status) {
-      query = query.eq('status', filter.status)
-    }
-    const { data, error } = await query.order('created_at', { ascending: false })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => {
+    // Paged: PostgREST caps one response, and the report export reads this list.
+    const data = await collectPages<CreditRow>(
+      (offset, size) => {
+        let query = supabase!
+          .from('credit_obligations')
+          .select(
+            `${CREDIT_COLUMNS}, sales(recorded_by_user_id, sale_lines(product_id, quantity, unit_price_minor, products(name)))`,
+          )
+          .neq('status', 'voided')
+        if (filter.customerId) {
+          query = query.eq('customer_id', filter.customerId)
+        }
+        if (filter.originStoreId) {
+          query = query.eq('origin_store_id', filter.originStoreId)
+        }
+        if (filter.status) {
+          query = query.eq('status', filter.status)
+        }
+        return query.range(offset, offset + size - 1).order('created_at', {
+          ascending: false,
+        }) as unknown as PromiseLike<{ data: CreditRow[] | null; error: unknown }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => {
       const creditRow = row as CreditRow
       const sale = embedded(creditRow.sales)
       return {

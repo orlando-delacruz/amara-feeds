@@ -1,6 +1,7 @@
 import type { Customer, CustomerId, NewCustomerInput } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { collectPages } from './pagination'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
@@ -17,15 +18,35 @@ export function sortCustomersByName(customers: Customer[]): Customer[] {
 
 export async function listCustomers(): Promise<Customer[]> {
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('id, name, contact, address, created_at')
-      .order('name', { ascending: true })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
+    // Paged: PostgREST caps one response, and the report export reads this list.
+    const data = await collectPages<{
+      id: string
+      name: string
+      contact: string | null
+      address: string | null
+      created_at: string
+    }>(
+      (offset, size) =>
+        supabase!
+          .from('customers')
+          .select('id, name, contact, address, created_at')
+          .range(offset, offset + size - 1)
+          .order('name', { ascending: true }) as unknown as PromiseLike<{
+          data: {
+            id: string
+            name: string
+            contact: string | null
+            address: string | null
+            created_at: string
+          }[] | null
+          error: unknown
+        }>,
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
     return sortCustomersByName(
-      (data ?? []).map((row) => ({
+      data.map((row) => ({
         id: row.id,
         name: row.name,
         contact: row.contact ?? undefined,

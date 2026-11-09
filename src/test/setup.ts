@@ -14,4 +14,17 @@ vi.mock('sweetalert2', async () => await import('./swalMock'))
 // vite.config.ts (the whole test, not just one poll).
 configure({ asyncUtilTimeout: 10000 })
 
+// jsdom has no ResizeObserver, and MoneyText (which every money figure renders
+// through) constructs one in an effect. Whether that effect had flushed before
+// an assertion varied with worker timing, so the dashboard suite failed only
+// sometimes — and failed deterministically when run alone. A no-op stub is the
+// standard jsdom fix and leaves production behaviour untouched.
+if (!('ResizeObserver' in globalThis)) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver
+}
+
 export { __resetSwalCalls } from './swalMock'
