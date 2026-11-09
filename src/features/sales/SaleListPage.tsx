@@ -118,6 +118,7 @@ export function SaleListPage({ basePath = '/sales' }: SaleListPageProps) {
         {sales.data && sales.data.length > 0 && (
           <RecordList
             caption={`Sales — ${storeLabel(store)} — ${formatDate(date)}`}
+            resetKey={`${store}:${date}`}
             columns={[
               { key: 'customer', header: 'Customer' },
               ...(allMode ? ([{ key: 'store', header: 'Store' }] as const) : []),

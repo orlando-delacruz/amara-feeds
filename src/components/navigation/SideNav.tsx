@@ -1,6 +1,8 @@
 import styled from 'styled-components'
 import { NavLink } from 'react-router-dom'
+import { NavIcon } from './icons'
 import type { NavItem } from './navItems'
+import { StoreControl } from '@/features/shared'
 
 interface SideNavProps {
   items: NavItem[]
@@ -11,7 +13,12 @@ const Aside = styled.nav`
   display: none;
 
   @media (min-width: ${({ theme }) => theme.breakpoint.desktop}) {
-    display: block;
+    position: sticky;
+    top: ${({ theme }) => theme.layout.headerHeight};
+    height: calc(100dvh - ${({ theme }) => theme.layout.headerHeight});
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     background-color: ${({ theme }) => theme.color.surface.card};
     border-right: 1px solid ${({ theme }) => theme.color.border.default};
     padding: ${({ theme }) => theme.space.lg} ${({ theme }) => theme.space.md};
@@ -23,8 +30,11 @@ const List = styled.ul`
   flex-direction: column;
   gap: ${({ theme }) => theme.space.xs};
   list-style: none;
-  position: sticky;
-  top: calc(${({ theme }) => theme.layout.headerHeight} + ${({ theme }) => theme.space.md});
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: ${({ theme }) => theme.space.md};
 `
 
 const StyledNavLink = styled(NavLink)`
@@ -56,20 +66,17 @@ const StyledNavLink = styled(NavLink)`
     font-weight: ${({ theme }) => theme.font.weight.bold};
     box-shadow: ${({ theme }) => theme.shadow.paint};
   }
-`
 
-const Marker = styled.span`
-  width: 8px;
-  height: 8px;
-  flex-shrink: 0;
-  border-radius: ${({ theme }) => theme.radius.sm};
-  background-color: ${({ theme }) => theme.color.neutral[300]};
+  & svg {
+    flex-shrink: 0;
+  }
 `
 
 const Badge = styled.span`
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
+  margin-left: auto;
   border-radius: 9999px;
   background-color: ${({ theme }) => theme.color.status.danger.text};
   color: ${({ theme }) => theme.color.text.inverse};
@@ -80,37 +87,51 @@ const Badge = styled.span`
   text-align: center;
 `
 
+const Footer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space.sm};
+  border-top: 1px solid ${({ theme }) => theme.color.border.default};
+  padding-top: ${({ theme }) => theme.space.md};
+`
+
+const FooterLabel = styled.span`
+  font-size: ${({ theme }) => theme.font.size.xs};
+  font-weight: ${({ theme }) => theme.font.weight.semibold};
+  text-transform: uppercase;
+  letter-spacing: ${({ theme }) => theme.font.tracking.wide};
+  color: ${({ theme }) => theme.color.text.muted};
+`
+
 export function SideNav({ items, badge }: SideNavProps) {
-  // The More page groups group destinations that are not in the sidebar list
-  // (account, store context, install, sign out) — reachable on desktop too.
-  const moreBase = items[0]?.to === '/admin' ? '/admin/more' : '/more'
+  // My Account and the admin store switch live only on the admin More page
+  // (/admin/more), which desktop no longer links to — surface them in the
+  // sidebar footer so every destination stays reachable. Staff have neither
+  // (locked store, no account page), so they get no footer.
+  const isAdmin = items[0]?.to === '/admin'
   return (
     <Aside aria-label="Primary">
       <List>
         {items.map((item) => (
           <li key={item.to}>
             <StyledNavLink to={item.to} end={item.to === '/dashboard' || item.to === '/admin'}>
-              {({ isActive }) => (
-                <>
-                  {!isActive && <Marker aria-hidden="true" />}
-                  {item.label}
-                  {badge && item.to === '/history' && <Badge aria-label="Unread">{badge}</Badge>}
-                </>
-              )}
+              <NavIcon name={item.icon} />
+              {item.label}
+              {badge && item.to === '/history' && <Badge aria-label="Unread">{badge}</Badge>}
             </StyledNavLink>
           </li>
         ))}
-        <li key="more">
-          <StyledNavLink to={moreBase} end>
-            {({ isActive }) => (
-              <>
-                {!isActive && <Marker aria-hidden="true" />}
-                More
-              </>
-            )}
-          </StyledNavLink>
-        </li>
       </List>
+      {isAdmin ? (
+        <Footer>
+          <StyledNavLink to="/admin/account">
+            <NavIcon name="account" />
+            My Account
+          </StyledNavLink>
+          <FooterLabel>Store context</FooterLabel>
+          <StoreControl />
+        </Footer>
+      ) : undefined}
     </Aside>
   )
 }

@@ -3,6 +3,7 @@ import type { StoreId } from '@/domain'
 import type { Money } from '@/lib/money'
 import { getDb } from './mocks/db'
 import { logAuditEvent } from './auditService'
+import { collectPages } from './pagination'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
@@ -11,20 +12,44 @@ export async function listStock(
   filter: { storeId?: StoreId; productId?: ProductId } = {},
 ): Promise<StockLevel[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase
-      .from('stock_levels')
-      .select('store_id, product_id, quantity, admin_approved, price_minor')
-    if (filter.storeId) {
-      query = query.eq('store_id', filter.storeId)
-    }
-    if (filter.productId) {
-      query = query.eq('product_id', filter.productId)
-    }
-    const { data, error } = await query
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // Paged: PostgREST caps one response at 1,000 rows. stock_levels has a
+    // composite key, so the (store, product) pair is the deterministic order.
+    const data = await collectPages<{
+      store_id: string
+      product_id: string
+      quantity: number
+      admin_approved: boolean | null
+      price_minor: number | null
+    }>(
+      (offset, size) => {
+        let query = supabase!
+          .from('stock_levels')
+          .select('store_id, product_id, quantity, admin_approved, price_minor')
+        if (filter.storeId) {
+          query = query.eq('store_id', filter.storeId)
+        }
+        if (filter.productId) {
+          query = query.eq('product_id', filter.productId)
+        }
+        return query
+          .range(offset, offset + size - 1)
+          .order('store_id', { ascending: true })
+          .order('product_id', { ascending: true }) as unknown as PromiseLike<{
+          data: {
+            store_id: string
+            product_id: string
+            quantity: number
+            admin_approved: boolean | null
+            price_minor: number | null
+          }[] | null
+          error: unknown
+        }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       storeId: row.store_id as StoreId,
       productId: row.product_id,
       quantity: row.quantity,

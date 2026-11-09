@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { LIST_PAGE_SIZE, collectPages } from './pagination'
+import { listAuditEvents } from './auditService'
+import { listProducts } from './productService'
 import { listSales } from './saleService'
 
 /**
@@ -36,6 +38,7 @@ vi.mock('./supabaseClient', () => {
     api.select = () => api
     api.eq = () => api
     api.neq = () => api
+    api.not = () => api
     api.gte = () => api
     api.lte = () => api
     api.range = (from: number, to: number) => {
@@ -43,7 +46,10 @@ vi.mock('./supabaseClient', () => {
       supabaseHarness.requests.push([from, to])
       return api
     }
-    api.order = async () => result()
+    // Chainable: real builders return the builder from order(), and the
+    // paged lists order twice (value, then id tie-breaker). Awaiting the
+    // chain resolves through `then` below.
+    api.order = () => api
     api.then = (
       onFulfilled: (value: { data: unknown[]; error: null }) => unknown,
       onRejected?: (reason: unknown) => unknown,
@@ -175,5 +181,74 @@ describe('listSales pagination (the report-export regression)', () => {
     const sales = await listSales({ from: '2026-09-01', to: '2026-09-30' })
     expect(sales).toHaveLength(40)
     expect(supabaseHarness.requests).toEqual([[0, LIST_PAGE_SIZE - 1]])
+  })
+})
+
+function productRow(index: number) {
+  const suffix = String(index).padStart(4, '0')
+  return {
+    id: `prod-${suffix}`,
+    name: `Product ${suffix}`,
+    status: 'active',
+    created_by_user_id: null,
+    created_at: '2026-09-01T00:00:00.000Z',
+  }
+}
+
+describe('listProducts pagination', () => {
+  beforeEach(() => {
+    supabaseHarness.requests = []
+    supabaseHarness.sales = Array.from({ length: 2300 }, (_, i) => productRow(i))
+  })
+
+  it('returns every product, not just the first page', async () => {
+    const products = await listProducts()
+    expect(products).toHaveLength(2300)
+    expect(new Set(products.map((product) => product.id)).size).toBe(2300)
+  })
+
+  it('requests consecutive, non-overlapping pages', async () => {
+    await listProducts()
+    expect(supabaseHarness.requests).toEqual([
+      [0, LIST_PAGE_SIZE - 1],
+      [LIST_PAGE_SIZE, LIST_PAGE_SIZE * 2 - 1],
+      [LIST_PAGE_SIZE * 2, LIST_PAGE_SIZE * 3 - 1],
+    ])
+  })
+})
+
+function auditRow(index: number) {
+  return {
+    id: `audit-${index}`,
+    action: 'sale.recorded',
+    actor_user_id: 'user-1',
+    actor_role: 'staff',
+    store_id: 'amara',
+    related_user_id: null,
+    subject: 'Sale at Amara',
+    detail: null,
+    created_at: '2026-09-01T00:00:00.000Z',
+  }
+}
+
+describe('listAuditEvents pagination', () => {
+  beforeEach(() => {
+    supabaseHarness.requests = []
+    supabaseHarness.sales = Array.from({ length: 2050 }, (_, i) => auditRow(i))
+  })
+
+  it('returns every audit event, not just the first page', async () => {
+    const events = await listAuditEvents()
+    expect(events).toHaveLength(2050)
+    expect(new Set(events.map((event) => event.id)).size).toBe(2050)
+  })
+
+  it('requests consecutive, non-overlapping pages', async () => {
+    await listAuditEvents()
+    expect(supabaseHarness.requests).toEqual([
+      [0, LIST_PAGE_SIZE - 1],
+      [LIST_PAGE_SIZE, LIST_PAGE_SIZE * 2 - 1],
+      [LIST_PAGE_SIZE * 2, LIST_PAGE_SIZE * 3 - 1],
+    ])
   })
 })

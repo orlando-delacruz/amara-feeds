@@ -96,6 +96,7 @@ export function CreditListPage({ basePath = '/credit' }: CreditListPageProps) {
         {filtered.length > 0 && (
           <RecordList
             caption="Credit obligations"
+            resetKey={status}
             columns={[
               { key: 'customer', header: 'Customer' },
               { key: 'origin', header: 'Origin store' },

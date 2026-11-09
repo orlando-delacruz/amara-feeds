@@ -2,6 +2,7 @@ import type { NewUserInput, UpdateUserInput, User, UserId, UserRole } from '@/do
 import type { StoreId } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { collectPages } from './pagination'
 import { isSupabaseConfigured, supabase, usernameEmail } from './supabaseClient'
 import { ServiceError } from './errors'
 
@@ -10,26 +11,52 @@ export async function listUsers(
 ): Promise<User[]> {
   if (isSupabaseConfigured && supabase) {
     // Roles read from the profiles table (RLS scopes staff to their own row);
-    // admins see and filter the full staff list.
-    let query = supabase.from('profiles').select('id, username, name, role, store_id, active')
-    if (filter.storeId) {
-      query = query.eq('store_id', filter.storeId)
-    }
-    if (filter.role) {
-      query = query.eq('role', filter.role)
-    }
-    if (filter.active !== undefined) {
-      query = query.eq('active', filter.active)
-    }
-    const { data, error } = await query.order('name', { ascending: true })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // admins see and filter the full staff list. Paged: PostgREST caps one response.
+    const data = await collectPages<{
+      id: string
+      username: string
+      name: string
+      role: string
+      store_id: string | null
+      active: boolean
+    }>(
+      (offset, size) => {
+        let query = supabase!
+          .from('profiles')
+          .select('id, username, name, role, store_id, active')
+        if (filter.storeId) {
+          query = query.eq('store_id', filter.storeId)
+        }
+        if (filter.role) {
+          query = query.eq('role', filter.role)
+        }
+        if (filter.active !== undefined) {
+          query = query.eq('active', filter.active)
+        }
+        return query
+          .range(offset, offset + size - 1)
+          .order('name', { ascending: true })
+          .order('id', { ascending: true }) as unknown as PromiseLike<{
+          data: {
+            id: string
+            username: string
+            name: string
+            role: string
+            store_id: string | null
+            active: boolean
+          }[] | null
+          error: unknown
+        }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       id: row.id,
       name: row.name,
       role: row.role as UserRole,
-      storeId: row.store_id ?? undefined,
+      storeId: row.store_id ? (row.store_id as StoreId) : undefined,
       username: row.username,
       active: row.active,
     }))

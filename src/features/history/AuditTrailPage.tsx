@@ -115,6 +115,7 @@ export function AuditTrailPage() {
         {visible.length > 0 && (
           <RecordList
             caption="History"
+            resetKey={`${date}:${filter}:${storeFilter}`}
             columns={[
               { key: 'action', header: 'Action' },
               { key: 'subject', header: 'Details' },

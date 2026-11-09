@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { resetDb } from '@/services/mocks/db'
+import { getDb, resetDb } from '@/services/mocks/db'
 import { renderWithProviders } from '@/test/render'
 import { __awaitSwal } from '@/test/swalMock'
 import type { User } from '@/domain'
@@ -100,5 +100,35 @@ describe('CustomerListPage', () => {
 
     await __awaitSwal('Customer deleted.')
     expect(screen.queryByText('Ana Reyes')).not.toBeInTheDocument()
+  })
+
+  it('paginates at ten rows and resets the page on search', async () => {
+    const user = userEvent.setup()
+    const db = getDb()
+    for (let index = 1; index <= 12; index++) {
+      const suffix = String(index).padStart(2, '0')
+      db.customers.push({
+        id: `cust-paginate-${suffix}`,
+        name: `Paginate ${suffix}`,
+        createdAt: new Date().toISOString(),
+      })
+    }
+    renderWithProviders(<CustomerListPage />, { user: staffUser })
+    await screen.findByText('Maria Santos')
+
+    // 3 seed customers + 12 added = 15 rows; only the first 10 render.
+    expect(screen.getByText('Paginate 07')).toBeInTheDocument()
+    expect(screen.queryByText('Paginate 08')).not.toBeInTheDocument()
+    expect(screen.getByText('Showing 1–10 of 15')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
+    expect(await screen.findByText('Paginate 08')).toBeInTheDocument()
+    expect(screen.queryByText('Maria Santos')).not.toBeInTheDocument()
+
+    // Searching narrows the data set and returns to the first page.
+    await user.clear(screen.getByLabelText('Search customers'))
+    await user.type(screen.getByLabelText('Search customers'), 'Paginate 01')
+    expect(await screen.findByText('Paginate 01')).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Customers pagination' })).not.toBeInTheDocument()
   })
 })

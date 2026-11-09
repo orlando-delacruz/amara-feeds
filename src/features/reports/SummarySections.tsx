@@ -95,6 +95,7 @@ export function SummarySections({ from, to, storeId, summaries }: SummarySection
           <Section title={<>Sales by store {rangeLabel}</>} variant="flush">
             <RecordList
               caption="Sales by store"
+              resetKey={`${from}:${to}`}
               variant="grouped"
               columns={[
                 { key: 'store', header: 'Store' },
@@ -134,6 +135,7 @@ export function SummarySections({ from, to, storeId, summaries }: SummarySection
           <Section title="Sales by mode of payment" variant="flush">
             <RecordList
               caption="Sales by mode of payment"
+              resetKey={`${from}:${to}`}
               columns={[
                 { key: 'method', header: 'Mode of payment' },
                 { key: 'sales', header: 'Sales' },
@@ -150,6 +152,7 @@ export function SummarySections({ from, to, storeId, summaries }: SummarySection
           <Section title="Current stock" variant="flush">
             <RecordList
               caption="Current stock"
+              resetKey={`${from}:${to}`}
               variant="grouped"
               columns={
                 stockWide
@@ -183,6 +186,7 @@ export function SummarySections({ from, to, storeId, summaries }: SummarySection
           <Section title={<>Received stock {rangeLabel}</>} variant="flush">
             <RecordList
               caption="Received stock"
+              resetKey={`${from}:${to}`}
               variant="grouped"
               columns={
                 stockWide

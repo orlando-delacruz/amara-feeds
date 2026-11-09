@@ -104,7 +104,8 @@ export async function listSales(
         }
         return query
           .range(offset, offset + size - 1)
-          .order('created_at', { ascending: false }) as unknown as PromiseLike<{
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false }) as unknown as PromiseLike<{
           data: SaleRow[] | null
           error: unknown
         }>

@@ -2,6 +2,7 @@ import type { NewVehicleInput, UpdateVehicleInput, Vehicle } from '@/domain'
 import type { StoreId } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { collectPages } from './pagination'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
@@ -10,20 +11,45 @@ export async function listVehicles(
   filter: { storeId?: StoreId; active?: boolean } = {},
 ): Promise<Vehicle[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase
-      .from('vehicles')
-      .select('id, label, store_id, active, created_by_user_id, created_at')
-    if (filter.storeId) {
-      query = query.eq('store_id', filter.storeId)
-    }
-    if (filter.active !== undefined) {
-      query = query.eq('active', filter.active)
-    }
-    const { data, error } = await query.order('label', { ascending: true })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // Paged: PostgREST caps one response at 1,000 rows.
+    const data = await collectPages<{
+      id: string
+      label: string
+      store_id: string
+      active: boolean
+      created_by_user_id: string | null
+      created_at: string
+    }>(
+      (offset, size) => {
+        let query = supabase!
+          .from('vehicles')
+          .select('id, label, store_id, active, created_by_user_id, created_at')
+        if (filter.storeId) {
+          query = query.eq('store_id', filter.storeId)
+        }
+        if (filter.active !== undefined) {
+          query = query.eq('active', filter.active)
+        }
+        return query
+          .range(offset, offset + size - 1)
+          .order('label', { ascending: true })
+          .order('id', { ascending: true }) as unknown as PromiseLike<{
+          data: {
+            id: string
+            label: string
+            store_id: string
+            active: boolean
+            created_by_user_id: string | null
+            created_at: string
+          }[] | null
+          error: unknown
+        }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       id: row.id,
       label: row.label,
       storeId: row.store_id as StoreId,

@@ -48,6 +48,7 @@ describe('AuditTrailPage', () => {
   })
 
   it('shows the encoder of sales, credits, and expenses to admins (DEC-067)', async () => {
+    const user = userEvent.setup()
     await logAuditEvent({
       action: 'credit.imported',
       actorUserId: adminUser.id,
@@ -62,9 +63,11 @@ describe('AuditTrailPage', () => {
     // Every action row carries its encoder: "Name · Admin/Staff" in the By column.
     expect((await screen.findAllByText(/Owner · Admin/)).length).toBeGreaterThan(0)
     expect(screen.getAllByText(/Alice · Staff/).length).toBeGreaterThan(0)
-    // Sales and expenses resolve their recorders too.
+    // Sales and expenses resolve their recorders too. The trail now pages at
+    // ten rows, so older entries (expenses) live past the first page.
     expect(screen.getAllByText('Sale recorded').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('Expense recorded').length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: 'Next page' }))
+    expect((await screen.findAllByText('Expense recorded')).length).toBeGreaterThan(0)
   })
 
   it('scopes staff to their own actions plus connected admin decisions', async () => {

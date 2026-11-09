@@ -31,7 +31,8 @@ export async function listCustomers(): Promise<Customer[]> {
           .from('customers')
           .select('id, name, contact, address, created_at')
           .range(offset, offset + size - 1)
-          .order('name', { ascending: true }) as unknown as PromiseLike<{
+          .order('name', { ascending: true })
+          .order('id', { ascending: true }) as unknown as PromiseLike<{
           data: {
             id: string
             name: string
@@ -72,14 +73,35 @@ export async function searchCustomers(term: string): Promise<Customer[]> {
     if (!query) {
       return listCustomers()
     }
-    const { data, error } = await supabase
-      .from('customers')
-      .select('id, name, contact, address, created_at')
-      .ilike('name', `%${query}%`)
-      .order('name', { ascending: true })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
+    // Paged: a name search can also exceed the PostgREST response cap.
+    const data = await collectPages<{
+      id: string
+      name: string
+      contact: string | null
+      address: string | null
+      created_at: string
+    }>(
+      (offset, size) =>
+        supabase!
+          .from('customers')
+          .select('id, name, contact, address, created_at')
+          .ilike('name', `%${query}%`)
+          .range(offset, offset + size - 1)
+          .order('name', { ascending: true })
+          .order('id', { ascending: true }) as unknown as PromiseLike<{
+          data: {
+            id: string
+            name: string
+            contact: string | null
+            address: string | null
+            created_at: string
+          }[] | null
+          error: unknown
+        }>,
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
     return sortCustomersByName(
       (data ?? []).map((row) => ({
         id: row.id,

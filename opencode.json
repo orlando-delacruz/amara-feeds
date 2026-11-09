@@ -5,5 +5,15 @@
       ".opencode/**": "deny",
       ".skill-lock.json": "deny"
     }
+  },
+  "commands": {
+    "save": {
+      "description": "Save session context + git state to workflow/session.md",
+      "template": "Working directory is the repository root. Run the save script, then update the Context section.\n\n!`node scripts/session/save.mjs`\n\nNow update `workflow/session.md`.\n\n1. Replace **only** the `## Context` section (everything above `<!-- STATE:BEGIN ... -->`). Leave the State block exactly as the script wrote it — it is generated, and hand edits are overwritten on the next run.\n2. Write the Context from this conversation using these headings and nothing else:\n   - `## Context`\n   - `### Objective` — one or two lines: what this session set out to do.\n   - `### What changed` — decisions and behaviour changes, not a file list (the State block already lists files).\n   - `### Verified` — what was actually run and its result. State explicitly what was NOT verified.\n   - `### Open items` — what the next session must pick up, in priority order.\n   - `### Assumptions` — anything taken on the user's behalf without an explicit answer.\n3. Keep it under ~120 lines. `/load` reads this file on every new session, so length is a direct token cost.\n4. Do not paste diffs, secrets, tokens, `.env` values, or whole file contents.\n\nFinish by reporting the branch, HEAD, and how many files changed."
+    },
+    "load": {
+      "description": "Load workflow/session.md with token-optimized codebase orientation",
+      "template": "!`cat workflow/session.md 2>/dev/null || echo \"(no saved session — run /save first)\"`\n\nYou have just been given the saved session state above. Orient yourself in this exact order. Do not read anything outside this budget.\n\n1. Read `AGENTS.md` (fall back to `CLAUDE.md` only if `AGENTS.md` is absent). It owns the operating rules and the source-of-truth table.\n2. Read ONLY the `docs/*` files that `AGENTS.md` section 3 assigns to the current task. Never open all of them.\n3. For any question about code, use the knowledge graph BEFORE reading files:\n   - `graphify query \"<question>\"`\n   - `graphify path \"A\" \"B\"`\n   - `graphify explain \"<node>\"`\n   - `graphify affected \"X\"`\n   Only read a source file when the task names it, and then use `grep` or offset reads — never dump a whole file.\n4. Never read `node_modules/`, `dist/`, `graphify-out/`, or the vault export directory.\n5. If the saved session names a patch bundle under `workflow/patches/`, read only the hunks touching files relevant to the current task — not the whole patch.\n\nThen report, briefly:\n- the project and its current branch,\n- what the last session did and what it explicitly did not verify,\n- what is uncommitted right now,\n- the next step you intend to take.\n\nIf the session's open items are ambiguous, or its state contradicts what you find in the repository, say so and ask before starting work. The repository always wins over the saved session."
+    }
   }
 }

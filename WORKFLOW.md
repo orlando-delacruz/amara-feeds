@@ -132,6 +132,41 @@ The vault lives **outside** the repository and is not covered by `.gitignore`. B
 - Never stage or commit without being asked. `graphify-out/` is gitignored and regenerable — do not commit it.
 - Never commit secrets, bypass authorization, or disable a security control to make something pass.
 
+## 5b. Session save/load commands
+
+Two project commands are registered in `opencode.json` under `commands`.
+
+**`/save`** — run at the end of a work session.
+- `scripts/session/save.mjs` captures branch, HEAD, working-tree status, staged
+  and unstaged diffs, untracked files, and the commit log since the previous
+  save point.
+- The full diff goes to `workflow/patches/<stamp>.diff` (gitignored); only a
+  summary goes into `workflow/session.md`.
+- The script **only** rewrites the area between `<!-- STATE:BEGIN -->` and
+  `<!-- STATE:END -->`. The `## Context` section above it is written by the
+  agent from the live conversation and is never touched by the script.
+- `workflow/.last-save.json` records the save point. It is what "since the last
+  save" means — delete it to force a full-history capture.
+- **It never stages or commits.** "Commit record" means the SHA and log are
+  *recorded*, not that git state changes.
+
+**`/load`** — run at the start of a new session.
+- Inlines `workflow/session.md`, then instructs the agent to read `AGENTS.md`,
+  only the `docs/*` that `AGENTS.md` §3 assigns to the task, and to answer code
+  questions through `graphify query` / `path` / `explain` rather than reading
+  files. It is explicitly told not to read `node_modules/`, `dist/`,
+  `graphify-out/`, or the vault export.
+
+Editing the command text: `opencode.json` is the source. `.opencode/commands/*.md`
+would be the conventional home, but `permission.edit[".opencode/**"]` is `deny`,
+so that layout needs that permission narrowed to allow `.opencode/commands/**`.
+OpenCode hot-reloads config, so no restart is needed.
+
+**Secrets:** `workflow/session.md` holds conversation context and may be
+committed. The script filters `.env*` paths out of the file lists, but the
+**agent** must not paste secrets into the Context section — the filter cannot
+inspect prose.
+
 ## 6. Session handoff
 
 When the client says **"hand-off context to Session.md"**, refresh `SESSION.md` following its existing structure. It has historically drifted out of date — the migration list, admin store default and test baseline in it go stale as migrations land. Check each against the repository, not against its own text.

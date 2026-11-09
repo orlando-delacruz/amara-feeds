@@ -16,6 +16,7 @@ import { storeIds } from '@/domain/store'
 import { isSameDate, startOfMonthOnly, startOfWeekOnly, toDateOnly } from '@/lib/dates'
 import { sumMinor } from '@/lib/money'
 import { getDb } from './mocks/db'
+import { collectPages } from './pagination'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { serviceErrorFromSupabase } from './userService'
 
@@ -530,13 +531,38 @@ export async function getCollectionByMethod(
 
 export async function getCurrentStock(): Promise<StockSummaryRow[]> {
   if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase
-      .from('stock_levels')
-      .select('store_id, product_id, quantity, admin_approved, price_minor, products(name)')
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // Paged: PostgREST caps one response at 1,000 rows. stock_levels has a
+    // composite key, so the (store, product) pair is the deterministic order.
+    const data = await collectPages<{
+      store_id: string
+      product_id: string
+      quantity: number
+      admin_approved: boolean | null
+      price_minor: number | null
+      products: { name?: string } | null
+    }>(
+      (offset, size) =>
+        supabase!
+          .from('stock_levels')
+          .select('store_id, product_id, quantity, admin_approved, price_minor, products(name)')
+          .range(offset, offset + size - 1)
+          .order('store_id', { ascending: true })
+          .order('product_id', { ascending: true }) as unknown as PromiseLike<{
+          data: {
+            store_id: string
+            product_id: string
+            quantity: number
+            admin_approved: boolean | null
+            price_minor: number | null
+            products: { name?: string } | null
+          }[] | null
+          error: unknown
+        }>,
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       storeId: row.store_id as StockSummaryRow['storeId'],
       productId: row.product_id,
       productName: (row.products as { name?: string } | null)?.name ?? 'Unknown',
@@ -560,25 +586,49 @@ export async function getReceivedStock(
   filter: { date?: string; from?: string; to?: string } = {},
 ): Promise<ReceivedStockSummaryRow[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase
-      .from('receiving_records')
-      .select('store_id, product_id, quantity, cost_price_minor, received_at, products(name)')
-    if (filter.date) {
-      query = query
-        .gte('received_at', `${filter.date}T00:00:00`)
-        .lte('received_at', `${filter.date}T23:59:59`)
-    }
-    if (filter.from) {
-      query = query.gte('received_at', `${filter.from}T00:00:00`)
-    }
-    if (filter.to) {
-      query = query.lte('received_at', `${filter.to}T23:59:59`)
-    }
-    const { data, error } = await query.order('received_at', { ascending: false })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // Paged: PostgREST caps one response at 1,000 rows.
+    const data = await collectPages<{
+      store_id: string
+      product_id: string
+      quantity: number
+      cost_price_minor: number
+      received_at: string
+      products: { name?: string } | null
+    }>(
+      (offset, size) => {
+        let query = supabase!
+          .from('receiving_records')
+          .select('store_id, product_id, quantity, cost_price_minor, received_at, products(name)')
+        if (filter.date) {
+          query = query
+            .gte('received_at', `${filter.date}T00:00:00`)
+            .lte('received_at', `${filter.date}T23:59:59`)
+        }
+        if (filter.from) {
+          query = query.gte('received_at', `${filter.from}T00:00:00`)
+        }
+        if (filter.to) {
+          query = query.lte('received_at', `${filter.to}T23:59:59`)
+        }
+        return query.range(offset, offset + size - 1).order('received_at', {
+          ascending: false,
+        }).order('product_id', { ascending: true }) as unknown as PromiseLike<{
+          data: {
+            store_id: string
+            product_id: string
+            quantity: number
+            cost_price_minor: number
+            received_at: string
+            products: { name?: string } | null
+          }[] | null
+          error: unknown
+        }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       storeId: row.store_id as ReceivedStockSummaryRow['storeId'],
       productId: row.product_id,
       productName: (row.products as { name?: string } | null)?.name ?? 'Unknown',

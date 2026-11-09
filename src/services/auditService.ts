@@ -2,6 +2,7 @@ import type { AuditEvent, NewAuditEventInput, StoreId, User, UserId } from '@/do
 import { isSameDate } from '@/lib/dates'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { collectPages } from './pagination'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { serviceErrorFromSupabase } from './userService'
 
@@ -58,30 +59,59 @@ export async function listAuditEvents(
     // scopes rows to the caller's visibility. actor_role is denormalized on
     // the row (trigger-maintained) because profile reads are RLS-scoped.
     // Filtering by date/store here is convenience only (the same scope RLS
-    // applies regardless).
-    let query = supabase
-      .from('audit_events')
-      .select(
-        'id, action, actor_user_id, actor_role, store_id, related_user_id, subject, detail, created_at',
-      )
-    if (filter.storeId) {
-      query = query.eq('store_id', filter.storeId)
-    }
-    if (filter.date) {
-      query = query
-        .gte('created_at', `${filter.date}T00:00:00`)
-        .lte('created_at', `${filter.date}T23:59:59`)
-    }
-    const { data, error } = await query.order('created_at', { ascending: false })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // applies regardless). Paged: PostgREST caps one response at 1,000 rows.
+    const data = await collectPages<{
+      id: string
+      action: string
+      actor_user_id: string
+      actor_role: string | null
+      store_id: string | null
+      related_user_id: string | null
+      subject: string
+      detail: string | null
+      created_at: string
+    }>(
+      (offset, size) => {
+        let query = supabase!
+          .from('audit_events')
+          .select(
+            'id, action, actor_user_id, actor_role, store_id, related_user_id, subject, detail, created_at',
+          )
+        if (filter.storeId) {
+          query = query.eq('store_id', filter.storeId)
+        }
+        if (filter.date) {
+          query = query
+            .gte('created_at', `${filter.date}T00:00:00`)
+            .lte('created_at', `${filter.date}T23:59:59`)
+        }
+        return query.range(offset, offset + size - 1).order('created_at', {
+          ascending: false,
+        }).order('id', { ascending: false }) as unknown as PromiseLike<{
+          data: {
+            id: string
+            action: string
+            actor_user_id: string
+            actor_role: string | null
+            store_id: string | null
+            related_user_id: string | null
+            subject: string
+            detail: string | null
+            created_at: string
+          }[] | null
+          error: unknown
+        }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       id: row.id,
       action: row.action as AuditEvent['action'],
       actorUserId: row.actor_user_id,
       actorRole: (row.actor_role ?? 'staff') as AuditEvent['actorRole'],
-      storeId: row.store_id ?? undefined,
+      storeId: row.store_id ? (row.store_id as StoreId) : undefined,
       relatedUserId: row.related_user_id ?? undefined,
       subject: row.subject,
       detail: row.detail ?? undefined,

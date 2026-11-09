@@ -5,6 +5,7 @@ import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
 import { applyStockDelta } from './inventoryService'
 import { assertActiveRecorder } from './userService'
+import { collectPages } from './pagination'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
@@ -13,25 +14,62 @@ export async function listReceiving(
   filter: { storeId?: StoreId; productId?: ProductId; status?: ReceivingStatus } = {},
 ): Promise<ReceivingRecord[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase
-      .from('receiving_records')
-      .select(
-        'id, store_id, product_id, quantity, supplier, cost_price_minor, selling_price_minor, rider_id, vehicle_id, recorded_by_user_id, received_at, status',
-      )
-    if (filter.storeId) {
-      query = query.eq('store_id', filter.storeId)
-    }
-    if (filter.productId) {
-      query = query.eq('product_id', filter.productId)
-    }
-    if (filter.status) {
-      query = query.eq('status', filter.status)
-    }
-    const { data, error } = await query.order('received_at', { ascending: false })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // Paged: PostgREST caps one response at 1,000 rows.
+    const data = await collectPages<{
+      id: string
+      store_id: string
+      product_id: string
+      quantity: number
+      supplier: string
+      cost_price_minor: number
+      selling_price_minor: number | null
+      rider_id: string | null
+      vehicle_id: string | null
+      recorded_by_user_id: string
+      received_at: string
+      status: string
+    }>(
+      (offset, size) => {
+        let query = supabase!
+          .from('receiving_records')
+          .select(
+            'id, store_id, product_id, quantity, supplier, cost_price_minor, selling_price_minor, rider_id, vehicle_id, recorded_by_user_id, received_at, status',
+          )
+        if (filter.storeId) {
+          query = query.eq('store_id', filter.storeId)
+        }
+        if (filter.productId) {
+          query = query.eq('product_id', filter.productId)
+        }
+        if (filter.status) {
+          query = query.eq('status', filter.status)
+        }
+        return query
+          .range(offset, offset + size - 1)
+          .order('received_at', { ascending: false })
+          .order('id', { ascending: false }) as unknown as PromiseLike<{
+          data: {
+            id: string
+            store_id: string
+            product_id: string
+            quantity: number
+            supplier: string
+            cost_price_minor: number
+            selling_price_minor: number | null
+            rider_id: string | null
+            vehicle_id: string | null
+            recorded_by_user_id: string
+            received_at: string
+            status: string
+          }[] | null
+          error: unknown
+        }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       id: row.id,
       storeId: row.store_id as StoreId,
       productId: row.product_id,
@@ -65,29 +103,54 @@ export async function listReceiving(
  */
 export async function listStorePrices(storeId: StoreId): Promise<Record<string, Money>> {
   if (isSupabaseConfigured && supabase) {
-    const { data: stock, error: stockError } = await supabase
-      .from('stock_levels')
-      .select('product_id, price_minor')
-      .eq('store_id', storeId)
-    if (stockError) {
-      throw serviceErrorFromSupabase(stockError)
-    }
+    // Paged: PostgREST caps one response at 1,000 rows.
+    const stock = await collectPages<{ product_id: string; price_minor: number | null }>(
+      (offset, size) =>
+        supabase!
+          .from('stock_levels')
+          .select('product_id, price_minor')
+          .eq('store_id', storeId)
+          .range(offset, offset + size - 1)
+          .order('product_id', { ascending: true }) as unknown as PromiseLike<{
+          data: { product_id: string; price_minor: number | null }[] | null
+          error: unknown
+        }>,
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
     const prices: Record<string, Money> = {}
     for (const row of stock ?? []) {
       if (row.price_minor !== null) {
         prices[row.product_id] = row.price_minor as Money
       }
     }
-    const { data: receipts, error } = await supabase
-      .from('receiving_records')
-      .select('product_id, selling_price_minor, received_at')
-      .eq('store_id', storeId)
-      .eq('status', 'approved')
-      .not('selling_price_minor', 'is', null)
-      .order('received_at', { ascending: false })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
+    const receipts = await collectPages<{
+      product_id: string
+      selling_price_minor: number | null
+      received_at: string
+    }>(
+      (offset, size) =>
+        supabase!
+          .from('receiving_records')
+          .select('product_id, selling_price_minor, received_at')
+          .eq('store_id', storeId)
+          .eq('status', 'approved')
+          .not('selling_price_minor', 'is', null)
+          .range(offset, offset + size - 1)
+          .order('received_at', { ascending: false })
+          .order('product_id', { ascending: true }) as unknown as PromiseLike<{
+          data: {
+            product_id: string
+            selling_price_minor: number | null
+            received_at: string
+          }[] | null
+          error: unknown
+        }>,
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
     for (const row of receipts ?? []) {
       if (prices[row.product_id] === undefined) {
         prices[row.product_id] = row.selling_price_minor as Money

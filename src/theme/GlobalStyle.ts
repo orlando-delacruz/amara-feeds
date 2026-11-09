@@ -31,11 +31,13 @@ export const GlobalStyle = createGlobalStyle`
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    overflow-x: clip;
   }
 
   #root {
     min-height: 100dvh;
     overflow-x: hidden;
+    overflow-x: clip;
   }
 
   button,

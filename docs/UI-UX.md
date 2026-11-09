@@ -97,6 +97,7 @@ Additional application areas require corresponding requirements before being int
 
 - Mobile navigation exposes the major operational areas with the same destinations as larger screens.
 - Larger-screen navigation presents the same areas without hiding workflow state.
+- The desktop sidebar lists every role destination with an icon and no More link; My Account and the admin store switch live in a sidebar footer that stays visible while a long nav list scrolls. Mobile keeps the More tab and page.
 - The active area is always indicated.
 - Current store context (Amara or Zeann) is always visible.
 - Navigation provides a clear path back to the previous or current context (for example, from a sale back to sales history, from a payment back to the credit record).
@@ -193,6 +194,7 @@ Mobile is the primary experience.
 - Full essential workflows (sale, payment, receiving, approval, review) are usable on mobile.
 - Content reflows naturally; core workflows never require horizontal scrolling.
 - Touch interaction is practical; forms are readable; tables and lists remain usable on smaller screens.
+- Record tables show at most ten rows per page, with page controls when there are more.
 - Important information (store context, balances, statuses, feedback) is never hidden solely because of screen size.
 - Admin functionality remains usable on smaller screens where applicable.
 

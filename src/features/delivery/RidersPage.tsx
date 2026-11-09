@@ -164,6 +164,7 @@ export function RidersPage() {
         {list.data && list.data.length > 0 && (
           <RecordList
             caption={`Riders — ${storeLabel(store)}`}
+            resetKey={store}
             columns={[
               { key: 'name', header: 'Name' },
               { key: 'store', header: 'Store' },

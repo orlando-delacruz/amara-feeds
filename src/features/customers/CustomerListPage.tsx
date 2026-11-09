@@ -183,6 +183,7 @@ export function CustomerListPage({ canAdd = true }: CustomerListPageProps) {
         {data && data.length > 0 && (
           <RecordList
             caption="Customers"
+            resetKey={term}
             columns={[
               { key: 'name', header: 'Name' },
               { key: 'contact', header: 'Contact' },

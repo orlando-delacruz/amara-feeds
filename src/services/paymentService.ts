@@ -3,6 +3,7 @@ import type { StoreId } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
 import { assertActiveRecorder } from './userService'
+import { collectPages } from './pagination'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { serviceErrorFromSupabase } from './userService'
 import { ServiceError } from './errors'
@@ -11,24 +12,52 @@ export async function listPayments(
   filter: { creditId?: CreditId; storeId?: StoreId } = {},
 ): Promise<Payment[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase
-      .from('payments')
-      .select(
-        'id, credit_id, store_id, amount_minor, method, recorded_by_user_id, paid_at, interest_minor',
-      )
-      // Voided (admin-reverted) payments are corrections, not history (DEC-050).
-      .eq('is_voided', false)
-    if (filter.creditId) {
-      query = query.eq('credit_id', filter.creditId)
-    }
-    if (filter.storeId) {
-      query = query.eq('store_id', filter.storeId)
-    }
-    const { data, error } = await query.order('paid_at', { ascending: false })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // Paged: PostgREST caps one response at 1,000 rows.
+    const data = await collectPages<{
+      id: string
+      credit_id: string
+      store_id: string
+      amount_minor: number
+      method: string | null
+      recorded_by_user_id: string
+      paid_at: string
+      interest_minor: number | null
+    }>(
+      (offset, size) => {
+        let query = supabase!
+          .from('payments')
+          .select(
+            'id, credit_id, store_id, amount_minor, method, recorded_by_user_id, paid_at, interest_minor',
+          )
+          // Voided (admin-reverted) payments are corrections, not history (DEC-050).
+          .eq('is_voided', false)
+        if (filter.creditId) {
+          query = query.eq('credit_id', filter.creditId)
+        }
+        if (filter.storeId) {
+          query = query.eq('store_id', filter.storeId)
+        }
+        return query.range(offset, offset + size - 1).order('paid_at', {
+          ascending: false,
+        }).order('id', { ascending: false }) as unknown as PromiseLike<{
+          data: {
+            id: string
+            credit_id: string
+            store_id: string
+            amount_minor: number
+            method: string | null
+            recorded_by_user_id: string
+            paid_at: string
+            interest_minor: number | null
+          }[] | null
+          error: unknown
+        }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       id: row.id,
       creditId: row.credit_id,
       storeId: row.store_id as StoreId,

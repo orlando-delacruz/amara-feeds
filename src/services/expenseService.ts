@@ -34,7 +34,7 @@ export async function listExpenses(filter: { storeId?: StoreId } = {}): Promise<
         }
         return query.range(offset, offset + size - 1).order('created_at', {
           ascending: false,
-        }) as unknown as PromiseLike<{ data: ExpenseRow[] | null; error: unknown }>
+        }).order('id', { ascending: false }) as unknown as PromiseLike<{ data: ExpenseRow[] | null; error: unknown }>
       },
       (error) => {
         throw serviceErrorFromSupabase(error as never)

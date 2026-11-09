@@ -429,6 +429,7 @@ export function ReceivingPage() {
             ) : (
               <RecordList
                 caption="Items awaiting approval"
+                resetKey={store}
                 columns={[
                   { key: 'name', header: 'Item' },
                   { key: 'submittedBy', header: 'Submitted by' },
@@ -478,6 +479,7 @@ export function ReceivingPage() {
             ) : (
               <RecordList
                 caption="Receipts awaiting approval"
+                resetKey={store}
                 columns={[
                   { key: 'product', header: 'Item' },
                   ...(allMode ? ([{ key: 'store', header: 'Store' }] as const) : []),
@@ -524,6 +526,7 @@ export function ReceivingPage() {
             {myPendingProducts.length > 0 && (
               <RecordList
                 caption="Your pending items"
+                resetKey={store}
                 columns={[
                   { key: 'name', header: 'Item' },
                   { key: 'status', header: 'Status' },
@@ -543,6 +546,7 @@ export function ReceivingPage() {
             {myPendingReceipts.length > 0 && (
               <RecordList
                 caption="Your pending receipts"
+                resetKey={store}
                 columns={[
                   { key: 'product', header: 'Item' },
                   { key: 'quantity', header: 'Quantity' },
@@ -580,6 +584,7 @@ export function ReceivingPage() {
           {list.data && list.data.length > 0 && (
             <RecordList
               caption={`Receiving history — ${storeLabel(store)}`}
+              resetKey={store}
               columns={[
                 { key: 'product', header: 'Item' },
                 ...(allMode ? ([{ key: 'store', header: 'Store' }] as const) : []),

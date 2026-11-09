@@ -353,6 +353,7 @@ export function ExpensesPage() {
         <Section title="Summary by date">
           <RecordList
             caption="Recorded expenses summarized by date"
+            resetKey={store}
             columns={[
               { key: 'date', header: 'Date' },
               { key: 'fuel', header: 'Fuel' },
@@ -443,6 +444,7 @@ export function ExpensesPage() {
             <Section title="Riders net">
               <RecordList
                 caption="Riders net summary"
+                resetKey={store}
                 columns={[
                   { key: 'name', header: 'Rider' },
                   { key: 'sales', header: 'Delivered sales' },
@@ -460,6 +462,7 @@ export function ExpensesPage() {
             <Section title="Vehicles net">
               <RecordList
                 caption="Vehicles net summary"
+                resetKey={store}
                 columns={[
                   { key: 'name', header: 'Vehicle' },
                   { key: 'sales', header: 'Delivered sales' },
@@ -494,6 +497,7 @@ export function ExpensesPage() {
         {expenses.data && expenses.data.length > 0 && (
           <RecordList
             caption={`Expense history — ${storeLabel(store)}`}
+            resetKey={store}
             columns={[
               { key: 'target', header: 'Assigned to' },
               { key: 'type', header: 'Type' },

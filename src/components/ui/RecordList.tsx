@@ -1,9 +1,14 @@
 import styled from 'styled-components'
+import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { DataTable } from './DataTable'
 import type { DataTableColumn, DataTableRow } from './DataTable'
+import { Pagination } from './Pagination'
 import { useMediaQuery } from '@/features/shared/hooks/useMediaQuery'
 import { tokens } from '@/theme/tokens'
+
+/** Every record table shows at most this many rows per page. */
+export const RECORD_PAGE_SIZE = 10
 
 interface RecordListProps {
   caption: string
@@ -12,6 +17,12 @@ interface RecordListProps {
   emptyMessage?: string
   variant?: 'card' | 'grouped'
   renderCard?: (row: DataTableRow, index: number) => ReactNode
+  /**
+   * When the underlying data set changes (filter, date, store), the caller
+   * passes a new key so the page resets to the first one. `renderCard`
+   * always receives the row's absolute index in `rows`, not the page offset.
+   */
+  resetKey?: string | number
 }
 
 const Cards = styled.ul`
@@ -94,6 +105,10 @@ function DefaultCard({ row, columns }: { row: DataTableRow; columns: DataTableCo
   )
 }
 
+function rowKey(row: DataTableRow, absoluteIndex: number): string | number {
+  return row.id && typeof row.id === 'string' ? row.id : absoluteIndex
+}
+
 export function RecordList({
   caption,
   columns,
@@ -101,32 +116,93 @@ export function RecordList({
   emptyMessage,
   variant = 'card',
   renderCard,
+  resetKey,
 }: RecordListProps) {
   const wide = useMediaQuery(`(min-width: ${tokens.breakpoint.tablet})`, true)
-  if (wide) {
-    return <DataTable caption={caption} columns={columns} rows={rows} emptyMessage={emptyMessage} />
+  const [page, setPage] = useState(0)
+  const [prevKey, setPrevKey] = useState(resetKey)
+  const topRef = useRef<HTMLDivElement>(null)
+
+  // Reset to the first page when the data set changes. This render-phase
+  // adjustment (React's sanctioned derived-state pattern) avoids a
+  // setState-in-effect cascade and keeps the page in sync before paint.
+  if (prevKey !== resetKey) {
+    setPrevKey(resetKey)
+    setPage(0)
   }
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / RECORD_PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount - 1)
+  const offset = currentPage * RECORD_PAGE_SIZE
+  const pageRows = rows.slice(offset, offset + RECORD_PAGE_SIZE)
+
+  function handlePageChange(next: number) {
+    setPage(next)
+    topRef.current?.scrollIntoView?.({ block: 'nearest' })
+  }
+
   if (rows.length === 0) {
     return <DataTable caption={caption} columns={columns} rows={rows} emptyMessage={emptyMessage} />
   }
+
+  const pagination =
+    pageCount > 1 ? (
+      <Pagination
+        page={currentPage}
+        pageCount={pageCount}
+        total={rows.length}
+        pageSize={RECORD_PAGE_SIZE}
+        label={caption}
+        onPageChange={handlePageChange}
+      />
+    ) : undefined
+
+  if (wide) {
+    return (
+      <div ref={topRef}>
+        <DataTable caption={caption} columns={columns} rows={pageRows} emptyMessage={emptyMessage} />
+        {pagination}
+      </div>
+    )
+  }
   if (variant === 'grouped') {
     return (
-      <Group aria-label={caption}>
-        {rows.map((row, index) => (
-          <GroupItem key={row.id && typeof row.id === 'string' ? row.id : index}>
-            {renderCard ? renderCard(row, index) : <DefaultCard row={row} columns={columns} />}
-          </GroupItem>
-        ))}
-      </Group>
+      <div ref={topRef}>
+        <Group aria-label={caption}>
+          {pageRows.map((row, index) => {
+            const absoluteIndex = offset + index
+            return (
+              <GroupItem key={rowKey(row, absoluteIndex)}>
+                {renderCard ? (
+                  renderCard(row, absoluteIndex)
+                ) : (
+                  <DefaultCard row={row} columns={columns} />
+                )}
+              </GroupItem>
+            )
+          })}
+        </Group>
+        {pagination}
+      </div>
     )
   }
   return (
-    <Cards aria-label={caption}>
-      {rows.map((row, index) => (
-        <CardItem key={row.id && typeof row.id === 'string' ? row.id : index}>
-          {renderCard ? renderCard(row, index) : <DefaultCard row={row} columns={columns} />}
-        </CardItem>
-      ))}
-    </Cards>
+    <div ref={topRef}>
+      <Cards aria-label={caption}>
+        {pageRows.map((row, index) => {
+          const absoluteIndex = offset + index
+          return (
+            <CardItem key={rowKey(row, absoluteIndex)}>
+              {renderCard ? (
+                renderCard(row, absoluteIndex)
+              ) : (
+                <DefaultCard row={row} columns={columns} />
+              )}
+            </CardItem>
+          )
+        })}
+      </Cards>
+      {pagination}
+    </div>
   )
 }

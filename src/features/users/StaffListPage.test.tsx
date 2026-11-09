@@ -35,7 +35,9 @@ describe('StaffListPage', () => {
     expect(screen.getByText('Ben')).toBeInTheDocument()
     expect(screen.getByText('alice')).toBeInTheDocument()
     expect(screen.getAllByText('Amara').length).toBeGreaterThan(0)
-    expect(screen.getByText('Zeann')).toBeInTheDocument()
+    // The desktop sidebar footer carries its own store switch, so Zeann
+    // appears both there and in a staff row.
+    expect(screen.getAllByText('Zeann').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Active').length).toBeGreaterThan(0)
   })
 

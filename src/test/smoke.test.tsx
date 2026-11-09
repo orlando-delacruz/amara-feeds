@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from '@/app/router'
@@ -56,9 +56,14 @@ describe('application shell', () => {
   it('lets an admin set the store context from the More page', async () => {
     const user = userEvent.setup()
     renderAt('/admin/more', adminUser)
-    expect(await screen.findByText('Store context')).toBeInTheDocument()
-    await user.click(screen.getByRole('radio', { name: 'Zeann' }))
-    expect(screen.getByRole('radio', { name: 'Zeann' })).toHaveAttribute('aria-checked', 'true')
+    const main = await screen.findByRole('main')
+    expect(within(main).getByText('Store context')).toBeInTheDocument()
+    // The desktop sidebar footer carries the same switch; scope to the page.
+    await user.click(within(main).getByRole('radio', { name: 'Zeann' }))
+    expect(within(main).getByRole('radio', { name: 'Zeann' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
   })
 
   it('redirects a staff user away from admin routes', () => {

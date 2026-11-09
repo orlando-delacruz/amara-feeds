@@ -23,6 +23,7 @@ import { MyAccountPage } from '@/features/account/MyAccountPage'
 import { StaffListPage } from '@/features/users/StaffListPage'
 import { AdminLayout } from './layouts/AdminLayout'
 import { StaffLayout } from './layouts/StaffLayout'
+import { ScrollManager } from './ScrollManager'
 
 function HomeRedirect() {
   return <Navigate to={useHomePath()} replace />
@@ -30,7 +31,9 @@ function HomeRedirect() {
 
 export function AppRoutes() {
   return (
-    <Routes>
+    <>
+      <ScrollManager />
+      <Routes>
       <Route path="/sign-in" element={<SignInPage />} />
 
       <Route element={<RequireRole role="staff" />}>
@@ -77,5 +80,6 @@ export function AppRoutes() {
         </Route>
       </Route>
     </Routes>
+    </>
   )
 }

@@ -62,11 +62,15 @@ describe('MorePage', () => {
   it('gives admins the store-context switch on the More page', async () => {
     const user = userEvent.setup()
     renderMore('/admin/more', adminUser)
-    expect(await screen.findByText('Store context')).toBeInTheDocument()
+    const main = await screen.findByRole('main')
+    expect(within(main).getByText('Store context')).toBeInTheDocument()
 
-    // Switching here is the one place store context is set for admin pages.
-    await user.click(screen.getByRole('radio', { name: 'Zeann' }))
-    expect(screen.getByRole('radio', { name: 'Zeann' })).toHaveAttribute('aria-checked', 'true')
+    // The desktop sidebar footer carries the same switch; scope to the page.
+    await user.click(within(main).getByRole('radio', { name: 'Zeann' }))
+    expect(within(main).getByRole('radio', { name: 'Zeann' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
   })
 
   it('does not render the store-context switch for staff', async () => {

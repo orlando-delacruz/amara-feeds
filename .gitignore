@@ -40,3 +40,7 @@ graphify-out/
 supabase/.temp/
 
 .vercel
+
+# /save diff bundles — large, regenerable from git
+workflow/patches/
+workflow/.last-save.json

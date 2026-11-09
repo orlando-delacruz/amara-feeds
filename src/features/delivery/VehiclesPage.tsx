@@ -165,6 +165,7 @@ export function VehiclesPage() {
         {list.data && list.data.length > 0 && (
           <RecordList
             caption={`Vehicles — ${storeLabel(store)}`}
+            resetKey={store}
             columns={[
               { key: 'label', header: 'Vehicle' },
               { key: 'store', header: 'Store' },

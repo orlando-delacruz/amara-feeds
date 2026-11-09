@@ -160,25 +160,35 @@ export async function listCredits(
   filter: { customerId?: CustomerId; originStoreId?: StoreId; status?: CreditStatus } = {},
 ): Promise<CreditObligation[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase
-      .from('credit_obligations')
-      .select(CREDIT_COLUMNS)
-      // Voided (admin-reverted) credits are corrections, not standing records.
-      .neq('status', 'voided')
-    if (filter.customerId) {
-      query = query.eq('customer_id', filter.customerId)
-    }
-    if (filter.originStoreId) {
-      query = query.eq('origin_store_id', filter.originStoreId)
-    }
-    if (filter.status) {
-      query = query.eq('status', filter.status)
-    }
-    const { data, error } = await query.order('created_at', { ascending: false })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => toCreditObligation(row as CreditRow))
+    // Paged: PostgREST caps one response at 1,000 rows.
+    const data = await collectPages<CreditRow>(
+      (offset, size) => {
+        let query = supabase!
+          .from('credit_obligations')
+          .select(CREDIT_COLUMNS)
+          // Voided (admin-reverted) credits are corrections, not standing records.
+          .neq('status', 'voided')
+        if (filter.customerId) {
+          query = query.eq('customer_id', filter.customerId)
+        }
+        if (filter.originStoreId) {
+          query = query.eq('origin_store_id', filter.originStoreId)
+        }
+        if (filter.status) {
+          query = query.eq('status', filter.status)
+        }
+        return query.range(offset, offset + size - 1).order('created_at', {
+          ascending: false,
+        }).order('id', { ascending: false }) as unknown as PromiseLike<{
+          data: CreditRow[] | null
+          error: unknown
+        }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => toCreditObligation(row as CreditRow))
   }
   return getDb()
     .credits.filter(
@@ -223,7 +233,7 @@ export async function listCreditRecords(
         }
         return query.range(offset, offset + size - 1).order('created_at', {
           ascending: false,
-        }) as unknown as PromiseLike<{ data: CreditRow[] | null; error: unknown }>
+        }).order('id', { ascending: false }) as unknown as PromiseLike<{ data: CreditRow[] | null; error: unknown }>
       },
       (error) => {
         throw serviceErrorFromSupabase(error as never)

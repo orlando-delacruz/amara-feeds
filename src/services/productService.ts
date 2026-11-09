@@ -1,6 +1,7 @@
 import type { NewProductInput, Product, ProductId, ProductStatus, UserRole } from '@/domain'
 import { getDb } from './mocks/db'
 import { nextId } from './mocks/ids'
+import { collectPages } from './pagination'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 import { logAuditEvent } from './auditService'
 import { serviceErrorFromSupabase } from './userService'
@@ -8,15 +9,38 @@ import { ServiceError } from './errors'
 
 export async function listProducts(filter: { status?: ProductStatus } = {}): Promise<Product[]> {
   if (isSupabaseConfigured && supabase) {
-    let query = supabase.from('products').select('id, name, status, created_by_user_id, created_at')
-    if (filter.status) {
-      query = query.eq('status', filter.status)
-    }
-    const { data, error } = await query.order('name', { ascending: true })
-    if (error) {
-      throw serviceErrorFromSupabase(error)
-    }
-    return (data ?? []).map((row) => ({
+    // Paged: PostgREST caps one response at 1,000 rows.
+    const data = await collectPages<{
+      id: string
+      name: string
+      status: string
+      created_by_user_id: string | null
+      created_at: string
+    }>(
+      (offset, size) => {
+        let query = supabase!.from('products').select('id, name, status, created_by_user_id, created_at')
+        if (filter.status) {
+          query = query.eq('status', filter.status)
+        }
+        return query
+          .range(offset, offset + size - 1)
+          .order('name', { ascending: true })
+          .order('id', { ascending: true }) as unknown as PromiseLike<{
+          data: {
+            id: string
+            name: string
+            status: string
+            created_by_user_id: string | null
+            created_at: string
+          }[] | null
+          error: unknown
+        }>
+      },
+      (error) => {
+        throw serviceErrorFromSupabase(error as never)
+      },
+    )
+    return data.map((row) => ({
       id: row.id,
       name: row.name,
       status: row.status as ProductStatus,

@@ -19,7 +19,7 @@ interface FakeChain {
   eq: (...args: unknown[]) => FakeChain
   /** PostgREST caps a response; lists page through `.range(offset, to)`. */
   range: (from: number, to: number) => FakeChain
-  order: (...args: unknown[]) => Promise<{ data: unknown[]; error: null }>
+  order: (...args: unknown[]) => FakeChain
   maybeSingle: (...args: unknown[]) => Promise<{ data: unknown; error: null }>
   /** postgrest-js builders are thenable: awaiting the chain runs the query. */
   then: (
@@ -44,7 +44,7 @@ vi.mock('./supabaseClient', () => {
         window = { from, to }
         return chain
       },
-      order: async () => result(),
+      order: () => chain,
       maybeSingle: async () => ({ data: rows()[0] ?? null, error: null }),
       then: (onFulfilled, onRejected) => Promise.resolve(result()).then(onFulfilled, onRejected),
     }

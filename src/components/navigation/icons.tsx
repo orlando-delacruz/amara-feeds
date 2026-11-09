@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 export type NavIconName =
+  | 'account'
   | 'dashboard'
   | 'sales'
   | 'customers'
@@ -34,6 +35,14 @@ function Base({ children }: { children: ReactNode }) {
 }
 
 const navIconPaths: Record<NavIconName, ReactNode> = {
+  account: (
+    <Base>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="9" cy="11" r="2.2" />
+      <path d="M5.5 16c.6-1.8 1.9-2.8 3.5-2.8s2.9 1 3.5 2.8" />
+      <path d="M15 9.5h4M15 13.5h4" />
+    </Base>
+  ),
   dashboard: (
     <Base>
       <rect x="3" y="3" width="7" height="7" rx="1.5" />

@@ -27,4 +27,9 @@ if (!('ResizeObserver' in globalThis)) {
   } as unknown as typeof ResizeObserver
 }
 
+// jsdom does not implement window.scrollTo (calling it logs "Not implemented"
+// noise); the app's ScrollManager calls it on every route change, so stub a
+// no-op. Tests that assert scroll behaviour replace it with a mock.
+window.scrollTo = () => {}
+
 export { __resetSwalCalls } from './swalMock'

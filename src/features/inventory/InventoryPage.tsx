@@ -182,6 +182,7 @@ export function InventoryPage() {
         {rows.length > 0 && (
           <RecordList
             caption={`Current stock — ${storeLabel(store)}`}
+            resetKey={store}
             columns={[
               { key: 'product', header: 'Product' },
               ...(allMode ? ([{ key: 'store', header: 'Store' }] as const) : []),
